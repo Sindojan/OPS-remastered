@@ -113,6 +113,23 @@ sindojan_ops_remastered/
 | TASK-BE-001 | Spring Boot Projektstruktur | ✅ |
 | TASK-BE-002 | PostgreSQL Multi-Schema & Flyway | ✅ |
 
+## Arbeitsweise mit Agents
+
+**Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
+- Nur in den erlaubten Pfaden arbeiten
+- Verbotene Aktionen einhalten
+- Constraints beachten
+
+Zuordnung:
+- Backend-Struktur/Config → `backend-structure-agent.md`
+- Datenbank/Entities/Migrations → `db-agent.md`
+- Auth/Security/JWT → `auth-agent.md`
+- Business Logic/Services → `domain-agent.md`
+- REST Controller/DTOs → `api-agent.md`
+- Domain Events → `event-agent.md`
+- Agent-Infrastruktur → `agentfactory-agent.md`
+- Frontend/UI → `frontend-agent.md`
+
 ## Wichtige Konventionen
 
 - **Commits:** Conventional Commits mit Task-Nummern, Co-Authored-By Claude
