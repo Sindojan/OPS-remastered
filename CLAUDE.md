@@ -28,10 +28,13 @@
 - StatusBadge mit rounded-md, Puls-Animation für "busy"
 - Uppercase Tracking-Wider für Labels und Spaltenüberschriften
 
-## Ordnerstruktur
+## Monorepo-Struktur
 
 ```
-frontend/
+sindojan_ops_remastered/
+├── CLAUDE.md                     # Diese Datei
+├── .gitignore                    # Root Gitignore
+└── frontend/                     # Next.js Frontend
 ├── app/                          # Routen (App Router)
 │   ├── layout.tsx                # Root Layout mit ThemeProvider + AppShell
 │   ├── page.tsx                  # Redirect → /agents
@@ -73,7 +76,7 @@ frontend/
 ├── lib/
 │   └── utils.ts                  # cn() Utility
 ├── types/                        # TypeScript Typen (noch leer)
-└── .env.local.example            # NEXT_PUBLIC_API_URL Platzhalter
+    └── .env.local.example            # NEXT_PUBLIC_API_URL Platzhalter
 ```
 
 ## Abgeschlossene Tasks
@@ -89,7 +92,7 @@ frontend/
 - [x] **TASK-FE-006** – DataTable<T> Komponente (Search, Sort, Selection, Pagination, Actions)
 - [x] **TASK-FE-007** – PageHeader, ConfirmationDialog, Skeleton-Varianten
 
-**Block 2 noch nicht committed/gepusht.**
+**Block 2 committed und gepusht.**
 
 ## Offene Tasks / Nächste Schritte
 
