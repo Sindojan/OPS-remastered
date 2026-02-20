@@ -11,10 +11,11 @@
 | Layer | Technologie |
 |-------|-------------|
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS v4, TypeScript |
-| Backend | Spring Boot 3, Java 21, Maven |
+| Backend | Spring Boot 3.5.0, Java 21, Maven |
 | Datenbank | PostgreSQL (Multi-Schema per Tenant) |
-| Migrations | Flyway |
-| Auth | JWT (stateless), Spring Security |
+| Migrations | Flyway (programmatisch, pro Schema) |
+| Auth | JWT (JJWT 0.12.6, stateless), Spring Security |
+| Dateispeicher | MinIO (Dokumente, Binärdateien) |
 | Typografie | DM Sans (body) + JetBrains Mono (mono/data) |
 | Charts | recharts |
 | Icons | lucide-react |
@@ -76,17 +77,31 @@ sindojan_ops_remastered/
     ├── pom.xml
     └── src/main/java/com/sindoflow/ops/
         ├── common/                  # BaseEntity, TenantContext, Exceptions
-        ├── config/                  # Security, JPA, Flyway, CORS
-        ├── auth/                    # JWT, Login
+        ├── config/                  # Security, JPA, Flyway, CORS, MinIO, PasswordEncoder
+        ├── auth/                    # JWT, Login, User-CRUD, Rollen
+        │   └── dto/                 # Auth DTOs (LoginRequest, UserResponse, etc.)
         ├── tenant/                  # Tenant-Management, Schema-Provisionierung
-        ├── production/              # Jobs, Stations, Scheduling
-        ├── machines/                # Maschinen, Wartung
-        ├── people/                  # Mitarbeiter, Zeiterfassung
-        ├── inventory/               # Lager, Artikel, Bewegungen
-        ├── bom/                     # Stücklisten, Arbeitspläne
-        ├── inbox/                   # Support, Tickets
-        ├── events/                  # Domain Events
-        └── agentinfra/              # Agent-Infrastruktur, Tool Registry
+        │   └── dto/                 # Tenant DTOs
+        ├── customers/               # Kunden, Kontakte, Adressen, Preisgruppen
+        │   └── dto/
+        ├── production/              # Jobs (Status-Maschine), Stationen, Schichten, QA
+        │   └── dto/
+        ├── machines/                # Maschinen, Wartung, Störungen
+        │   └── dto/
+        ├── people/                  # Mitarbeiter, Zeiterfassung, Abwesenheiten
+        │   └── dto/
+        ├── inventory/               # Lager, Artikel, Bestand, Lieferanten
+        │   └── dto/
+        ├── bom/                     # Stücklisten, Arbeitspläne, Kalkulation
+        │   └── dto/
+        ├── documents/               # Dokumente (Metadaten in DB, Binär in MinIO)
+        │   └── dto/
+        ├── inbox/                   # Conversations, Nachrichten, Tags
+        │   └── dto/
+        ├── events/                  # Domain Events, Scheduled Triggers
+        │   └── dto/
+        └── agentinfra/              # Agent Templates, Instances, Runs, Steps
+            └── dto/
 ```
 
 ## Abgeschlossene Tasks
@@ -106,12 +121,28 @@ sindojan_ops_remastered/
 | TASK-FE-006 | DataTable\<T\> | `2fc8f8e` |
 | TASK-FE-007 | PageHeader, ConfirmationDialog, Skeletons | `77c5247` |
 
-### Block 3: Agent Setup & Backend ✅
+### Block 3: Agent Setup & Backend Grundarchitektur ✅
 | Task | Beschreibung | Status |
 |------|-------------|--------|
 | TASK-SETUP-001 | Claude Agent Struktur & Skill-Files | ✅ |
 | TASK-BE-001 | Spring Boot Projektstruktur | ✅ |
 | TASK-BE-002 | PostgreSQL Multi-Schema & Flyway | ✅ |
+
+### Block 4+5: Auth, Tenant & vollständige Domänenarchitektur ✅
+| Task | Beschreibung | Status |
+|------|-------------|--------|
+| TASK-BE-003 | Auth (JWT, Login, Refresh, Logout), User-CRUD, Tenant-Provisionierung | ✅ |
+| TASK-BE-004 | Vollständiges DB-Schema (V3 Migration: alle Tabellen, Enums, Indizes) | ✅ |
+| TASK-BE-005 | MinIO Setup & Document Service | ✅ |
+| TASK-BE-006a | Kunden (CRUD, Kontakte, Adressen, Preisgruppen) | ✅ |
+| TASK-BE-006b | Produktion (Jobs mit Status-Maschine, Stationen, Schichten, QA) | ✅ |
+| TASK-BE-006c | Maschinen (CRUD, Wartung, Störungen) | ✅ |
+| TASK-BE-006d | Mitarbeiter & Zeiterfassung (Clock-In/Out, MyDay, Abwesenheiten) | ✅ |
+| TASK-BE-006e | Lager & Material (Artikel, Bestand, Bewegungen, Lieferanten) | ✅ |
+| TASK-BE-006f | Stücklisten & Kalkulation (BOM, Arbeitspläne, Soll/Ist-Vergleich) | ✅ |
+| TASK-BE-006g | Inbox & Support (Conversations, Messages, Tags, Links) | ✅ |
+| TASK-BE-006h | Agent Infrastructure (Templates, Instances, Runs, Steps, Incidents) | ✅ |
+| Events | Domain Events & Scheduled Triggers | ✅ |
 
 ## Arbeitsweise mit Agents
 
@@ -139,8 +170,62 @@ Zuordnung:
 - **Lombok:** Funktioniert nicht zuverlässig mit dem Maven Compiler – explizite Logger + Konstruktoren verwenden
 - **Pfad-Aliases (FE):** `@/components`, `@/lib`, `@/types`
 
+## API-Endpunkte (Übersicht)
+
+| Bereich | Basis-Pfad | Auth |
+|---------|-----------|------|
+| Auth | `/api/auth/**` | public |
+| Users | `/api/users` | ADMIN/MANAGER |
+| Tenants | `/api/admin/tenants` | ADMIN |
+| Customers | `/api/customers` | authenticated |
+| Jobs | `/api/jobs` | authenticated |
+| Stations | `/api/stations` | authenticated |
+| Shifts | `/api/shifts` | authenticated |
+| Quality | `/api/quality-checks` | authenticated |
+| Machines | `/api/machines` | authenticated |
+| Maintenance | `/api/maintenance` | authenticated |
+| Employees | `/api/employees` | authenticated |
+| Time Entries | `/api/time-entries` | authenticated |
+| Absences | `/api/absences` | authenticated |
+| Articles | `/api/articles` | authenticated |
+| Stock | `/api/stock` | authenticated |
+| Suppliers | `/api/suppliers` | authenticated |
+| Parts | `/api/parts` | authenticated |
+| BOM | `/api/bom` | authenticated |
+| Process Plans | `/api/process-plans` | authenticated |
+| Calculations | `/api/calculations` | authenticated |
+| Documents | `/api/documents` | authenticated |
+| Conversations | `/api/conversations` | authenticated |
+| Agent Templates | `/api/agent-templates` | authenticated |
+| Agent Instances | `/api/agent-instances` | authenticated |
+| Agent Runs | `/api/agent-runs` | authenticated |
+| Events | `/api/events` | authenticated |
+| Triggers | `/api/scheduled-triggers` | authenticated |
+| Health | `/actuator/health` | public |
+
+## Flyway Migrationen
+
+| Schema | Migration | Inhalt |
+|--------|----------|--------|
+| public | V1__init_public.sql | Tenants-Tabelle |
+| tenant | V1__init_tenant_schema.sql | Platzhalter |
+| tenant | V2__users_and_auth.sql | Users, Refresh Token Blacklist, Default Admin |
+| tenant | V3__full_schema.sql | Alle Domänen-Tabellen, 25 Enums, ~80 Indizes |
+
+## Default Admin
+
+- **Email:** software@sindojan.de
+- **Passwort:** root1234
+- **Rolle:** ADMIN
+- Wird automatisch bei jeder neuen Tenant-Schema-Erstellung angelegt (via V2 Migration)
+
+## Rollen
+
+`ADMIN`, `MANAGER`, `TEAM_LEAD`, `WORKER`, `AGENT_SYSTEM`
+
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-02-20
-**Session:** Block 1-3 komplett
-**Status:** Frontend läuft (Port 4201), Backend kompiliert (Port 8080, braucht PostgreSQL)
+**Session:** Block 1-5 komplett (Frontend Foundation + Shared Components + Backend Grundarchitektur + Auth/Tenant + vollständige Domänenarchitektur)
+**Status:** Frontend läuft (Port 4201), Backend kompiliert mit 342 Java-Dateien (Port 8080, braucht PostgreSQL + MinIO)
+**Nächster Block:** Agent Infrastructure mit LLM-Integration + Event-Layer verdrahten
