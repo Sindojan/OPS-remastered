@@ -13,7 +13,8 @@ spring:
 
 jwt:
   secret: dev-secret-key-change-in-production-min-256-bits-long!!
-  expiration: 86400000  # 24 hours
+  expiration: 86400000      # 24 hours
+  refresh-expiration: 604800000  # 7 days
 
 logging:
   level:

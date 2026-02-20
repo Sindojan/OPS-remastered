@@ -1,5 +1,6 @@
 package com.sindoflow.ops.config;
 
+import com.sindoflow.ops.tenant.TenantRepository;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,12 +16,19 @@ public class FlywayConfig {
     private static final Logger log = LoggerFactory.getLogger(FlywayConfig.class);
 
     private final DataSource dataSource;
+    private final TenantRepository tenantRepository;
 
-    public FlywayConfig(DataSource dataSource) {
+    public FlywayConfig(DataSource dataSource, TenantRepository tenantRepository) {
         this.dataSource = dataSource;
+        this.tenantRepository = tenantRepository;
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    public void migrateAllSchemas() {
+        migratePublicSchema();
+        migrateExistingTenantSchemas();
+    }
+
     public void migratePublicSchema() {
         log.info("Running Flyway migrations for public schema");
         Flyway flyway = Flyway.configure()
@@ -31,6 +39,13 @@ public class FlywayConfig {
                 .load();
         flyway.migrate();
         log.info("Public schema migration complete");
+    }
+
+    private void migrateExistingTenantSchemas() {
+        tenantRepository.findByActiveTrue().forEach(tenant -> {
+            log.info("Migrating existing tenant schema: {}", tenant.getSchemaName());
+            migrateTenantSchema(tenant.getSchemaName());
+        });
     }
 
     public void migrateTenantSchema(String schemaName) {

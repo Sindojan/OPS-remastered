@@ -25,5 +25,16 @@ management:
     health:
       show-details: when-authorized
 
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:sindoflow-documents}
+
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production}
+  expiration: 86400000        # 24 hours
+  refresh-expiration: 604800000  # 7 days
+
 server:
   port: 8080
