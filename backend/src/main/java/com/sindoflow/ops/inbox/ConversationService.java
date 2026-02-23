@@ -1,5 +1,6 @@
 package com.sindoflow.ops.inbox;
 
+import com.sindoflow.ops.events.DomainEventService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,13 +19,16 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final ConversationTagRepository tagRepository;
     private final ConversationLinkRepository linkRepository;
+    private final DomainEventService domainEventService;
 
     public ConversationService(ConversationRepository conversationRepository,
                                ConversationTagRepository tagRepository,
-                               ConversationLinkRepository linkRepository) {
+                               ConversationLinkRepository linkRepository,
+                               DomainEventService domainEventService) {
         this.conversationRepository = conversationRepository;
         this.tagRepository = tagRepository;
         this.linkRepository = linkRepository;
+        this.domainEventService = domainEventService;
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +56,16 @@ public class ConversationService {
         conversation.setStatus(ConversationStatus.OPEN);
 
         log.info("Creating conversation: {}", subject);
-        return conversationRepository.save(conversation);
+        ConversationEntity saved = conversationRepository.save(conversation);
+
+        try {
+            domainEventService.publish("CONVERSATION_NEW", "conversation", saved.getId(),
+                    "{\"subject\":\"" + subject + "\",\"customerId\":\"" + customerId + "\"}");
+        } catch (Exception e) {
+            log.warn("Failed to publish CONVERSATION_NEW event: {}", e.getMessage());
+        }
+
+        return saved;
     }
 
     @Transactional

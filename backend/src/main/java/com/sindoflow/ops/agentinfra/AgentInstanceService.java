@@ -99,6 +99,14 @@ public class AgentInstanceService {
     }
 
     @Transactional
+    public AgentInstanceEntity updateConfig(UUID id, String config) {
+        AgentInstanceEntity instance = findById(id);
+        instance.setConfig(config);
+        log.info("Updated config for agent instance: {}", id);
+        return instanceRepository.save(instance);
+    }
+
+    @Transactional
     public void delete(UUID id) {
         AgentInstanceEntity existing = findById(id);
         instanceRepository.delete(existing);

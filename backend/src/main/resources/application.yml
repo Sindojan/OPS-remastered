@@ -36,5 +36,8 @@ jwt:
   expiration: 86400000        # 24 hours
   refresh-expiration: 604800000  # 7 days
 
+encryption:
+  key: ${ENCRYPTION_KEY:default-dev-key-change-in-prod-32ch}
+
 server:
   port: 8080

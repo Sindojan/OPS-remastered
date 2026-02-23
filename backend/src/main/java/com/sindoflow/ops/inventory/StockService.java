@@ -1,5 +1,6 @@
 package com.sindoflow.ops.inventory;
 
+import com.sindoflow.ops.events.DomainEventService;
 import com.sindoflow.ops.inventory.dto.CriticalArticleResponse;
 import com.sindoflow.ops.inventory.dto.StockResponse;
 import com.sindoflow.ops.inventory.dto.StockSummaryResponse;
@@ -20,11 +21,14 @@ public class StockService {
 
     private final StockRepository stockRepository;
     private final ArticleRepository articleRepository;
+    private final DomainEventService domainEventService;
 
     public StockService(StockRepository stockRepository,
-                        ArticleRepository articleRepository) {
+                        ArticleRepository articleRepository,
+                        DomainEventService domainEventService) {
         this.stockRepository = stockRepository;
         this.articleRepository = articleRepository;
+        this.domainEventService = domainEventService;
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +85,9 @@ public class StockService {
             throw new IllegalArgumentException("Insufficient available stock. Available: " + available + ", requested: " + quantity);
         }
         stock.setReservedQuantity(stock.getReservedQuantity().add(quantity));
-        return stockRepository.save(stock);
+        StockEntity saved = stockRepository.save(stock);
+        checkCriticalStock(saved);
+        return saved;
     }
 
     @Transactional
@@ -93,6 +99,23 @@ public class StockService {
             throw new IllegalArgumentException("Cannot release more than reserved. Reserved: " + stock.getReservedQuantity());
         }
         stock.setReservedQuantity(stock.getReservedQuantity().subtract(quantity));
-        return stockRepository.save(stock);
+        StockEntity saved = stockRepository.save(stock);
+        checkCriticalStock(saved);
+        return saved;
+    }
+
+    private void checkCriticalStock(StockEntity stock) {
+        try {
+            ArticleEntity article = articleRepository.findById(stock.getArticleId()).orElse(null);
+            if (article != null && article.getMinStock() != null) {
+                BigDecimal available = stock.getQuantity().subtract(stock.getReservedQuantity());
+                if (available.compareTo(article.getMinStock()) < 0) {
+                    domainEventService.publish("STOCK_CRITICAL", "article", stock.getArticleId(),
+                            "{\"articleId\":\"" + stock.getArticleId() + "\",\"available\":" + available + ",\"minStock\":" + article.getMinStock() + "}");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to check critical stock: {}", e.getMessage());
+        }
     }
 }

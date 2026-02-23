@@ -3,11 +3,14 @@ package com.sindoflow.ops.events;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,12 +18,6 @@ import java.util.UUID;
 public class ScheduledTriggerService {
 
     private static final Logger log = LoggerFactory.getLogger(ScheduledTriggerService.class);
-
-    /**
-     * Default interval placeholder for cron next-run calculation.
-     * Full cron parsing can be added later.
-     */
-    private static final Duration DEFAULT_INTERVAL = Duration.ofHours(1);
 
     private final ScheduledTriggerRepository triggerRepository;
 
@@ -108,12 +105,19 @@ public class ScheduledTriggerService {
     }
 
     /**
-     * Placeholder for cron expression parsing.
-     * Currently adds a default interval from now. Full cron parsing can be implemented later.
+     * Parses the cron expression using Spring's CronExpression and calculates the next run time.
      */
     private Instant calculateNextRunAt(String cronExpression) {
-        // Placeholder: just add the default interval from now
-        // A proper implementation would parse the cron expression
-        return Instant.now().plus(DEFAULT_INTERVAL);
+        try {
+            CronExpression cron = CronExpression.parse(cronExpression);
+            LocalDateTime next = cron.next(LocalDateTime.now());
+            if (next != null) {
+                return next.atZone(ZoneId.of("Europe/Berlin")).toInstant();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse cron expression '{}': {}", cronExpression, e.getMessage());
+        }
+        // Fallback: 1 hour from now
+        return Instant.now().plus(Duration.ofHours(1));
     }
 }

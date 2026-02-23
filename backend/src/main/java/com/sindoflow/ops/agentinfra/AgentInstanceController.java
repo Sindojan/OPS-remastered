@@ -91,6 +91,32 @@ public class AgentInstanceController {
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(terminated), "Agent instance terminated"));
     }
 
+    @PatchMapping("/{id}/model")
+    public ResponseEntity<ApiResponse<AgentInstanceResponse>> updateModel(
+            @PathVariable UUID id,
+            @RequestBody java.util.Map<String, String> body) {
+        String model = body.get("model");
+        if (model == null || model.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("model field is required"));
+        }
+        AgentInstanceEntity instance = instanceService.findById(id);
+        // Merge model into existing config JSON
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> config = instance.getConfig() != null && !instance.getConfig().equals("{}")
+                    ? mapper.readValue(instance.getConfig(),
+                        mapper.getTypeFactory().constructMapType(java.util.Map.class, String.class, Object.class))
+                    : new java.util.HashMap<>();
+            config.put("model", model);
+            instance.setConfig(mapper.writeValueAsString(config));
+        } catch (Exception e) {
+            instance.setConfig("{\"model\":\"" + model + "\"}");
+        }
+        AgentInstanceEntity saved = instanceService.updateConfig(id, instance.getConfig());
+        return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(saved), "Model updated"));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         instanceService.delete(id);

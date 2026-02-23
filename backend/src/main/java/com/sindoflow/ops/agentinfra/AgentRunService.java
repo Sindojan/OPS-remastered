@@ -70,7 +70,7 @@ public class AgentRunService {
         run.setInstanceId(instanceId);
         run.setTriggerType(triggerType);
         run.setTriggerSource(triggerSource);
-        run.setInputContext(inputContext);
+        run.setInputContext(ensureJson(inputContext));
         run.setStatus(AgentRunStatus.PENDING);
         run.setStartedAt(Instant.now());
 
@@ -171,4 +171,14 @@ public class AgentRunService {
             int tokensUsedToday,
             int tokensRemaining
     ) {}
+
+    private String ensureJson(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        if (trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("\"")) {
+            return trimmed;
+        }
+        // Wrap plain text as JSON string
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    }
 }

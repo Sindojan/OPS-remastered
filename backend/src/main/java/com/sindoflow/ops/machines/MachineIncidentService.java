@@ -1,5 +1,6 @@
 package com.sindoflow.ops.machines;
 
+import com.sindoflow.ops.events.DomainEventService;
 import com.sindoflow.ops.machines.dto.MachineIncidentResponse;
 import com.sindoflow.ops.machines.dto.ReportIncidentRequest;
 import com.sindoflow.ops.machines.dto.ResolveIncidentRequest;
@@ -20,11 +21,14 @@ public class MachineIncidentService {
 
     private final MachineIncidentRepository incidentRepository;
     private final MachineRepository machineRepository;
+    private final DomainEventService domainEventService;
 
     public MachineIncidentService(MachineIncidentRepository incidentRepository,
-                                   MachineRepository machineRepository) {
+                                   MachineRepository machineRepository,
+                                   DomainEventService domainEventService) {
         this.incidentRepository = incidentRepository;
         this.machineRepository = machineRepository;
+        this.domainEventService = domainEventService;
     }
 
     @Transactional
@@ -42,6 +46,14 @@ public class MachineIncidentService {
         entity.setReportedAt(Instant.now());
         entity = incidentRepository.save(entity);
         log.info("Reported incident {} for machine {}", entity.getId(), machineId);
+
+        try {
+            domainEventService.publish("MACHINE_INCIDENT", "machine_incident", entity.getId(),
+                    "{\"machineId\":\"" + machineId + "\",\"type\":\"" + request.type() + "\",\"severity\":\"" + request.severity() + "\"}");
+        } catch (Exception e) {
+            log.warn("Failed to publish MACHINE_INCIDENT event: {}", e.getMessage());
+        }
+
         return toResponse(entity);
     }
 

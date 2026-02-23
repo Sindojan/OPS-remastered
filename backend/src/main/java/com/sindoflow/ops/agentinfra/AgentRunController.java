@@ -1,6 +1,7 @@
 package com.sindoflow.ops.agentinfra;
 
 import com.sindoflow.ops.agentinfra.dto.*;
+import com.sindoflow.ops.agentinfra.execution.AgentRunOrchestrator;
 import com.sindoflow.ops.common.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -15,9 +16,12 @@ import java.util.UUID;
 public class AgentRunController {
 
     private final AgentRunService runService;
+    private final AgentRunOrchestrator orchestrator;
 
-    public AgentRunController(AgentRunService runService) {
+    public AgentRunController(AgentRunService runService,
+                               AgentRunOrchestrator orchestrator) {
         this.runService = runService;
+        this.orchestrator = orchestrator;
     }
 
     @PostMapping
@@ -109,5 +113,18 @@ public class AgentRunController {
     public ResponseEntity<ApiResponse<BudgetCheckResponse>> checkBudget(@PathVariable UUID instanceId) {
         AgentRunService.BudgetCheckResult result = runService.checkBudget(instanceId);
         return ResponseEntity.ok(ApiResponse.ok(BudgetCheckResponse.from(result)));
+    }
+
+    @PostMapping("/trigger")
+    public ResponseEntity<ApiResponse<String>> triggerRun(
+            @Valid @RequestBody StartAgentRunRequest request) {
+        orchestrator.triggerRun(
+                request.instanceId(),
+                request.triggerType(),
+                request.triggerSource(),
+                request.inputContext()
+        );
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.ok("Agent run triggered", "Run wird asynchron ausgeführt"));
     }
 }
