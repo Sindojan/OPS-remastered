@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/sindoflow_ops?stringtype=unspecified
+    url: jdbc:postgresql://localhost:5432/owlsburg_ops?stringtype=unspecified
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -18,5 +18,5 @@ jwt:
 
 logging:
   level:
-    com.sindoflow.ops: DEBUG
+    com.owlsburg.ops: DEBUG
     org.hibernate.SQL: DEBUG

@@ -1,8 +1,8 @@
-# Sindoflow OPS – Projektdokumentation
+# Owlsburg OPS – Projektdokumentation
 
 ## Projekt
 
-**Sindoflow OPS** – Agentenbasierte Operations-Plattform für eine Auto-Sitz-Manufaktur.
+**Owlsburg OPS** – Agentenbasierte Operations-Plattform für eine Auto-Sitz-Manufaktur.
 **Repo:** https://github.com/Sindojan/OPS-remastered
 **GitHub Account:** Sindojan
 
@@ -75,7 +75,7 @@ sindojan_ops_remastered/
 │   └── types/                       # TypeScript Typen
 └── backend/                         # Spring Boot Backend
     ├── pom.xml
-    └── src/main/java/com/sindoflow/ops/
+    └── src/main/java/com/owlsburg/ops/
         ├── common/                  # BaseEntity, TenantContext, Exceptions
         ├── config/                  # Security, JPA, Flyway, CORS, MinIO, PasswordEncoder
         ├── auth/                    # JWT, Login, User-CRUD, Rollen

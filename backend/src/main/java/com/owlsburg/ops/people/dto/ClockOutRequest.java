@@ -1,0 +1,9 @@
+package com.owlsburg.ops.people.dto;
+
+import jakarta.validation.constraints.NotNull;
+
+import java.util.UUID;
+
+public record ClockOutRequest(
+        @NotNull UUID employeeId
+) {}

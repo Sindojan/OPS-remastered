@@ -1,2 +1,0 @@
--- Tenant schema: Basis-Struktur die in jedem Tenant-Schema existiert
--- Weitere Tabellen werden durch nachfolgende Migrationen hinzugefügt

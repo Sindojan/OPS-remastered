@@ -8,11 +8,11 @@
 		<version>3.5.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.sindoflow</groupId>
+	<groupId>com.owlsburg</groupId>
 	<artifactId>ops</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ops</name>
-	<description>Sindoflow OPS – Operations Platform for Manufacturing</description>
+	<description>Owlsburg OPS – Operations Platform for Manufacturing</description>
 	<properties>
 		<java.version>21</java.version>
 	</properties>
@@ -61,6 +61,13 @@
 			<groupId>io.minio</groupId>
 			<artifactId>minio</artifactId>
 			<version>8.5.7</version>
+		</dependency>
+
+		<!-- Rate Limiting -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j_jdk17-core</artifactId>
+			<version>8.14.0</version>
 		</dependency>
 
 		<!-- JWT -->

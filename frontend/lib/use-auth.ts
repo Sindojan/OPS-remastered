@@ -14,10 +14,10 @@ export function useAuth() {
     setIsLoading(false);
   }, []);
 
-  const login = useCallback(async (email: string, password: string, tenantId: string = 'default') => {
+  const login = useCallback(async (email: string, password: string) => {
     const response = await apiClient.post<ApiResponse<LoginResponse>>(
       '/api/auth/login',
-      { email, password, tenantId }
+      { email, password }
     );
     localStorage.setItem('accessToken', response.data.accessToken);
     localStorage.setItem('refreshToken', response.data.refreshToken);

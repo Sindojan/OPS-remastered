@@ -16,7 +16,6 @@ export function LoginGate({ children }: LoginGateProps) {
   const { isAuthenticated, isLoading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [tenantId, setTenantId] = useState("default");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,7 +38,7 @@ export function LoginGate({ children }: LoginGateProps) {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password, tenantId);
+      await login(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -58,7 +57,7 @@ export function LoginGate({ children }: LoginGateProps) {
             <CardTitle className="text-lg">Authentication Required</CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">
-            Sign in to access system settings
+            Sign in to access Owlsburg OPS
           </p>
         </CardHeader>
         <CardContent>
@@ -70,22 +69,11 @@ export function LoginGate({ children }: LoginGateProps) {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="tenantId">Tenant</Label>
-              <Input
-                id="tenantId"
-                type="text"
-                placeholder="default"
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="operator@sindoflow.de"
+                placeholder="operator@owlsburg.de"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

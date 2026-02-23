@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sindoflow OPS",
+  title: "Owlsburg OPS",
   description: "Operations Platform for Manufacturing",
 };
 

@@ -35,7 +35,7 @@ export function Topbar({ onAgentPanelToggle, agentPanelOpen }: TopbarProps) {
     <header className="flex h-12 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-sm">
       <div className="flex items-center gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">
-          Sindojan
+          Owlsburg OPS
         </span>
         <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
         <span className="text-[13px] font-semibold text-foreground">

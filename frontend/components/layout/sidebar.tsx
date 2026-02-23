@@ -76,7 +76,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
             <span className="truncate text-sm font-bold tracking-tight text-sidebar-accent-foreground">
-              Sindoflow
+              Owlsburg
             </span>
             <span className="truncate text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/50">
               OPS
