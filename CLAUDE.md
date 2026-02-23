@@ -160,6 +160,17 @@ sindojan_ops_remastered/
 | TASK-FE-008 | LLM Settings UI + Agent Instances Tab | `67821f2` |
 | TASK-FIX-001 | CORS Fix, System-Test, Bugfixes | `67821f2` |
 
+### Block 7: Frontend OPS-Views ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| Block-7-infra | Domain Types, API Hooks, Format Utils, DomainStatusBadge | `bc0b0f6` |
+| TASK-FE-009 | Production Views (Jobs, Planner, Stations) | `7db1d18` |
+| TASK-FE-010 | Machines Views (Overview, Detail mit Wartung/Störungen) | `7db1d18` |
+| TASK-FE-011 | Inventory Views (Artikel, Lieferanten, Bewegungen) | `c5df042` |
+| TASK-FE-012 | People Views (Mitarbeiter, Zeiterfassung, My Day) | `c5df042` |
+| TASK-FE-013 | Inbox (Split-Layout, Chat, Konversationen) | `5672775` |
+| TASK-FE-014 | Reports (KPI Dashboard, Charts, CSV Export) | `5672775` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -247,6 +258,6 @@ Zuordnung:
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-02-23
-**Session:** Block 6 komplett (Agent Infrastructure + LLM-Integration + Event-Routing + Frontend Settings)
-**Status:** Backend ~400 Java-Dateien, alle APIs getestet und funktional. Frontend hat Login, Settings (LLM Config + Agent Instances). Agent ReAct-Loop funktioniert (braucht Anthropic API Key).
-**Nächster Block:** Frontend Domain-Screens (Dashboard, Produktion, Lager, Maschinen, etc.)
+**Session:** Block 7 komplett (Alle Frontend OPS-Views implementiert)
+**Status:** Backend ~400 Java-Dateien, alle APIs getestet. Frontend hat alle Domain-Views: Production (Jobs, Planner, Stations), Machines (Detail, Wartung, Störungen), Inventory (Artikel, Lieferanten, Bewegungen), People (Mitarbeiter, Zeiterfassung, Abwesenheiten, My Day), Inbox (Split-Layout Chat), Reports (KPI Dashboard, Charts, CSV Export). Alles TypeScript-fehlerfrei.
+**Nächster Block:** Agent Console (Chat-Interface, Agent Hierarchy, Live-Runs) oder End-to-End-Testing mit echtem Backend
