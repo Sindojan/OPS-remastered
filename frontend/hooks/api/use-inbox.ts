@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi, useMutation } from "./use-api";
+import { usePagedApi, useApi, useMutation } from "./use-api";
 import type {
   ConversationResponse,
   CreateConversationRequest,
@@ -10,7 +10,7 @@ import type {
 } from "@/types/api";
 
 export function useConversations() {
-  return useApi<ConversationResponse[]>("/api/conversations");
+  return usePagedApi<ConversationResponse>("/api/conversations?size=1000");
 }
 
 export function useConversation(id: string | null) {

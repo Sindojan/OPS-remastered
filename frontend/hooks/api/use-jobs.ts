@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi, useMutation } from "./use-api";
+import { usePagedApi, useApi, useMutation } from "./use-api";
 import type {
   JobResponse,
   CreateJobRequest,
@@ -14,7 +14,7 @@ import type {
 } from "@/types/api";
 
 export function useJobs() {
-  return useApi<JobResponse[]>("/api/jobs");
+  return usePagedApi<JobResponse>("/api/jobs?size=1000");
 }
 
 export function useJob(id: string | null) {

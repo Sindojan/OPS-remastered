@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi, useMutation } from "./use-api";
+import { usePagedApi, useApi, useMutation } from "./use-api";
 import type {
   ArticleResponse,
   CreateArticleRequest,
@@ -16,7 +16,7 @@ import type {
 } from "@/types/api";
 
 export function useArticles() {
-  return useApi<ArticleResponse[]>("/api/articles");
+  return usePagedApi<ArticleResponse>("/api/articles?size=1000");
 }
 
 export function useArticle(id: string | null) {
@@ -36,7 +36,7 @@ export function useMovements(articleId: string | null) {
 }
 
 export function useSuppliers() {
-  return useApi<SupplierResponse[]>("/api/suppliers");
+  return usePagedApi<SupplierResponse>("/api/suppliers?size=1000");
 }
 
 export function useSupplier(id: string | null) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi, useMutation } from "./use-api";
+import { usePagedApi, useApi, useMutation } from "./use-api";
 import type {
   EmployeeResponse,
   CreateEmployeeRequest,
@@ -12,7 +12,7 @@ import type {
 } from "@/types/api";
 
 export function useEmployees() {
-  return useApi<EmployeeResponse[]>("/api/employees");
+  return usePagedApi<EmployeeResponse>("/api/employees?size=1000");
 }
 
 export function useEmployee(id: string | null) {

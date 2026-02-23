@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { apiClient } from "@/lib/api-client";
-import type { ApiResponse } from "@/types/api";
+import type { ApiResponse, PageResponse } from "@/types/api";
 
 interface UseApiState<T> {
   data: T | null;
@@ -29,6 +29,45 @@ export function useApi<T>(path: string | null): UseApiReturn<T> {
       const res = await apiClient.get<ApiResponse<T>>(path);
       if (!abortRef.current) {
         setState({ data: res.data, loading: false, error: null });
+      }
+    } catch (e) {
+      if (!abortRef.current) {
+        setState((s) => ({
+          ...s,
+          loading: false,
+          error: e instanceof Error ? e.message : "Unknown error",
+        }));
+      }
+    }
+  }, [path]);
+
+  useEffect(() => {
+    abortRef.current = false;
+    fetchData();
+    return () => {
+      abortRef.current = true;
+    };
+  }, [fetchData]);
+
+  return { ...state, refetch: fetchData };
+}
+
+/** Hook for paginated endpoints that return { content: T[], totalElements, ... } */
+export function usePagedApi<T>(path: string | null): UseApiReturn<T[]> {
+  const [state, setState] = useState<UseApiState<T[]>>({
+    data: null,
+    loading: !!path,
+    error: null,
+  });
+  const abortRef = useRef(false);
+
+  const fetchData = useCallback(async () => {
+    if (!path) return;
+    setState((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const res = await apiClient.get<ApiResponse<PageResponse<T>>>(path);
+      if (!abortRef.current) {
+        setState({ data: res.data.content, loading: false, error: null });
       }
     } catch (e) {
       if (!abortRef.current) {
