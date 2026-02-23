@@ -869,7 +869,7 @@ export default function EmployeeDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <form
-            onSubmit={absenceForm.handleSubmit(handleAbsenceSubmit)}
+            onSubmit={absenceForm.handleSubmit(handleAbsenceSubmit as any)}
             className="space-y-4"
           >
             <div className="space-y-1.5">
@@ -960,7 +960,7 @@ export default function EmployeeDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <form
-            onSubmit={qualForm.handleSubmit(handleQualificationSubmit)}
+            onSubmit={qualForm.handleSubmit(handleQualificationSubmit as any)}
             className="space-y-4"
           >
             <div className="space-y-1.5">
@@ -1030,7 +1030,7 @@ export default function EmployeeDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <form
-            onSubmit={manualEntryForm.handleSubmit(handleManualEntry)}
+            onSubmit={manualEntryForm.handleSubmit(handleManualEntry as any)}
             className="space-y-4"
           >
             <div className="space-y-1.5">

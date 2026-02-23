@@ -129,7 +129,7 @@ function renderPieLabel(props: any) {
     <text
       x={x}
       y={y}
-      fill="hsl(var(--muted-foreground))"
+      fill="var(--muted-foreground)"
       textAnchor={x > (cx ?? 0) ? "start" : "end"}
       dominantBaseline="central"
       className="font-mono text-xs"
@@ -589,18 +589,18 @@ export default function ReportsPage() {
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
+                    stroke="var(--border)"
                     vertical={false}
                   />
                   <XAxis
                     dataKey="label"
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                     tickLine={false}
                     axisLine={false}
                     interval="preserveStartEnd"
                   />
                   <YAxis
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                     tickLine={false}
                     axisLine={false}
                     allowDecimals={false}
@@ -624,7 +624,7 @@ export default function ReportsPage() {
                     activeDot={{
                       r: 4,
                       fill: "#00D4B4",
-                      stroke: "hsl(var(--card))",
+                      stroke: "var(--card)",
                       strokeWidth: 2,
                     }}
                   />
@@ -652,13 +652,13 @@ export default function ReportsPage() {
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
+                      stroke="var(--border)"
                       horizontal={false}
                     />
                     <XAxis
                       type="number"
                       tick={{
-                        fill: "hsl(var(--muted-foreground))",
+                        fill: "var(--muted-foreground)",
                         fontSize: 10,
                       }}
                       tickLine={false}
@@ -669,7 +669,7 @@ export default function ReportsPage() {
                       type="category"
                       dataKey="name"
                       tick={{
-                        fill: "hsl(var(--muted-foreground))",
+                        fill: "var(--muted-foreground)",
                         fontSize: 11,
                       }}
                       tickLine={false}

@@ -470,7 +470,7 @@ export default function MachinesPage() {
             </DialogDescription>
           </DialogHeader>
           <form
-            onSubmit={form.handleSubmit(onCreateSubmit)}
+            onSubmit={form.handleSubmit(onCreateSubmit as any)}
             className="space-y-4"
           >
             <div className="grid grid-cols-2 gap-4">
