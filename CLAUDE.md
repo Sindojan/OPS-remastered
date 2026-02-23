@@ -101,7 +101,12 @@ sindojan_ops_remastered/
         ├── events/                  # Domain Events, Scheduled Triggers
         │   └── dto/
         └── agentinfra/              # Agent Templates, Instances, Runs, Steps
-            └── dto/
+            ├── dto/
+            ├── llm/                 # LLM Provider, Config, Anthropic-Integration
+            ├── tools/               # Tool Registry + 13 Domain Tools
+            │   └── impl/
+            ├── execution/           # ReAct-Loop, Orchestrator, SystemPromptBuilder
+            └── events/              # Event Subscriptions, Scheduled Run Executor
 ```
 
 ## Abgeschlossene Tasks
@@ -143,6 +148,17 @@ sindojan_ops_remastered/
 | TASK-BE-006g | Inbox & Support (Conversations, Messages, Tags, Links) | ✅ |
 | TASK-BE-006h | Agent Infrastructure (Templates, Instances, Runs, Steps, Incidents) | ✅ |
 | Events | Domain Events & Scheduled Triggers | ✅ |
+
+### Block 6: Agent Infrastructure & LLM-Integration ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-007 | LLM Provider Abstraktionsschicht (Anthropic, AES-256-GCM) | `7bdf7ea` |
+| TASK-BE-008 | Tool Registry (13 Domain Tools) | `7bdf7ea` |
+| TASK-BE-009 | Agent Execution Engine (ReAct Loop, Delegation) | `7bdf7ea` |
+| TASK-BE-010 | Seed Agent Templates & Instances (CEO + 7 Leads) | `7bdf7ea` |
+| TASK-BE-011 | Event Routing & Scheduler | `7bdf7ea` |
+| TASK-FE-008 | LLM Settings UI + Agent Instances Tab | `67821f2` |
+| TASK-FIX-001 | CORS Fix, System-Test, Bugfixes | `67821f2` |
 
 ## Arbeitsweise mit Agents
 
@@ -199,6 +215,7 @@ Zuordnung:
 | Agent Templates | `/api/agent-templates` | authenticated |
 | Agent Instances | `/api/agent-instances` | authenticated |
 | Agent Runs | `/api/agent-runs` | authenticated |
+| LLM Config | `/api/settings/llm` | authenticated |
 | Events | `/api/events` | authenticated |
 | Triggers | `/api/scheduled-triggers` | authenticated |
 | Health | `/actuator/health` | public |
@@ -211,6 +228,10 @@ Zuordnung:
 | tenant | V1__init_tenant_schema.sql | Platzhalter |
 | tenant | V2__users_and_auth.sql | Users, Refresh Token Blacklist, Default Admin |
 | tenant | V3__full_schema.sql | Alle Domänen-Tabellen, 25 Enums, ~80 Indizes |
+| tenant | V4__llm_config.sql | tenant_llm_config (Provider, API Key encrypted, Model) |
+| tenant | V5__seed_agent_templates.sql | 8 Agent Templates (CEO + 7 Leads) |
+| tenant | V6__seed_agent_instances.sql | 8 Agent Instances (PERSISTENT, ACTIVE) |
+| tenant | V7__event_subscriptions_and_triggers.sql | Event Subscriptions + Scheduled Triggers |
 
 ## Default Admin
 
@@ -225,7 +246,7 @@ Zuordnung:
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-02-20
-**Session:** Block 1-5 komplett (Frontend Foundation + Shared Components + Backend Grundarchitektur + Auth/Tenant + vollständige Domänenarchitektur)
-**Status:** Frontend läuft (Port 4201), Backend kompiliert mit 342 Java-Dateien (Port 8080, braucht PostgreSQL + MinIO)
-**Nächster Block:** Agent Infrastructure mit LLM-Integration + Event-Layer verdrahten
+**Datum:** 2026-02-23
+**Session:** Block 6 komplett (Agent Infrastructure + LLM-Integration + Event-Routing + Frontend Settings)
+**Status:** Backend ~400 Java-Dateien, alle APIs getestet und funktional. Frontend hat Login, Settings (LLM Config + Agent Instances). Agent ReAct-Loop funktioniert (braucht Anthropic API Key).
+**Nächster Block:** Frontend Domain-Screens (Dashboard, Produktion, Lager, Maschinen, etc.)
