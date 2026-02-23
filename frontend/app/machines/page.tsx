@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { toast } from "sonner";
 import { useMachines, useMachineMutations } from "@/hooks/api/use-machines";
 import type { MachineResponse, MachineStatus } from "@/types/api";
 import { formatDate, humanizeStatus } from "@/lib/format";
@@ -224,35 +225,40 @@ export default function MachinesPage() {
 
   const onCreateSubmit = useCallback(
     async (data: CreateMachineFormData) => {
-      const payload = {
-        name: data.name,
-        machineNumber: data.machineNumber,
-        type: data.type || undefined,
-        stationId: data.stationId || undefined,
-        capacityPerHour:
-          data.capacityPerHour && data.capacityPerHour.trim()
-            ? Number(data.capacityPerHour)
-            : undefined,
-        manufacturer: data.manufacturer || undefined,
-        model: data.model || undefined,
-        serialNumber: data.serialNumber || undefined,
-        purchaseDate: data.purchaseDate || undefined,
-      };
-      const result = await mutations.createMachine(payload);
-      if (result) {
-        setCreateOpen(false);
-        form.reset({
-          name: "",
-          machineNumber: `M-${Date.now().toString(36).toUpperCase().slice(-6)}`,
-          type: "",
-          stationId: "",
-          capacityPerHour: "",
-          manufacturer: "",
-          model: "",
-          serialNumber: "",
-          purchaseDate: "",
-        });
-        refetch();
+      try {
+        const payload = {
+          name: data.name,
+          machineNumber: data.machineNumber,
+          type: data.type || undefined,
+          stationId: data.stationId || undefined,
+          capacityPerHour:
+            data.capacityPerHour && data.capacityPerHour.trim()
+              ? Number(data.capacityPerHour)
+              : undefined,
+          manufacturer: data.manufacturer || undefined,
+          model: data.model || undefined,
+          serialNumber: data.serialNumber || undefined,
+          purchaseDate: data.purchaseDate || undefined,
+        };
+        const result = await mutations.createMachine(payload);
+        if (result) {
+          toast.success("Machine created");
+          setCreateOpen(false);
+          form.reset({
+            name: "",
+            machineNumber: `M-${Date.now().toString(36).toUpperCase().slice(-6)}`,
+            type: "",
+            stationId: "",
+            capacityPerHour: "",
+            manufacturer: "",
+            model: "",
+            serialNumber: "",
+            purchaseDate: "",
+          });
+          refetch();
+        }
+      } catch (err) {
+        toast.error("Failed to create machine", { description: err instanceof Error ? err.message : "Unknown error" });
       }
     },
     [mutations, form, refetch]
@@ -260,28 +266,38 @@ export default function MachinesPage() {
 
   const handleChangeStatus = useCallback(async () => {
     if (!statusTarget) return;
-    const result = await mutations.changeStatus(statusTarget.id, newStatus);
-    if (result) {
-      setStatusDialogOpen(false);
-      setStatusTarget(null);
-      refetch();
+    try {
+      const result = await mutations.changeStatus(statusTarget.id, newStatus);
+      if (result) {
+        toast.success("Machine status updated");
+        setStatusDialogOpen(false);
+        setStatusTarget(null);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to change status", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [mutations, statusTarget, newStatus, refetch]);
 
   const handleReportIncident = useCallback(async () => {
     if (!incidentTarget) return;
-    const result = await mutations.reportIncident(incidentTarget.id, {
-      type: incidentType,
-      description: incidentDescription || undefined,
-      severity: incidentSeverity as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
-    });
-    if (result) {
-      setIncidentDialogOpen(false);
-      setIncidentTarget(null);
-      setIncidentType("");
-      setIncidentDescription("");
-      setIncidentSeverity("MEDIUM");
-      refetch();
+    try {
+      const result = await mutations.reportIncident(incidentTarget.id, {
+        type: incidentType,
+        description: incidentDescription || undefined,
+        severity: incidentSeverity as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+      });
+      if (result) {
+        toast.success("Incident reported");
+        setIncidentDialogOpen(false);
+        setIncidentTarget(null);
+        setIncidentType("");
+        setIncidentDescription("");
+        setIncidentSeverity("MEDIUM");
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to report incident", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [
     mutations,

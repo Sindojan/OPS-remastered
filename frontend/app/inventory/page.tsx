@@ -57,6 +57,7 @@ import type {
   CreateSupplierRequest,
 } from "@/types/api";
 import { formatNumber, humanizeStatus } from "@/lib/format";
+import { toast } from "sonner";
 
 // ─── Article Status Helpers ─────────────────────────────
 
@@ -288,18 +289,23 @@ export default function InventoryPage() {
       reorderPoint: values.reorderPoint,
       status: values.status,
     };
-    const result = await mutations.createArticle(req);
-    if (result) {
-      setArticleDialogOpen(false);
-      articleForm.reset({
-        articleNumber: `ART-${Date.now().toString(36).toUpperCase()}`,
-        name: "",
-        description: "",
-        minStock: 0,
-        reorderPoint: 0,
-        status: "ACTIVE",
-      });
-      refetchArticles();
+    try {
+      const result = await mutations.createArticle(req);
+      if (result) {
+        toast.success("Article created successfully");
+        setArticleDialogOpen(false);
+        articleForm.reset({
+          articleNumber: `ART-${Date.now().toString(36).toUpperCase()}`,
+          name: "",
+          description: "",
+          minStock: 0,
+          reorderPoint: 0,
+          status: "ACTIVE",
+        });
+        refetchArticles();
+      }
+    } catch (err) {
+      toast.error("Failed to create article", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 
@@ -312,11 +318,16 @@ export default function InventoryPage() {
       address: values.address || undefined,
       taxId: values.taxId || undefined,
     };
-    const result = await mutations.createSupplier(req);
-    if (result) {
-      setSupplierDialogOpen(false);
-      supplierForm.reset();
-      refetchSuppliers();
+    try {
+      const result = await mutations.createSupplier(req);
+      if (result) {
+        toast.success("Supplier created successfully");
+        setSupplierDialogOpen(false);
+        supplierForm.reset();
+        refetchSuppliers();
+      }
+    } catch (err) {
+      toast.error("Failed to create supplier", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 

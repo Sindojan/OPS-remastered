@@ -29,11 +29,25 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(errorBody || `HTTP ${response.status}`);
+      let msg = `HTTP ${response.status}`;
+      try {
+        const errorBody = await response.json();
+        msg = errorBody?.message || JSON.stringify(errorBody);
+      } catch {
+        const text = await response.text();
+        if (text) msg = text;
+      }
+      throw new Error(msg);
     }
 
-    return response.json();
+    const json = await response.json();
+
+    // Handle ApiResponse wrapper with success: false
+    if (json && typeof json === "object" && "success" in json && !json.success) {
+      throw new Error(json.message || "Operation failed");
+    }
+
+    return json;
   }
 
   async get<T>(path: string): Promise<T> {

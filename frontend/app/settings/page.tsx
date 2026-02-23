@@ -36,6 +36,7 @@ import type {
   AgentInstance,
   AgentTemplate,
 } from "@/types/api";
+import { toast } from "sonner";
 
 // ============ Types for internal use ============
 
@@ -148,14 +149,13 @@ function LlmConfigTab() {
         apiKey: apiKey || undefined,
         defaultModel,
       });
-      setSaveMessage({ type: "success", text: "Configuration saved successfully" });
+      toast.success("Configuration saved successfully");
       setHasApiKey(true);
       setApiKey("");
       await fetchModels();
     } catch (err) {
-      setSaveMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Failed to save configuration",
+      toast.error("Failed to save configuration", {
+        description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
       setSaving(false);
@@ -167,14 +167,10 @@ function LlmConfigTab() {
     setSaveMessage(null);
     try {
       await fetchModels();
-      setSaveMessage({
-        type: "success",
-        text: `Connection successful. ${models.length} models available.`,
-      });
+      toast.success(`Connection successful. ${models.length} models available.`);
     } catch (err) {
-      setSaveMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Connection test failed",
+      toast.error("Connection test failed", {
+        description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
       setTesting(false);
@@ -425,7 +421,11 @@ function AgentInstancesTab() {
           inst.id === instanceId ? { ...inst, model: newModel } : inst
         )
       );
-    } catch {
+      toast.success("Model updated");
+    } catch (err) {
+      toast.error("Failed to update model", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
       // Revert on error - refetch
       await fetchData();
     } finally {

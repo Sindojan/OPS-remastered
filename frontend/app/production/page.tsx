@@ -43,6 +43,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -190,20 +191,25 @@ export default function ProductionOverviewPage() {
   // ─── Handlers ─────────────────────────────────────────
   const handleCreateJob = useCallback(
     async (data: CreateJobFormData) => {
-      const req: CreateJobRequest = {
-        jobNumber: data.jobNumber,
-        title: data.title,
-        priority: data.priority,
-        quantity: data.quantity,
-        ...(data.customerId ? { customerId: data.customerId } : {}),
-        ...(data.deadline ? { deadline: data.deadline } : {}),
-        ...(data.notes ? { notes: data.notes } : {}),
-      };
-      const result = await createJob(req);
-      if (result) {
-        setCreateOpen(false);
-        form.reset({ jobNumber: `JOB-${Date.now()}`, title: "", customerId: "", priority: 3, quantity: 1, deadline: "", notes: "" });
-        refetch();
+      try {
+        const req: CreateJobRequest = {
+          jobNumber: data.jobNumber,
+          title: data.title,
+          priority: data.priority,
+          quantity: data.quantity,
+          ...(data.customerId ? { customerId: data.customerId } : {}),
+          ...(data.deadline ? { deadline: new Date(data.deadline).toISOString() } : {}),
+          ...(data.notes ? { notes: data.notes } : {}),
+        };
+        const result = await createJob(req);
+        if (result) {
+          toast.success("Job created");
+          setCreateOpen(false);
+          form.reset({ jobNumber: `JOB-${Date.now()}`, title: "", customerId: "", priority: 3, quantity: 1, deadline: "", notes: "" });
+          refetch();
+        }
+      } catch (err) {
+        toast.error("Failed to create job", { description: err instanceof Error ? err.message : "Unknown error" });
       }
     },
     [createJob, form, refetch]
@@ -211,30 +217,45 @@ export default function ProductionOverviewPage() {
 
   const handleDeleteJob = useCallback(async () => {
     if (!deleteTarget) return;
-    await deleteJob(deleteTarget.id);
-    setDeleteTarget(null);
-    refetch();
+    try {
+      await deleteJob(deleteTarget.id);
+      toast.success("Job deleted");
+      setDeleteTarget(null);
+      refetch();
+    } catch (err) {
+      toast.error("Failed to delete job", { description: err instanceof Error ? err.message : "Unknown error" });
+    }
   }, [deleteTarget, deleteJob, refetch]);
 
   const handleBulkDelete = useCallback(async () => {
     if (!bulkDeleteIds) return;
-    for (const id of bulkDeleteIds) {
-      await deleteJob(id);
+    try {
+      for (const id of bulkDeleteIds) {
+        await deleteJob(id);
+      }
+      toast.success(`${bulkDeleteIds.length} job(s) deleted`);
+      setBulkDeleteIds(null);
+      refetch();
+    } catch (err) {
+      toast.error("Failed to delete jobs", { description: err instanceof Error ? err.message : "Unknown error" });
     }
-    setBulkDeleteIds(null);
-    refetch();
   }, [bulkDeleteIds, deleteJob, refetch]);
 
   const handleChangeStatus = useCallback(async () => {
     if (!statusTarget || !selectedNewStatus) return;
-    await changeStatus(statusTarget.id, {
-      newStatus: selectedNewStatus as JobStatus,
-      reason: statusReason || undefined,
-    });
-    setStatusTarget(null);
-    setSelectedNewStatus("");
-    setStatusReason("");
-    refetch();
+    try {
+      await changeStatus(statusTarget.id, {
+        newStatus: selectedNewStatus as JobStatus,
+        reason: statusReason || undefined,
+      });
+      toast.success("Job status updated");
+      setStatusTarget(null);
+      setSelectedNewStatus("");
+      setStatusReason("");
+      refetch();
+    } catch (err) {
+      toast.error("Failed to change status", { description: err instanceof Error ? err.message : "Unknown error" });
+    }
   }, [statusTarget, selectedNewStatus, statusReason, changeStatus, refetch]);
 
   // ─── Columns ──────────────────────────────────────────

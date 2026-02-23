@@ -125,7 +125,7 @@ export function useMutation<TReq, TRes = unknown>() {
         const msg = e instanceof Error ? e.message : "Unknown error";
         setError(msg);
         setLoading(false);
-        return null;
+        throw e;
       }
     },
     []

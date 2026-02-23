@@ -62,6 +62,7 @@ import type {
   AbsenceType,
 } from "@/types/api";
 import { formatDate, formatDateTime, formatTime, humanizeStatus } from "@/lib/format";
+import { toast } from "sonner";
 
 // ─── Schemas ────────────────────────────────────────────
 
@@ -292,34 +293,44 @@ export default function EmployeeDetailPage() {
 
   const handleSaveEdit = useCallback(async () => {
     if (!employee) return;
-    const result = await mutations.updateEmployee(employee.id, {
-      employeeNumber: employee.employeeNumber,
-      firstName: editFirstName,
-      lastName: editLastName,
-      email: editEmail || undefined,
-      phone: editPhone || undefined,
-      role: editRole || undefined,
-    });
-    if (result) {
-      setEditMode(false);
-      refetch();
+    try {
+      const result = await mutations.updateEmployee(employee.id, {
+        employeeNumber: employee.employeeNumber,
+        firstName: editFirstName,
+        lastName: editLastName,
+        email: editEmail || undefined,
+        phone: editPhone || undefined,
+        role: editRole || undefined,
+      });
+      if (result) {
+        toast.success("Employee updated successfully");
+        setEditMode(false);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to update employee", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [employee, editFirstName, editLastName, editEmail, editPhone, editRole, mutations, refetch]);
 
   const handleAbsenceSubmit = useCallback(
     async (data: AbsenceFormData) => {
       if (!employeeId) return;
-      const result = await mutations.createAbsence({
-        employeeId,
-        type: data.type,
-        fromDate: data.fromDate,
-        toDate: data.toDate,
-        notes: data.notes || undefined,
-      });
-      if (result) {
-        setAbsenceDialogOpen(false);
-        absenceForm.reset();
-        refetchAbsences();
+      try {
+        const result = await mutations.createAbsence({
+          employeeId,
+          type: data.type,
+          fromDate: data.fromDate,
+          toDate: data.toDate,
+          notes: data.notes || undefined,
+        });
+        if (result) {
+          toast.success("Absence request submitted");
+          setAbsenceDialogOpen(false);
+          absenceForm.reset();
+          refetchAbsences();
+        }
+      } catch (err) {
+        toast.error("Failed to submit absence", { description: err instanceof Error ? err.message : "Unknown error" });
       }
     },
     [employeeId, mutations, absenceForm, refetchAbsences]
@@ -328,15 +339,20 @@ export default function EmployeeDetailPage() {
   const handleQualificationSubmit = useCallback(
     async (data: QualificationFormData) => {
       if (!employeeId) return;
-      const result = await mutations.addQualification(employeeId, {
-        qualification: data.qualification,
-        certifiedAt: data.certifiedAt || undefined,
-        expiresAt: data.expiresAt || undefined,
-      });
-      if (result) {
-        setQualDialogOpen(false);
-        qualForm.reset();
-        refetchQuals();
+      try {
+        const result = await mutations.addQualification(employeeId, {
+          qualification: data.qualification,
+          certifiedAt: data.certifiedAt || undefined,
+          expiresAt: data.expiresAt || undefined,
+        });
+        if (result) {
+          toast.success("Qualification added successfully");
+          setQualDialogOpen(false);
+          qualForm.reset();
+          refetchQuals();
+        }
+      } catch (err) {
+        toast.error("Failed to add qualification", { description: err instanceof Error ? err.message : "Unknown error" });
       }
     },
     [employeeId, mutations, qualForm, refetchQuals]
@@ -345,30 +361,35 @@ export default function EmployeeDetailPage() {
   const handleManualEntry = useCallback(
     async (data: ManualEntryFormData) => {
       if (!employeeId) return;
-      // Use the appropriate mutation based on type
-      let result = null;
-      switch (data.type) {
-        case "CLOCK_IN":
-          result = await mutations.clockIn(employeeId);
-          break;
-        case "CLOCK_OUT":
-          result = await mutations.clockOut(employeeId);
-          break;
-        case "JOB_START":
-          if (data.jobId) {
-            result = await mutations.jobStart(employeeId, data.jobId);
-          }
-          break;
-        case "JOB_END":
-          if (data.jobId) {
-            result = await mutations.jobEnd(employeeId, data.jobId);
-          }
-          break;
-      }
-      if (result !== undefined) {
-        setManualEntryDialogOpen(false);
-        manualEntryForm.reset();
-        refetchTime();
+      try {
+        // Use the appropriate mutation based on type
+        let result = null;
+        switch (data.type) {
+          case "CLOCK_IN":
+            result = await mutations.clockIn(employeeId);
+            break;
+          case "CLOCK_OUT":
+            result = await mutations.clockOut(employeeId);
+            break;
+          case "JOB_START":
+            if (data.jobId) {
+              result = await mutations.jobStart(employeeId, data.jobId);
+            }
+            break;
+          case "JOB_END":
+            if (data.jobId) {
+              result = await mutations.jobEnd(employeeId, data.jobId);
+            }
+            break;
+        }
+        if (result !== undefined) {
+          toast.success("Time entry created successfully");
+          setManualEntryDialogOpen(false);
+          manualEntryForm.reset();
+          refetchTime();
+        }
+      } catch (err) {
+        toast.error("Failed to create time entry", { description: err instanceof Error ? err.message : "Unknown error" });
       }
     },
     [employeeId, mutations, manualEntryForm, refetchTime]
@@ -376,16 +397,26 @@ export default function EmployeeDetailPage() {
 
   const handleApproveAbsence = useCallback(
     async (id: string) => {
-      await mutations.approveAbsence(id);
-      refetchAbsences();
+      try {
+        await mutations.approveAbsence(id);
+        toast.success("Absence approved");
+        refetchAbsences();
+      } catch (err) {
+        toast.error("Failed to approve absence", { description: err instanceof Error ? err.message : "Unknown error" });
+      }
     },
     [mutations, refetchAbsences]
   );
 
   const handleRejectAbsence = useCallback(
     async (id: string) => {
-      await mutations.rejectAbsence(id);
-      refetchAbsences();
+      try {
+        await mutations.rejectAbsence(id);
+        toast.success("Absence rejected");
+        refetchAbsences();
+      } catch (err) {
+        toast.error("Failed to reject absence", { description: err instanceof Error ? err.message : "Unknown error" });
+      }
     },
     [mutations, refetchAbsences]
   );

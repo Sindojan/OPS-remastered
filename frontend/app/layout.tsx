@@ -3,6 +3,7 @@ import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AppShell>{children}</AppShell>
+          <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

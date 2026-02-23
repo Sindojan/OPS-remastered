@@ -70,6 +70,7 @@ import type {
   MaintenanceType,
   SeverityLevel,
 } from "@/types/api";
+import { toast } from "sonner";
 import {
   formatDate,
   formatDateTime,
@@ -155,27 +156,37 @@ export default function MachineDetailPage() {
 
   const handleChangeStatus = useCallback(async () => {
     if (!machine) return;
-    const result = await mutations.changeStatus(machine.id, newStatus);
-    if (result) {
-      setStatusDialogOpen(false);
-      refetch();
+    try {
+      const result = await mutations.changeStatus(machine.id, newStatus);
+      if (result) {
+        toast.success("Machine status updated");
+        setStatusDialogOpen(false);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to change status", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [mutations, machine, newStatus, refetch]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!machine) return;
-    const result = await mutations.updateMachine(machine.id, {
-      name: editName || machine.name,
-      machineNumber: machine.machineNumber,
-      type: editType || undefined,
-      capacityPerHour: editCapacity ? Number(editCapacity) : undefined,
-      manufacturer: editManufacturer || undefined,
-      model: editModel || undefined,
-      serialNumber: editSerial || undefined,
-    });
-    if (result) {
-      setEditMode(false);
-      refetch();
+    try {
+      const result = await mutations.updateMachine(machine.id, {
+        name: editName || machine.name,
+        machineNumber: machine.machineNumber,
+        type: editType || undefined,
+        capacityPerHour: editCapacity ? Number(editCapacity) : undefined,
+        manufacturer: editManufacturer || undefined,
+        model: editModel || undefined,
+        serialNumber: editSerial || undefined,
+      });
+      if (result) {
+        toast.success("Machine updated");
+        setEditMode(false);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to update machine", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [
     mutations,
@@ -202,21 +213,26 @@ export default function MachineDetailPage() {
 
   const handleCreateInterval = useCallback(async () => {
     if (!machine) return;
-    const result = await mutations.createInterval({
-      machineId: machine.id,
-      type: intervalType,
-      intervalDays: intervalType === "TIME_BASED" && intervalDays ? Number(intervalDays) : undefined,
-      intervalHours: intervalType === "HOURS_BASED" && intervalHours ? Number(intervalHours) : undefined,
-      description: intervalDescription || undefined,
-      nextDueAt: intervalNextDue || undefined,
-    });
-    if (result) {
-      setIntervalDialogOpen(false);
-      setIntervalDays("");
-      setIntervalHours("");
-      setIntervalDescription("");
-      setIntervalNextDue("");
-      refetchIntervals();
+    try {
+      const result = await mutations.createInterval({
+        machineId: machine.id,
+        type: intervalType,
+        intervalDays: intervalType === "TIME_BASED" && intervalDays ? Number(intervalDays) : undefined,
+        intervalHours: intervalType === "HOURS_BASED" && intervalHours ? Number(intervalHours) : undefined,
+        description: intervalDescription || undefined,
+        nextDueAt: intervalNextDue || undefined,
+      });
+      if (result) {
+        toast.success("Maintenance interval created");
+        setIntervalDialogOpen(false);
+        setIntervalDays("");
+        setIntervalHours("");
+        setIntervalDescription("");
+        setIntervalNextDue("");
+        refetchIntervals();
+      }
+    } catch (err) {
+      toast.error("Failed to create interval", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [
     mutations,
@@ -231,20 +247,25 @@ export default function MachineDetailPage() {
 
   const handlePerformMaintenance = useCallback(async () => {
     if (!machine) return;
-    const result = await mutations.performMaintenance({
-      machineId: machine.id,
-      intervalId: performIntervalId || undefined,
-      performedBy: "current-user",
-      durationMinutes: Number(performDuration) || 0,
-      notes: performNotes || undefined,
-    });
-    if (result) {
-      setPerformDialogOpen(false);
-      setPerformIntervalId(null);
-      setPerformDuration("");
-      setPerformNotes("");
-      refetchIntervals();
-      refetchRecords();
+    try {
+      const result = await mutations.performMaintenance({
+        machineId: machine.id,
+        intervalId: performIntervalId || undefined,
+        performedBy: "current-user",
+        durationMinutes: Number(performDuration) || 0,
+        notes: performNotes || undefined,
+      });
+      if (result) {
+        toast.success("Maintenance recorded");
+        setPerformDialogOpen(false);
+        setPerformIntervalId(null);
+        setPerformDuration("");
+        setPerformNotes("");
+        refetchIntervals();
+        refetchRecords();
+      }
+    } catch (err) {
+      toast.error("Failed to record maintenance", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [
     mutations,
@@ -258,17 +279,22 @@ export default function MachineDetailPage() {
 
   const handleReportIncident = useCallback(async () => {
     if (!machine) return;
-    const result = await mutations.reportIncident(machine.id, {
-      type: incidentType,
-      description: incidentDescription || undefined,
-      severity: incidentSeverity,
-    });
-    if (result) {
-      setIncidentDialogOpen(false);
-      setIncidentType("");
-      setIncidentDescription("");
-      setIncidentSeverity("MEDIUM");
-      refetchIncidents();
+    try {
+      const result = await mutations.reportIncident(machine.id, {
+        type: incidentType,
+        description: incidentDescription || undefined,
+        severity: incidentSeverity,
+      });
+      if (result) {
+        toast.success("Incident reported");
+        setIncidentDialogOpen(false);
+        setIncidentType("");
+        setIncidentDescription("");
+        setIncidentSeverity("MEDIUM");
+        refetchIncidents();
+      }
+    } catch (err) {
+      toast.error("Failed to report incident", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [
     mutations,
@@ -281,16 +307,21 @@ export default function MachineDetailPage() {
 
   const handleResolveIncident = useCallback(async () => {
     if (!machine || !resolveTarget) return;
-    const result = await mutations.resolveIncident(
-      machine.id,
-      resolveTarget.id,
-      resolveNotes || undefined
-    );
-    if (result) {
-      setResolveDialogOpen(false);
-      setResolveTarget(null);
-      setResolveNotes("");
-      refetchIncidents();
+    try {
+      const result = await mutations.resolveIncident(
+        machine.id,
+        resolveTarget.id,
+        resolveNotes || undefined
+      );
+      if (result) {
+        toast.success("Incident resolved");
+        setResolveDialogOpen(false);
+        setResolveTarget(null);
+        setResolveNotes("");
+        refetchIncidents();
+      }
+    } catch (err) {
+      toast.error("Failed to resolve incident", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [mutations, machine, resolveTarget, resolveNotes, refetchIncidents]);
 

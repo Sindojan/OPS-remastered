@@ -61,6 +61,7 @@ import {
   User,
   Hash,
 } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -160,15 +161,20 @@ export default function JobDetailPage() {
   const handleSave = useCallback(
     async (data: EditJobFormData) => {
       if (!job) return;
-      const req: UpdateJobRequest = {
-        title: data.title,
-        priority: data.priority,
-        ...(data.deadline ? { deadline: data.deadline } : {}),
-        ...(data.notes ? { notes: data.notes } : {}),
-      };
-      await updateJob(job.id, req);
-      setEditing(false);
-      refetch();
+      try {
+        const req: UpdateJobRequest = {
+          title: data.title,
+          priority: data.priority,
+          ...(data.deadline ? { deadline: data.deadline } : {}),
+          ...(data.notes ? { notes: data.notes } : {}),
+        };
+        await updateJob(job.id, req);
+        toast.success("Job updated");
+        setEditing(false);
+        refetch();
+      } catch (err) {
+        toast.error("Failed to update job", { description: err instanceof Error ? err.message : "Unknown error" });
+      }
     },
     [job, updateJob, refetch]
   );
@@ -177,17 +183,22 @@ export default function JobDetailPage() {
   const handleAddQC = useCallback(
     async (data: QualityCheckFormData) => {
       if (!job) return;
-      const req: CreateQualityCheckRequest = {
-        jobId: job.id,
-        checkType: data.checkType,
-        result: data.result,
-        defectCount: data.defectCount,
-        ...(data.notes ? { notes: data.notes } : {}),
-      };
-      await createQualityCheck(req);
-      setAddingQC(false);
-      qcForm.reset({ checkType: "", result: "PASS", defectCount: 0, notes: "" });
-      refetchQC();
+      try {
+        const req: CreateQualityCheckRequest = {
+          jobId: job.id,
+          checkType: data.checkType,
+          result: data.result,
+          defectCount: data.defectCount,
+          ...(data.notes ? { notes: data.notes } : {}),
+        };
+        await createQualityCheck(req);
+        toast.success("Quality check added");
+        setAddingQC(false);
+        qcForm.reset({ checkType: "", result: "PASS", defectCount: 0, notes: "" });
+        refetchQC();
+      } catch (err) {
+        toast.error("Failed to add quality check", { description: err instanceof Error ? err.message : "Unknown error" });
+      }
     },
     [job, createQualityCheck, qcForm, refetchQC]
   );

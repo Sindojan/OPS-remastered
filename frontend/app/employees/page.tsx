@@ -45,6 +45,7 @@ import {
 import { useEmployees, usePeopleMutations } from "@/hooks/api/use-people";
 import type { EmployeeResponse, EmployeeStatus } from "@/types/api";
 import { formatDate, humanizeStatus } from "@/lib/format";
+import { toast } from "sonner";
 
 // ─── Schemas ────────────────────────────────────────────
 
@@ -222,20 +223,25 @@ export default function EmployeesPage() {
         hireDate: data.hireDate || undefined,
         stationId: data.stationId || undefined,
       };
-      const result = await mutations.createEmployee(payload);
-      if (result) {
-        setCreateOpen(false);
-        form.reset({
-          employeeNumber: `EMP-${Date.now().toString(36).toUpperCase().slice(-6)}`,
-          firstName: "",
-          lastName: "",
-          email: "",
-          phone: "",
-          role: "",
-          hireDate: "",
-          stationId: "",
-        });
-        refetch();
+      try {
+        const result = await mutations.createEmployee(payload);
+        if (result) {
+          toast.success("Employee created successfully");
+          setCreateOpen(false);
+          form.reset({
+            employeeNumber: `EMP-${Date.now().toString(36).toUpperCase().slice(-6)}`,
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            role: "",
+            hireDate: "",
+            stationId: "",
+          });
+          refetch();
+        }
+      } catch (err) {
+        toast.error("Failed to create employee", { description: err instanceof Error ? err.message : "Unknown error" });
       }
     },
     [mutations, form, refetch]
@@ -243,14 +249,19 @@ export default function EmployeesPage() {
 
   const handleDeactivate = useCallback(async () => {
     if (!deactivateTarget) return;
-    const result = await mutations.updateEmployee(deactivateTarget.id, {
-      firstName: deactivateTarget.firstName,
-      lastName: deactivateTarget.lastName,
-      employeeNumber: deactivateTarget.employeeNumber,
-    });
-    if (result) {
-      setDeactivateTarget(null);
-      refetch();
+    try {
+      const result = await mutations.updateEmployee(deactivateTarget.id, {
+        firstName: deactivateTarget.firstName,
+        lastName: deactivateTarget.lastName,
+        employeeNumber: deactivateTarget.employeeNumber,
+      });
+      if (result) {
+        toast.success("Employee deactivated successfully");
+        setDeactivateTarget(null);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to deactivate employee", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   }, [mutations, deactivateTarget, refetch]);
 

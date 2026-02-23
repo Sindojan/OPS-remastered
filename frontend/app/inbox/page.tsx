@@ -62,6 +62,7 @@ import type {
 } from "@/types/api";
 import { formatRelativeDate, formatDateTime, humanizeStatus } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ─── Constants ──────────────────────────────────────────
 
@@ -196,67 +197,106 @@ export default function InboxPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onCreateSubmit = useCallback(async (data: CreateConversationFormData) => {
-    const result = await mutations.createConversation({
-      subject: data.subject,
-      customerId: data.customerId || undefined,
-      priority: (data.priority as ConversationPriority) || "NORMAL",
-      source: "MANUAL",
-    });
-    if (result) {
-      setCreateOpen(false);
-      form.reset({
-        subject: "",
-        customerId: "",
-        priority: "NORMAL",
+    try {
+      const result = await mutations.createConversation({
+        subject: data.subject,
+        customerId: data.customerId || undefined,
+        priority: (data.priority as ConversationPriority) || "NORMAL",
         source: "MANUAL",
       });
-      refetch();
+      if (result) {
+        toast.success("Conversation created");
+        setCreateOpen(false);
+        form.reset({
+          subject: "",
+          customerId: "",
+          priority: "NORMAL",
+          source: "MANUAL",
+        });
+        await refetch();
+        // Auto-select the newly created conversation
+        if (result.id) {
+          handleSelectConversation(result.id);
+        }
+      }
+    } catch (err) {
+      toast.error("Failed to create conversation", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     }
-  }, [mutations, form, refetch]);
+  }, [mutations, form, refetch, handleSelectConversation]);
 
   const handleChangeStatus = useCallback(async () => {
     if (!selectedId) return;
-    const result = await mutations.updateStatus(selectedId, newStatus);
-    if (result) {
-      setStatusDialogOpen(false);
-      refetch();
-      refetchConversation();
+    try {
+      const result = await mutations.updateStatus(selectedId, newStatus);
+      if (result) {
+        toast.success("Status updated");
+        setStatusDialogOpen(false);
+        refetch();
+        refetchConversation();
+      }
+    } catch (err) {
+      toast.error("Failed to update status", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     }
   }, [mutations, selectedId, newStatus, refetch, refetchConversation]);
 
   const handleChangePriority = useCallback(async () => {
     if (!selectedId) return;
-    const result = await mutations.updatePriority(selectedId, newPriority);
-    if (result) {
-      setPriorityDialogOpen(false);
-      refetch();
-      refetchConversation();
+    try {
+      const result = await mutations.updatePriority(selectedId, newPriority);
+      if (result) {
+        toast.success("Priority updated");
+        setPriorityDialogOpen(false);
+        refetch();
+        refetchConversation();
+      }
+    } catch (err) {
+      toast.error("Failed to update priority", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     }
   }, [mutations, selectedId, newPriority, refetch, refetchConversation]);
 
   const handleAssign = useCallback(async () => {
     if (!selectedId || !assignTo.trim()) return;
-    const result = await mutations.assign(selectedId, assignTo);
-    if (result) {
-      setAssignDialogOpen(false);
-      setAssignTo("");
-      refetch();
-      refetchConversation();
+    try {
+      const result = await mutations.assign(selectedId, assignTo);
+      if (result) {
+        toast.success("Conversation assigned");
+        setAssignDialogOpen(false);
+        setAssignTo("");
+        refetch();
+        refetchConversation();
+      }
+    } catch (err) {
+      toast.error("Failed to assign conversation", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     }
   }, [mutations, selectedId, assignTo, refetch, refetchConversation]);
 
   const handleSendMessage = useCallback(async () => {
     if (!selectedId || !replyContent.trim()) return;
     setSending(true);
-    const result = await mutations.sendMessage(selectedId, {
-      content: replyContent.trim(),
-      senderType: "USER",
-    });
-    if (result) {
-      setReplyContent("");
-      refetchMessages();
+    try {
+      const result = await mutations.sendMessage(selectedId, {
+        content: replyContent.trim(),
+        senderType: "USER",
+      });
+      if (result) {
+        setReplyContent("");
+        refetchMessages();
+      }
+    } catch (err) {
+      toast.error("Failed to send message", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   }, [mutations, selectedId, replyContent, refetchMessages]);
 
   const handleKeyDown = useCallback(

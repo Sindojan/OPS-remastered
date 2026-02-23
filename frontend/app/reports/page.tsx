@@ -43,6 +43,7 @@ import {
   AreaChart,
 } from "recharts";
 import { Download, FileSpreadsheet } from "lucide-react";
+import { toast } from "sonner";
 
 // ── Color maps ──────────────────────────────────────────
 
@@ -323,51 +324,65 @@ export default function ReportsPage() {
   // ── CSV Export handlers ─────────────────────────────
 
   const exportJobsCsv = useCallback(() => {
-    const jobList = jobs ?? [];
-    const headers = [
-      "Job Number",
-      "Title",
-      "Status",
-      "Priority",
-      "Quantity",
-      "Deadline",
-      "Created At",
-      "Completed At",
-    ];
-    const rows = jobList.map((j) => [
-      j.jobNumber,
-      j.title,
-      j.status,
-      String(j.priority),
-      String(j.quantity),
-      j.deadline ?? "",
-      j.createdAt,
-      j.completedAt ?? "",
-    ]);
-    downloadCsv("jobs-report.csv", headers, rows);
+    try {
+      const jobList = jobs ?? [];
+      const headers = [
+        "Job Number",
+        "Title",
+        "Status",
+        "Priority",
+        "Quantity",
+        "Deadline",
+        "Created At",
+        "Completed At",
+      ];
+      const rows = jobList.map((j) => [
+        j.jobNumber,
+        j.title,
+        j.status,
+        String(j.priority),
+        String(j.quantity),
+        j.deadline ?? "",
+        j.createdAt,
+        j.completedAt ?? "",
+      ]);
+      downloadCsv("jobs-report.csv", headers, rows);
+      toast.success("CSV exported");
+    } catch (err) {
+      toast.error("Export failed", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
   }, [jobs]);
 
   const exportInventoryCsv = useCallback(() => {
-    const articleList = articles ?? [];
-    const headers = [
-      "Article Number",
-      "Name",
-      "Description",
-      "Min Stock",
-      "Reorder Point",
-      "Status",
-      "Created At",
-    ];
-    const rows = articleList.map((a) => [
-      a.articleNumber,
-      a.name,
-      a.description ?? "",
-      String(a.minStock ?? ""),
-      String(a.reorderPoint ?? ""),
-      a.status,
-      a.createdAt,
-    ]);
-    downloadCsv("inventory-report.csv", headers, rows);
+    try {
+      const articleList = articles ?? [];
+      const headers = [
+        "Article Number",
+        "Name",
+        "Description",
+        "Min Stock",
+        "Reorder Point",
+        "Status",
+        "Created At",
+      ];
+      const rows = articleList.map((a) => [
+        a.articleNumber,
+        a.name,
+        a.description ?? "",
+        String(a.minStock ?? ""),
+        String(a.reorderPoint ?? ""),
+        a.status,
+        a.createdAt,
+      ]);
+      downloadCsv("inventory-report.csv", headers, rows);
+      toast.success("CSV exported");
+    } catch (err) {
+      toast.error("Export failed", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
   }, [articles]);
 
   // ── Render ──────────────────────────────────────────

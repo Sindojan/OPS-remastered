@@ -62,6 +62,7 @@ import {
   formatNumber,
   humanizeStatus,
 } from "@/lib/format";
+import { toast } from "sonner";
 
 // ─── Status Helpers ─────────────────────────────────────
 
@@ -231,15 +232,20 @@ export default function ArticleDetailPage() {
 
   const handleSaveEdit = async () => {
     if (!article) return;
-    const result = await mutations.updateArticle(article.id, {
-      name: editName,
-      description: editDescription || undefined,
-      minStock: editMinStock,
-      reorderPoint: editReorderPoint,
-    });
-    if (result) {
-      setIsEditing(false);
-      refetch();
+    try {
+      const result = await mutations.updateArticle(article.id, {
+        name: editName,
+        description: editDescription || undefined,
+        minStock: editMinStock,
+        reorderPoint: editReorderPoint,
+      });
+      if (result) {
+        toast.success("Article updated successfully");
+        setIsEditing(false);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to update article", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 
@@ -252,11 +258,16 @@ export default function ArticleDetailPage() {
       toLocationId: values.toLocationId || undefined,
       notes: values.notes || undefined,
     };
-    const result = await mutations.createMovement(req);
-    if (result) {
-      setMovementDialogOpen(false);
-      movementForm.reset();
-      refetchMovements();
+    try {
+      const result = await mutations.createMovement(req);
+      if (result) {
+        toast.success("Movement booked successfully");
+        setMovementDialogOpen(false);
+        movementForm.reset();
+        refetchMovements();
+      }
+    } catch (err) {
+      toast.error("Failed to book movement", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 

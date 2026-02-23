@@ -11,6 +11,8 @@ import {
   UserCircle,
 } from "lucide-react";
 
+import { toast } from "sonner";
+
 import { PageHeader } from "@/components/shared/page-header";
 
 import { Button } from "@/components/ui/button";
@@ -54,13 +56,23 @@ export default function MyDayPage() {
   const elapsed = useTimer(clockedIn, clockInTime);
 
   const handleClockIn = useCallback(() => {
-    setClockedIn(true);
-    setClockInTime(new Date());
+    try {
+      setClockedIn(true);
+      setClockInTime(new Date());
+      toast.success("Clocked in successfully");
+    } catch (err) {
+      toast.error("Failed to clock in", { description: err instanceof Error ? err.message : "Unknown error" });
+    }
   }, []);
 
   const handleClockOut = useCallback(() => {
-    setClockedIn(false);
-    setClockInTime(null);
+    try {
+      setClockedIn(false);
+      setClockInTime(null);
+      toast.success("Clocked out successfully");
+    } catch (err) {
+      toast.error("Failed to clock out", { description: err instanceof Error ? err.message : "Unknown error" });
+    }
   }, []);
 
   return (

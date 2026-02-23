@@ -34,6 +34,7 @@ import {
 } from "@/hooks/api/use-inventory";
 import type { SupplierArticleResponse } from "@/types/api";
 import { formatNumber, humanizeStatus } from "@/lib/format";
+import { toast } from "sonner";
 
 // ─── Status Helpers ─────────────────────────────────────
 
@@ -123,17 +124,22 @@ export default function SupplierDetailPage() {
 
   const handleSaveEdit = async () => {
     if (!supplier) return;
-    const result = await mutations.updateSupplier(supplier.id, {
-      name: editName,
-      contactName: editContactName || undefined,
-      email: editEmail || undefined,
-      phone: editPhone || undefined,
-      address: editAddress || undefined,
-      taxId: editTaxId || undefined,
-    });
-    if (result) {
-      setIsEditing(false);
-      refetch();
+    try {
+      const result = await mutations.updateSupplier(supplier.id, {
+        name: editName,
+        contactName: editContactName || undefined,
+        email: editEmail || undefined,
+        phone: editPhone || undefined,
+        address: editAddress || undefined,
+        taxId: editTaxId || undefined,
+      });
+      if (result) {
+        toast.success("Supplier updated successfully");
+        setIsEditing(false);
+        refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to update supplier", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 
