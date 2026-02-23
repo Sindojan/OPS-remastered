@@ -3,12 +3,13 @@ package com.sindoflow.ops.config;
 import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
 
 @Configuration
 public class MinioConfig {
@@ -35,7 +36,7 @@ public class MinioConfig {
                 .build();
     }
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void ensureBucket() {
         try {
             MinioClient client = minioClient();
