@@ -22,6 +22,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Zap,
+  Cog,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -35,6 +36,7 @@ const navSections = [
     items: [
       { label: "Console", href: "/agents", icon: Bot },
       { label: "Production", href: "/production", icon: Factory },
+      { label: "Machines", href: "/machines", icon: Cog },
       { label: "Inventory", href: "/inventory", icon: Package },
       { label: "Parts & Processes", href: "/parts", icon: Puzzle },
     ],

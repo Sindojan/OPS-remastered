@@ -15,6 +15,7 @@ const routeNames: Record<string, string> = {
   "/agents/hierarchy": "Agent Hierarchy",
   "/production": "Production Overview",
   "/production/planner": "Production Planner",
+  "/machines": "Machines",
   "/inventory": "Inventory",
   "/parts": "Parts & Components",
   "/process-plans": "Process Plans",
