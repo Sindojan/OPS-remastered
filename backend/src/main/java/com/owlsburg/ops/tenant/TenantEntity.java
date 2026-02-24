@@ -43,6 +43,33 @@ public class TenantEntity {
     @Column(name = "suspend_reason")
     private String suspendReason;
 
+    @Column(name = "logo_url", length = 500)
+    private String logoUrl;
+
+    @Column(name = "contact_email")
+    private String contactEmail;
+
+    @Column(name = "contact_phone", length = 50)
+    private String contactPhone;
+
+    @Column(length = 500)
+    private String address;
+
+    @Column(length = 100)
+    private String city;
+
+    @Column(name = "postal_code", length = 20)
+    private String postalCode;
+
+    @Column(length = 100)
+    private String country;
+
+    @Column(length = 255)
+    private String website;
+
+    @Column(name = "vat_id", length = 50)
+    private String vatId;
+
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private Instant createdAt;

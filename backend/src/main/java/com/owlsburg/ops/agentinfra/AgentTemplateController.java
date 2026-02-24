@@ -1,8 +1,10 @@
 package com.owlsburg.ops.agentinfra;
 
 import com.owlsburg.ops.agentinfra.dto.AgentTemplateResponse;
+import com.owlsburg.ops.agentinfra.dto.AvailableToolResponse;
 import com.owlsburg.ops.agentinfra.dto.CreateAgentTemplateRequest;
 import com.owlsburg.ops.agentinfra.dto.UpdateAgentTemplateRequest;
+import com.owlsburg.ops.agentinfra.tools.AgentToolRegistry;
 import com.owlsburg.ops.common.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -17,9 +19,12 @@ import java.util.UUID;
 public class AgentTemplateController {
 
     private final AgentTemplateService templateService;
+    private final AgentToolRegistry toolRegistry;
 
-    public AgentTemplateController(AgentTemplateService templateService) {
+    public AgentTemplateController(AgentTemplateService templateService,
+                                   AgentToolRegistry toolRegistry) {
         this.templateService = templateService;
+        this.toolRegistry = toolRegistry;
     }
 
     @GetMapping
@@ -94,5 +99,18 @@ public class AgentTemplateController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         templateService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Agent template deleted"));
+    }
+
+    @GetMapping("/available-tools")
+    public ResponseEntity<ApiResponse<List<AvailableToolResponse>>> availableTools() {
+        List<AvailableToolResponse> tools = toolRegistry.getAllTools().stream()
+                .map(tool -> new AvailableToolResponse(
+                        tool.getName(),
+                        tool.getDescription(),
+                        tool.getPermission().name()
+                ))
+                .sorted((a, b) -> a.name().compareTo(b.name()))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.ok(tools));
     }
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PageHeader } from "@/components/shared/page-header";
-import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { apiClient } from "@/lib/api-client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,16 +34,18 @@ import {
   Trash2,
   X,
   Tag,
+  Users,
+  Building2,
+  DollarSign,
+  Bell,
 } from "lucide-react";
 import type {
   ApiResponse,
   LlmConfig,
   AgentInstance,
-  AgentTemplate,
   RoleAgentDefaultResponse,
   RoleAgentDefaultUpdateRequest,
   KnowledgeCategoryResponse,
-  KnowledgeTagResponse,
 } from "@/types/api";
 import { toast } from "sonner";
 import {
@@ -54,21 +55,20 @@ import {
   useKnowledgeTagMutations,
 } from "@/hooks/api/use-knowledge";
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
+import { useAuth } from "@/contexts/auth-context";
+
+// New tab components
+import { UsersTab } from "@/components/settings/users-tab";
+import { CompanyTab } from "@/components/settings/company-tab";
+import { AgentsExtendedTab } from "@/components/settings/agents-extended-tab";
+import { BudgetTab } from "@/components/settings/budget-tab";
+import { NotificationsTab } from "@/components/settings/notifications-tab";
 
 // ============ Types for internal use ============
 
 interface ModelInfo {
   id: string;
   name: string;
-}
-
-interface InstanceRow {
-  id: string;
-  name: string;
-  role: string;
-  status: string;
-  model: string;
-  templateId: string;
 }
 
 // ============ LLM Configuration Tab ============
@@ -360,193 +360,6 @@ function LlmConfigTab() {
   );
 }
 
-// ============ Agent Instances Tab ============
-
-function AgentInstancesTab() {
-  const [instances, setInstances] = useState<InstanceRow[]>([]);
-  const [models, setModels] = useState<ModelInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [instancesRes, templatesRes, modelsRes] = await Promise.all([
-        apiClient.get<ApiResponse<AgentInstance[]>>("/api/agent-instances"),
-        apiClient.get<ApiResponse<AgentTemplate[]>>("/api/agent-templates"),
-        apiClient.get<ApiResponse<string[]>>("/api/settings/llm/models").catch(() => ({
-          success: true,
-          data: [] as string[],
-          timestamp: "",
-        })),
-      ]);
-
-      const templateMap = new Map(
-        templatesRes.data.map((t) => [t.id, t])
-      );
-
-      const rawModels = modelsRes.data || [];
-      const mappedModels: ModelInfo[] = rawModels.length > 0
-        ? rawModels.map((id) => ({ id, name: id }))
-        : [
-            { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
-            { id: "claude-opus-4-20250514", name: "Claude Opus 4" },
-            { id: "claude-haiku-4-20250414", name: "Claude Haiku 4" },
-          ];
-      setModels(mappedModels);
-
-      const rows: InstanceRow[] = instancesRes.data.map((inst) => {
-        const template = templateMap.get(inst.templateId);
-        let model = "";
-        try {
-          const config = inst.config ? JSON.parse(inst.config) : {};
-          model = config.model || "";
-        } catch {
-          // ignore parse errors
-        }
-        return {
-          id: inst.id,
-          name: inst.name,
-          role: template?.role || "Unknown",
-          status: inst.status,
-          model,
-          templateId: inst.templateId,
-        };
-      });
-
-      setInstances(rows);
-    } catch {
-      // API not available
-      setInstances([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleModelChange = async (instanceId: string, newModel: string) => {
-    setUpdatingId(instanceId);
-    try {
-      await apiClient.patch(`/api/agent-instances/${instanceId}/model`, {
-        model: newModel,
-      });
-      setInstances((prev) =>
-        prev.map((inst) =>
-          inst.id === instanceId ? { ...inst, model: newModel } : inst
-        )
-      );
-      toast.success("Modell aktualisiert");
-    } catch (err) {
-      toast.error("Fehler beim Aktualisieren des Modells", {
-        description: err instanceof Error ? err.message : "Unbekannter Fehler",
-      });
-      // Revert on error - refetch
-      await fetchData();
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const columns: ColumnDef<InstanceRow>[] = [
-    {
-      id: "name",
-      header: "Name",
-      accessorKey: "name",
-      cell: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-            <Bot className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <span className="font-medium text-sm">{row.name}</span>
-        </div>
-      ),
-    },
-    {
-      id: "role",
-      header: "Rolle",
-      accessorKey: "role",
-      cell: (row) => (
-        <span className="font-mono text-xs text-muted-foreground">
-          {row.role}
-        </span>
-      ),
-    },
-    {
-      id: "status",
-      header: "Status",
-      accessorKey: "status",
-      cell: (row) => {
-        const statusMap: Record<string, "idle" | "busy" | "degraded" | "quarantine" | "success" | "error" | "warning"> = {
-          ACTIVE: "success",
-          IDLE: "idle",
-          BUSY: "busy",
-          PAUSED: "warning",
-          ERROR: "error",
-          DISABLED: "quarantine",
-        };
-        const mapped = statusMap[row.status] || "idle";
-        return <StatusBadge status={mapped}>{row.status}</StatusBadge>;
-      },
-    },
-    {
-      id: "model",
-      header: "Modell",
-      accessorKey: "model",
-      sortable: false,
-      cell: (row) => (
-        <div className="flex items-center gap-2">
-          <Select
-            value={row.model || undefined}
-            onValueChange={(value) => handleModelChange(row.id, value)}
-            disabled={updatingId === row.id}
-          >
-            <SelectTrigger className="h-8 w-56" size="sm">
-              <SelectValue placeholder="Modell waehlen">
-                {updatingId === row.id ? (
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Aktualisieren...
-                  </span>
-                ) : (
-                  <span className="font-mono text-xs">
-                    {row.model || "Nicht gesetzt"}
-                  </span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {models.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  <span className="font-mono text-xs">{model.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ),
-    },
-  ];
-
-  return (
-    <DataTable<InstanceRow>
-      data={instances}
-      columns={columns}
-      loading={loading}
-      searchKey="name"
-      searchPlaceholder="Agenten-Instanzen suchen..."
-      emptyState={{
-        icon: <Bot className="h-8 w-8 text-muted-foreground/40" />,
-        title: "Keine Agenten-Instanzen",
-        description:
-          "Agenten-Instanzen erscheinen hier, sobald sie ueber die API erstellt wurden.",
-      }}
-    />
-  );
-}
-
 // ============ Role Agent Defaults Tab ============
 
 const ROLES = ["ADMIN", "MANAGER", "TEAM_LEAD", "WORKER"] as const;
@@ -686,7 +499,7 @@ function RoleAgentTab() {
                   }
                 >
                   <SelectTrigger className="w-full max-w-sm">
-                    <SelectValue placeholder="Agent auswählen...">
+                    <SelectValue placeholder="Agent auswaehlen...">
                       {currentName ? (
                         <span className="flex items-center gap-1.5">
                           <Bot className="h-3.5 w-3.5 text-muted-foreground" />
@@ -694,7 +507,7 @@ function RoleAgentTab() {
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                          Agent auswählen...
+                          Agent auswaehlen...
                         </span>
                       )}
                     </SelectValue>
@@ -799,11 +612,11 @@ function KnowledgeSettingsTab() {
     if (!deleteCatId) return;
     try {
       await catMutations.deleteCategory(deleteCatId);
-      toast.success("Kategorie gelöscht");
+      toast.success("Kategorie geloescht");
       setDeleteCatId(null);
       refetchCats();
     } catch (err) {
-      toast.error("Fehler beim Löschen der Kategorie", {
+      toast.error("Fehler beim Loeschen der Kategorie", {
         description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
@@ -829,11 +642,11 @@ function KnowledgeSettingsTab() {
     if (!deleteTagId) return;
     try {
       await tagMutations.deleteTag(deleteTagId);
-      toast.success("Tag gelöscht");
+      toast.success("Tag geloescht");
       setDeleteTagId(null);
       refetchTags();
     } catch (err) {
-      toast.error("Fehler beim Löschen des Tags", {
+      toast.error("Fehler beim Loeschen des Tags", {
         description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
@@ -1022,21 +835,21 @@ function KnowledgeSettingsTab() {
       {/* Delete Confirmations */}
       <ConfirmationDialog
         open={!!deleteCatId}
-        title="Kategorie löschen?"
-        description="Die Kategorie wird unwiderruflich gelöscht. Artikel mit dieser Kategorie behalten ihren Inhalt."
+        title="Kategorie loeschen?"
+        description="Die Kategorie wird unwiderruflich geloescht. Artikel mit dieser Kategorie behalten ihren Inhalt."
         onConfirm={handleDeleteCat}
         onCancel={() => setDeleteCatId(null)}
         variant="destructive"
-        confirmLabel="Kategorie löschen"
+        confirmLabel="Kategorie loeschen"
       />
       <ConfirmationDialog
         open={!!deleteTagId}
-        title="Tag löschen?"
-        description="Der Tag wird von allen Artikeln entfernt und unwiderruflich gelöscht."
+        title="Tag loeschen?"
+        description="Der Tag wird von allen Artikeln entfernt und unwiderruflich geloescht."
         onConfirm={handleDeleteTag}
         onCancel={() => setDeleteTagId(null)}
         variant="destructive"
-        confirmLabel="Tag löschen"
+        confirmLabel="Tag loeschen"
       />
     </div>
   );
@@ -1045,6 +858,10 @@ function KnowledgeSettingsTab() {
 // ============ Main Settings Page ============
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SYSTEM_ADMIN";
+  const isManagerOrAbove = isAdmin || user?.role === "MANAGER";
+
   return (
     <div className="space-y-6">
         <PageHeader
@@ -1062,14 +879,14 @@ export default function SettingsPage() {
         />
 
         <Tabs defaultValue="llm" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="llm" className="gap-1.5">
               <Key className="h-3.5 w-3.5" />
               LLM-Konfiguration
             </TabsTrigger>
-            <TabsTrigger value="instances" className="gap-1.5">
+            <TabsTrigger value="agents" className="gap-1.5">
               <Bot className="h-3.5 w-3.5" />
-              Agenten-Instanzen
+              Agenten
             </TabsTrigger>
             <TabsTrigger value="roles" className="gap-1.5">
               <Shield className="h-3.5 w-3.5" />
@@ -1079,14 +896,36 @@ export default function SettingsPage() {
               <BookOpen className="h-3.5 w-3.5" />
               Wissen
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="users" className="gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                Benutzer
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="company" className="gap-1.5">
+                <Building2 className="h-3.5 w-3.5" />
+                Firma
+              </TabsTrigger>
+            )}
+            {isManagerOrAbove && (
+              <TabsTrigger value="budget" className="gap-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                Budget
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="notifications" className="gap-1.5">
+              <Bell className="h-3.5 w-3.5" />
+              Benachrichtigungen
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="llm">
             <LlmConfigTab />
           </TabsContent>
 
-          <TabsContent value="instances">
-            <AgentInstancesTab />
+          <TabsContent value="agents">
+            <AgentsExtendedTab />
           </TabsContent>
 
           <TabsContent value="roles">
@@ -1095,6 +934,28 @@ export default function SettingsPage() {
 
           <TabsContent value="knowledge">
             <KnowledgeSettingsTab />
+          </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="users">
+              <UsersTab />
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="company">
+              <CompanyTab />
+            </TabsContent>
+          )}
+
+          {isManagerOrAbove && (
+            <TabsContent value="budget">
+              <BudgetTab />
+            </TabsContent>
+          )}
+
+          <TabsContent value="notifications">
+            <NotificationsTab />
           </TabsContent>
         </Tabs>
       </div>

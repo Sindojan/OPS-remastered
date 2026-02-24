@@ -962,3 +962,104 @@ export interface ScheduledTriggerResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Tenant Config ─────────────────────────────────────
+
+export interface TenantConfigResponse {
+  id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  status: string;
+  logoUrl: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  address: string | null;
+  city: string | null;
+  postalCode: string | null;
+  country: string | null;
+  website: string | null;
+  vatId: string | null;
+}
+
+export interface TenantConfigUpdateRequest {
+  name?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  website?: string;
+  vatId?: string;
+}
+
+// ─── Budget ────────────────────────────────────────────
+
+export interface BudgetOverviewResponse {
+  currentMonth: BudgetPeriod;
+  last30Days: BudgetPeriod;
+  dailyUsage: DailyUsage[];
+}
+
+export interface BudgetPeriod {
+  totalCostUsd: number;
+  totalTokens: number;
+  totalRuns: number;
+  byAgent: AgentBudget[];
+}
+
+export interface AgentBudget {
+  agentName: string;
+  costUsd: number;
+  tokens: number;
+  runs: number;
+}
+
+export interface DailyUsage {
+  date: string;
+  costUsd: number;
+  tokens: number;
+}
+
+// ─── Notification Settings ─────────────────────────────
+
+export interface NotificationSettingsResponse {
+  agentRunCompleted: boolean;
+  agentRunFailed: boolean;
+  stockBelowMinimum: boolean;
+  machineIncident: boolean;
+  jobOverdue: boolean;
+  absenceRequest: boolean;
+  inboxNewMessage: boolean;
+  inApp: boolean;
+  emailNotifications: boolean;
+}
+
+export type NotificationSettingsUpdateRequest = NotificationSettingsResponse;
+
+// ─── Available Tools ───────────────────────────────────
+
+export interface AvailableToolResponse {
+  name: string;
+  description: string;
+  permissionLevel: string;
+}
+
+// ─── Agent Template Detail ─────────────────────────────
+
+export interface AgentTemplateDetailResponse {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  basePrompt: string;
+  allowedTools: string;
+  triggerTypes: string;
+  maxTokensPerRun: number;
+  dailyTokenBudget: number;
+  status: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}

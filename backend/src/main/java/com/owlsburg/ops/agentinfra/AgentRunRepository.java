@@ -15,4 +15,6 @@ public interface AgentRunRepository extends JpaRepository<AgentRunEntity, UUID> 
     List<AgentRunEntity> findByStatus(AgentRunStatus status);
 
     List<AgentRunEntity> findByInstanceIdAndStartedAtBetween(UUID instanceId, Instant from, Instant to);
+
+    List<AgentRunEntity> findByStartedAtBetween(Instant from, Instant to);
 }

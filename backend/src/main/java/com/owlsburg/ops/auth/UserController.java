@@ -8,6 +8,10 @@ import com.owlsburg.ops.agentinfra.dto.MeResponse;
 import com.owlsburg.ops.agentinfra.dto.PrimaryAgentResponse;
 import com.owlsburg.ops.agentinfra.dto.PrimaryAgentUpdateRequest;
 import com.owlsburg.ops.auth.dto.*;
+import com.owlsburg.ops.auth.notifications.NotificationSettingsResponse;
+import com.owlsburg.ops.auth.notifications.NotificationSettingsService;
+import com.owlsburg.ops.auth.notifications.NotificationSettingsUpdateRequest;
+import com.owlsburg.ops.auth.notifications.UserNotificationSettingsEntity;
 import com.owlsburg.ops.common.ApiResponse;
 import com.owlsburg.ops.common.TenantContext;
 import jakarta.validation.Valid;
@@ -28,13 +32,16 @@ public class UserController {
     private final UserService userService;
     private final PrimaryAgentService primaryAgentService;
     private final AgentTemplateRepository agentTemplateRepository;
+    private final NotificationSettingsService notificationSettingsService;
 
     public UserController(UserService userService,
                           PrimaryAgentService primaryAgentService,
-                          AgentTemplateRepository agentTemplateRepository) {
+                          AgentTemplateRepository agentTemplateRepository,
+                          NotificationSettingsService notificationSettingsService) {
         this.userService = userService;
         this.primaryAgentService = primaryAgentService;
         this.agentTemplateRepository = agentTemplateRepository;
+        this.notificationSettingsService = notificationSettingsService;
     }
 
     @GetMapping
@@ -132,5 +139,22 @@ public class UserController {
         user.setPrimaryAgentInstanceId(request.agentInstanceId());
         UserEntity saved = userService.save(user);
         return ResponseEntity.ok(ApiResponse.ok(UserResponse.from(saved)));
+    }
+
+    @GetMapping("/me/notifications")
+    public ResponseEntity<ApiResponse<NotificationSettingsResponse>> getNotificationSettings(
+            Authentication authentication) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        UserNotificationSettingsEntity settings = notificationSettingsService.getForUser(userId);
+        return ResponseEntity.ok(ApiResponse.ok(NotificationSettingsResponse.from(settings)));
+    }
+
+    @PutMapping("/me/notifications")
+    public ResponseEntity<ApiResponse<NotificationSettingsResponse>> updateNotificationSettings(
+            Authentication authentication,
+            @RequestBody NotificationSettingsUpdateRequest request) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        UserNotificationSettingsEntity settings = notificationSettingsService.updateForUser(userId, request);
+        return ResponseEntity.ok(ApiResponse.ok(NotificationSettingsResponse.from(settings)));
     }
 }
