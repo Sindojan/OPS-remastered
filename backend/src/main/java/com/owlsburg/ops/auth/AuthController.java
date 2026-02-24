@@ -65,11 +65,21 @@ public class AuthController {
                     .body(ApiResponse.error("Account is deactivated"));
         }
 
-        // Check tenant is active
+        // Check tenant status (skip for SYSTEM_ADMIN)
         TenantEntity tenant = tenantService.findById(user.getTenantId());
-        if (!tenant.isActive()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Tenant is deactivated"));
+        if (user.getRole() != Role.SYSTEM_ADMIN) {
+            if ("SUSPENDED".equals(tenant.getStatus())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Your company account has been suspended. Contact support."));
+            }
+            if ("DELETED".equals(tenant.getStatus())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Account not available"));
+            }
+            if (!tenant.isActive()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Tenant is deactivated"));
+            }
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {

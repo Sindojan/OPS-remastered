@@ -1,8 +1,14 @@
 package com.owlsburg.ops.people;
 
+import com.owlsburg.ops.auth.Role;
+import com.owlsburg.ops.auth.UserEntity;
+import com.owlsburg.ops.auth.UserService;
 import com.owlsburg.ops.common.ApiResponse;
+import com.owlsburg.ops.common.TenantContext;
 import com.owlsburg.ops.people.dto.*;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -16,20 +22,56 @@ import java.util.UUID;
 @RequestMapping("/api/employees")
 public class EmployeeController {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeController.class);
+
     private final EmployeeService employeeService;
     private final TimeTrackingService timeTrackingService;
+    private final UserService userService;
 
     public EmployeeController(EmployeeService employeeService,
-                              TimeTrackingService timeTrackingService) {
+                              TimeTrackingService timeTrackingService,
+                              UserService userService) {
         this.employeeService = employeeService;
         this.timeTrackingService = timeTrackingService;
+        this.userService = userService;
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<EmployeeResponse>> create(@Valid @RequestBody CreateEmployeeRequest request) {
-        EmployeeEntity entity = employeeService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(EmployeeResponse.from(entity)));
+    public ResponseEntity<ApiResponse<EmployeeCreateResponse>> create(@Valid @RequestBody CreateEmployeeRequest request) {
+        EmployeeCreateResponse.UserCredentials credentials = null;
+
+        // Auto-create user account if email and systemRole are provided
+        UUID userId = request.userId();
+        if (userId == null && request.email() != null && !request.email().isBlank()
+                && request.systemRole() != null && !request.systemRole().isBlank()) {
+            Role role = Role.valueOf(request.systemRole());
+            String password = request.password() != null && !request.password().isBlank()
+                    ? request.password()
+                    : UUID.randomUUID().toString().substring(0, 12);
+            UUID tenantId = UUID.fromString(TenantContext.getCurrentTenant());
+
+            UserEntity user = userService.create(
+                    request.email(), password, request.firstName(), request.lastName(), role, tenantId
+            );
+            userId = user.getId();
+            credentials = new EmployeeCreateResponse.UserCredentials(
+                    user.getId(), user.getEmail(), role.name(), password
+            );
+            log.info("Auto-created user {} with role {} for employee {}", user.getEmail(), role, request.employeeNumber());
+        }
+
+        // Create employee with linked userId
+        CreateEmployeeRequest withUser = new CreateEmployeeRequest(
+                userId, request.employeeNumber(), request.firstName(), request.lastName(),
+                request.email(), request.phone(), request.role(), request.systemRole(),
+                null, request.hireDate(), request.stationId()
+        );
+        EmployeeEntity entity = employeeService.create(withUser);
+
+        EmployeeCreateResponse response = new EmployeeCreateResponse(
+                EmployeeResponse.from(entity), credentials
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));
     }
 
     @GetMapping("/{id}")
@@ -48,6 +90,18 @@ public class EmployeeController {
     public ResponseEntity<ApiResponse<EmployeeResponse>> update(@PathVariable UUID id,
                                                                  @Valid @RequestBody UpdateEmployeeRequest request) {
         EmployeeEntity entity = employeeService.update(id, request);
+
+        // If systemRole changed and employee has a linked user, update user role
+        if (request.systemRole() != null && !request.systemRole().isBlank() && entity.getUserId() != null) {
+            try {
+                Role newRole = Role.valueOf(request.systemRole());
+                userService.updateRole(entity.getUserId(), newRole);
+                log.info("Updated system role to {} for user {} (employee {})", newRole, entity.getUserId(), id);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid system role: {}", request.systemRole());
+            }
+        }
+
         return ResponseEntity.ok(ApiResponse.ok(EmployeeResponse.from(entity)));
     }
 

@@ -71,7 +71,11 @@ sindojan_ops_remastered/
 │   └── agents/                      # 8 Agent-Definitionen
 ├── frontend/                        # Next.js Frontend
 │   ├── app/                         # Routen (App Router)
+│   │   ├── login/                   # Login-Seite (außerhalb AppShell)
+│   │   └── (app)/                   # Auth-geschützte Route Group (mit AppShell)
 │   ├── components/                  # UI + Layout + Shared
+│   ├── contexts/                    # AuthContext Provider
+│   ├── hooks/                       # Custom Hooks (usePrimaryAgent, API Hooks)
 │   ├── lib/                         # Utilities
 │   └── types/                       # TypeScript Typen
 └── backend/                         # Spring Boot Backend
@@ -180,6 +184,15 @@ sindojan_ops_remastered/
 | FIX-BLOCK-B | CORS Fix, AuthService Extract, N+1 Fixes, Overdue Flag | `25a5fa1` |
 | CORS-FIX | CORS @Value comma-separated string Fix | `edca221` |
 
+### Block 9: Login, Agent-Button, My-Day Dashboard ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-FE-015 | Login-Screen & Auth-Flow (AuthContext, Route Guard, User Dropdown) | `8d99a8a` |
+| TASK-BE-012 | Primary Agent Backend (V5/V6 Migrationen, PrimaryAgentService, /me Endpoint) | `8d99a8a` |
+| TASK-FE-016 | Dynamischer Agent-Button (usePrimaryAgent Hook) | `8d99a8a` |
+| TASK-FE-017 | My-Day Dashboard (rollenbasiert, Clock-In/Out, Jobs, KPIs, Info-Cards) | `8d99a8a` |
+| TASK-FE-018 | Settings: Rollen-Agent-Zuweisung Tab | `8d99a8a` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -236,6 +249,8 @@ Zuordnung:
 | Agent Instances | `/api/agent-instances` | authenticated |
 | Agent Runs | `/api/agent-runs` | authenticated |
 | LLM Config | `/api/settings/llm` | authenticated |
+| Role-Agent Defaults | `/api/settings/role-agent-defaults` | ADMIN/MANAGER |
+| User Me | `/api/users/me` | authenticated |
 | Events | `/api/events` | authenticated |
 | Triggers | `/api/scheduled-triggers` | authenticated |
 | Health | `/actuator/health` | public |
@@ -250,6 +265,8 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V2__full_schema.sql | Alle Domänen-Tabellen – jede mit `tenant_id UUID NOT NULL REFERENCES tenants(id)` + Index |
 | V3__rls_policies.sql | `current_tenant_id()` Funktion + RLS Policies für alle tenant_id-Tabellen |
 | V4__seed_agents.sql | Agent Templates, Instances, Event Subscriptions, Scheduled Triggers (mit tenant_id) |
+| V5__primary_agent.sql | `role_agent_defaults` Tabelle + RLS + `users.primary_agent_instance_id` |
+| V6__seed_role_defaults.sql | Rollen-Defaults: ADMIN/MANAGER→CEO, TEAM_LEAD→Production Lead, WORKER→People Lead |
 
 ## Default Admin
 
@@ -274,6 +291,6 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-02-23
-**Session:** Block 8 komplett (RLS Migration, Rebranding, System-Review, Bugfixes)
-**Status:** Backend ~430 Java-Dateien. Single-Schema RLS statt Multi-Schema. Login getestet, Anwendung läuft. Frontend alle Domain-Views implementiert. TypeScript-fehlerfrei.
+**Session:** Block 9 komplett (Login, Auth-Flow, Agent-Button, My-Day Dashboard, Rollen-Settings)
+**Status:** Backend ~440 Java-Dateien. Login-Flow mit JWT funktioniert. Frontend hat Login-Seite, Auth-Guard via (app) Route Group, dynamischen Agent-Button, rollenbasiertes My-Day Dashboard, Rollen-Agent-Zuweisung in Settings. Alles kompiliert und getestet.
 **Nächster Block:** Agent Console (Chat-Interface, Agent Hierarchy, Live-Runs) oder End-to-End-Testing mit echtem Backend

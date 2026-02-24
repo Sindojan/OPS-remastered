@@ -9,6 +9,7 @@ public record UpdateEmployeeRequest(
         String email,
         String phone,
         String role,
+        String systemRole,
         String status,
         LocalDate hireDate,
         UUID stationId

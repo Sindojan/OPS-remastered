@@ -23,7 +23,9 @@ import {
   ChevronsRight,
   Zap,
   Cog,
+  Shield,
 } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -60,6 +62,8 @@ const navSections = [
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
 
   return (
     <aside
@@ -143,6 +147,55 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </div>
         ))}
       </nav>
+
+      {/* System Admin Link */}
+      {isSystemAdmin && (
+        <div className="border-t border-sidebar-border px-2 py-2">
+          {(() => {
+            const isActive =
+              pathname === "/system/companies" ||
+              pathname.startsWith("/system/companies/");
+            const linkContent = (
+              <Link
+                href="/system/companies"
+                className={cn(
+                  "group relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  collapsed && "justify-center px-0"
+                )}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                )}
+                <Shield
+                  className={cn(
+                    "h-[18px] w-[18px] shrink-0 transition-colors",
+                    isActive
+                      ? "text-sidebar-primary"
+                      : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/75"
+                  )}
+                />
+                {!collapsed && <span>System</span>}
+              </Link>
+            );
+
+            if (collapsed) {
+              return (
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    System
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return linkContent;
+          })()}
+        </div>
+      )}
 
       {/* Collapse toggle */}
       <div className="border-t border-sidebar-border p-2">

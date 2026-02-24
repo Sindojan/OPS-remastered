@@ -13,6 +13,8 @@ public record CreateEmployeeRequest(
         String email,
         String phone,
         String role,
+        String systemRole,
+        String password,
         LocalDate hireDate,
         UUID stationId
 ) {}

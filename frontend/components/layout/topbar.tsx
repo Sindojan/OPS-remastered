@@ -35,6 +35,7 @@ const routeNames: Record<string, string> = {
   "/my-day": "My Day",
   "/knowledge": "Knowledge Base",
   "/settings": "Settings",
+  "/system/companies": "Companies",
 };
 
 export function Topbar({ onAgentPanelToggle, agentPanelOpen }: TopbarProps) {

@@ -693,6 +693,68 @@ export interface RoleAgentDefaultUpdateRequest {
   agentInstanceId: string;
 }
 
+// ─── System Admin ──────────────────────────────────────
+export type CompanyPlan = 'BASIC' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type CompanyStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+
+export interface CompanyResponse {
+  id: string;
+  name: string;
+  slug: string;
+  plan: CompanyPlan;
+  status: CompanyStatus;
+  active: boolean;
+  createdAt: string;
+  suspendedAt: string | null;
+  suspendReason: string | null;
+}
+
+export interface CompanyCreateRequest {
+  name: string;
+  slug: string;
+  plan?: CompanyPlan;
+  adminEmail: string;
+  adminFirstName: string;
+  adminLastName: string;
+  adminPassword?: string;
+}
+
+export interface CompanyCreateResponse {
+  id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  adminEmail: string;
+  adminPassword: string;
+}
+
+export interface CompanyUpdateRequest {
+  name?: string;
+  plan?: CompanyPlan;
+}
+
+export interface CompanyStatsResponse {
+  userCount: number;
+  activeAgentRuns30d: number;
+  storageUsedMb: number;
+  lastActiveAt: string | null;
+}
+
+export interface CompanyAdminResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface PasswordResetResponse {
+  userId: string;
+  newPassword: string;
+}
+
 // ─── Events ─────────────────────────────────────────────
 
 export interface DomainEventResponse {

@@ -45,7 +45,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String role = jwtService.getRole(token);
                     String email = jwtService.getEmail(token);
 
-                    TenantContext.setCurrentTenant(tenantId);
+                    // SYSTEM_ADMIN operates without tenant context (no RLS filtering)
+                    if (!"SYSTEM_ADMIN".equals(role)) {
+                        TenantContext.setCurrentTenant(tenantId);
+                    }
 
                     List<SimpleGrantedAuthority> authorities = List.of(
                             new SimpleGrantedAuthority("ROLE_" + role)

@@ -11,6 +11,9 @@ import {
   Eye,
   UserX,
   AlertTriangle,
+  Copy,
+  Check,
+  EyeOff,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
@@ -32,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -56,6 +60,7 @@ const createEmployeeSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
   role: z.string().optional(),
+  password: z.string().optional(),
   hireDate: z.string().optional(),
   stationId: z.string().optional(),
 });
@@ -63,6 +68,39 @@ const createEmployeeSchema = z.object({
 type CreateEmployeeFormData = z.infer<typeof createEmployeeSchema>;
 
 const EMPLOYEE_STATUSES: EmployeeStatus[] = ["ACTIVE", "INACTIVE", "ON_LEAVE"];
+
+const EMPLOYEE_ROLES = [
+  "Operator",
+  "Technician",
+  "Shift Lead",
+  "Quality Inspector",
+  "Maintenance Technician",
+  "Warehouse Clerk",
+  "Logistics",
+  "Team Lead",
+  "Production Manager",
+  "Office / Admin",
+] as const;
+
+const ROLE_TO_SYSTEM_ROLE: Record<string, string> = {
+  "Operator": "WORKER",
+  "Technician": "WORKER",
+  "Shift Lead": "TEAM_LEAD",
+  "Quality Inspector": "WORKER",
+  "Maintenance Technician": "WORKER",
+  "Warehouse Clerk": "WORKER",
+  "Logistics": "WORKER",
+  "Team Lead": "TEAM_LEAD",
+  "Production Manager": "MANAGER",
+  "Office / Admin": "ADMIN",
+};
+
+const SYSTEM_ROLE_LABELS: Record<string, string> = {
+  WORKER: "Worker",
+  TEAM_LEAD: "Team Lead",
+  MANAGER: "Manager",
+  ADMIN: "Admin",
+};
 
 // ─── Extended row type with computed field ──────────────
 
@@ -79,6 +117,14 @@ export default function EmployeesPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<EmployeeResponse | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password: string;
+    role: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [useRandomPassword, setUseRandomPassword] = useState(true);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -213,7 +259,8 @@ export default function EmployeesPage() {
 
   const onCreateSubmit = useCallback(
     async (data: CreateEmployeeFormData) => {
-      const payload = {
+      const systemRole = data.role ? ROLE_TO_SYSTEM_ROLE[data.role] : undefined;
+      const payload: Record<string, unknown> = {
         employeeNumber: data.employeeNumber,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -223,9 +270,27 @@ export default function EmployeesPage() {
         hireDate: data.hireDate || undefined,
         stationId: data.stationId || undefined,
       };
+
+      // If email + role are set, send systemRole to auto-create user account
+      if (data.email && systemRole) {
+        payload.systemRole = systemRole;
+        if (!useRandomPassword && data.password) {
+          payload.password = data.password;
+        }
+      }
+
       try {
-        const result = await mutations.createEmployee(payload);
+        const result = await mutations.createEmployee(payload as any);
         if (result) {
+          // Check if user credentials were returned
+          const res = result as any;
+          if (res.userCredentials) {
+            setCreatedCredentials({
+              email: res.userCredentials.email,
+              password: res.userCredentials.password,
+              role: res.userCredentials.role,
+            });
+          }
           toast.success("Employee created successfully");
           setCreateOpen(false);
           form.reset({
@@ -235,16 +300,18 @@ export default function EmployeesPage() {
             email: "",
             phone: "",
             role: "",
+            password: "",
             hireDate: "",
             stationId: "",
           });
+          setUseRandomPassword(true);
           refetch();
         }
       } catch (err) {
         toast.error("Failed to create employee", { description: err instanceof Error ? err.message : "Unknown error" });
       }
     },
-    [mutations, form, refetch]
+    [mutations, form, refetch, useRandomPassword]
   );
 
   const handleDeactivate = useCallback(async () => {
@@ -493,13 +560,76 @@ export default function EmployeesPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="role">Role</Label>
-                <Input
-                  id="role"
-                  placeholder="Operator, Technician..."
-                  {...form.register("role")}
-                />
+                <Select
+                  value={form.watch("role") || ""}
+                  onValueChange={(v) => form.setValue("role", v)}
+                >
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select role..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EMPLOYEE_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.watch("role") && ROLE_TO_SYSTEM_ROLE[form.watch("role")!] && (
+                  <p className="text-[11px] text-muted-foreground">
+                    System role: <span className="font-semibold">{SYSTEM_ROLE_LABELS[ROLE_TO_SYSTEM_ROLE[form.watch("role")!]] || ROLE_TO_SYSTEM_ROLE[form.watch("role")!]}</span>
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* Password section – only if email is filled */}
+            {form.watch("email") && form.watch("role") && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  User Account
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  A user account with role <span className="font-semibold">{SYSTEM_ROLE_LABELS[ROLE_TO_SYSTEM_ROLE[form.watch("role")!]] || "–"}</span> will be created automatically.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="random-pw"
+                    checked={useRandomPassword}
+                    onCheckedChange={(v) => setUseRandomPassword(!!v)}
+                  />
+                  <Label htmlFor="random-pw" className="text-sm font-normal">
+                    Generate random password
+                  </Label>
+                </div>
+                {!useRandomPassword && (
+                  <div className="space-y-1">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Min. 8 characters"
+                        {...form.register("password")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -535,6 +665,70 @@ export default function EmployeesPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* ═══ Created Credentials Dialog ═══ */}
+      <Dialog
+        open={!!createdCredentials}
+        onOpenChange={(v) => {
+          if (!v) {
+            setCreatedCredentials(null);
+            setCopied(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>User Account Created</DialogTitle>
+            <DialogDescription>
+              Save these login credentials. The password cannot be retrieved later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+            <div>
+              <span className="text-xs font-medium text-muted-foreground">Email</span>
+              <p className="font-mono text-sm">{createdCredentials?.email}</p>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-muted-foreground">Password</span>
+              <p className="font-mono text-sm select-all">{createdCredentials?.password}</p>
+            </div>
+            <div>
+              <span className="text-xs font-medium text-muted-foreground">System Role</span>
+              <p className="text-sm font-semibold">
+                {createdCredentials?.role && SYSTEM_ROLE_LABELS[createdCredentials.role]
+                  ? SYSTEM_ROLE_LABELS[createdCredentials.role]
+                  : createdCredentials?.role}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 gap-1.5"
+              onClick={() => {
+                if (!createdCredentials) return;
+                navigator.clipboard.writeText(
+                  `Email: ${createdCredentials.email}\nPassword: ${createdCredentials.password}`
+                );
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied" : "Copy Credentials"}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button
+              size="sm"
+              onClick={() => {
+                setCreatedCredentials(null);
+                setCopied(false);
+              }}
+            >
+              Done
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

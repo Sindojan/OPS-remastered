@@ -25,8 +25,23 @@ public class TenantEntity {
     @Column(nullable = false)
     private String name;
 
+    @Column(unique = true, length = 100)
+    private String slug;
+
+    @Column(nullable = false, length = 50)
+    private String plan = "BASIC";
+
+    @Column(nullable = false, length = 50)
+    private String status = "ACTIVE";
+
     @Column(nullable = false)
     private boolean active = true;
+
+    @Column(name = "suspended_at")
+    private Instant suspendedAt;
+
+    @Column(name = "suspend_reason")
+    private String suspendReason;
 
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
