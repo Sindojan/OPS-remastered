@@ -101,6 +101,8 @@ sindojan_ops_remastered/
         │   └── dto/
         ├── documents/               # Dokumente (Metadaten in DB, Binär in MinIO)
         │   └── dto/
+        ├── knowledge/               # Wissensdatenbank (Artikel, Kategorien, Tags, Suche)
+        │   └── dto/
         ├── inbox/                   # Conversations, Nachrichten, Tags
         │   └── dto/
         ├── events/                  # Domain Events, Scheduled Triggers
@@ -214,6 +216,13 @@ sindojan_ops_remastered/
 | FIX-2 | Komplette deutsche Lokalisierung (31 Dateien, zentrale i18n.ts, 150+ Begriffe) | `a847882` |
 | FIX-3 | Mitarbeiter-Rollenauswahl auf System-Rollen vereinfacht (WORKER, TEAM_LEAD, MANAGER, ADMIN) | `a847882` |
 
+### Block 12: Knowledge & Dokumente ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-015 | V9 Migration (knowledge_categories, knowledge_articles, knowledge_tags), Knowledge CRUD, Search, Document-Erweiterungen (preview, metadata update) | `65b1a2c` |
+| TASK-FE-022 | Knowledge Overview, Markdown-Editor (MDEditor), Artikel-Detail, Dokument-Management mit Vorschau, Settings-Tab für Kategorien/Tags | `65b1a2c` |
+| FIX-AUTH | AuthContext: /me-Validierung bei Start (stale Token nach DB-Reset), Select.Item empty-value Fixes, LazyInitializationException Fix | `65b1a2c` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -266,6 +275,10 @@ Zuordnung:
 | Process Plans | `/api/process-plans` | authenticated |
 | Calculations | `/api/calculations` | authenticated |
 | Documents | `/api/documents` | authenticated |
+| Knowledge Articles | `/api/knowledge/articles` | authenticated |
+| Knowledge Categories | `/api/knowledge/categories` | authenticated |
+| Knowledge Tags | `/api/knowledge/tags` | authenticated |
+| Knowledge Search | `/api/knowledge/search` | authenticated |
 | Conversations | `/api/conversations` | authenticated |
 | Agent Templates | `/api/agent-templates` | authenticated |
 | Agent Instances | `/api/agent-instances` | authenticated |
@@ -291,6 +304,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V6__seed_role_defaults.sql | Rollen-Defaults: ADMIN/MANAGER→CEO, TEAM_LEAD→Production Lead, WORKER→People Lead |
 | V7__system_admin.sql | Tenant-Extension (slug, plan, status, suspended_at, suspend_reason), SYSTEM_ADMIN User Seed |
 | V8__customer_fields.sql | `customer_number VARCHAR(50)`, `short_name VARCHAR(100)` auf customers, Unique Index |
+| V9__knowledge.sql | Knowledge-Tabellen (categories, articles, tags, article_tags), Document-Erweiterung (category_id, excerpt), RLS Policies |
 
 ## Default Admin
 
@@ -323,7 +337,7 @@ Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEA
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-02-23
-**Session:** Block 11 + FIX-BLOCK-D komplett
-**Status:** Backend ~450 Java-Dateien, V8 Migration. Kunden-Views mit Detail-Tabs, Parts & Processes mit BOM/Arbeitspläne/Kalkulation. Gesamtes Frontend auf Deutsch lokalisiert (zentrale `lib/i18n.ts`). Mitarbeiter-Rollenauswahl auf System-Rollen vereinfacht. Alles kompiliert.
-**Nächste Blöcke laut Masterplan:** Block 10 (Knowledge & Dokumente), Block 11 (Settings vervollständigen), Block 12 (Docker/Deployment), Block 13 (Agent Console)
+**Datum:** 2026-02-24
+**Session:** Block 12 (Knowledge & Dokumente) komplett
+**Status:** Backend ~475 Java-Dateien, V9 Migration. Knowledge-Base mit Markdown-Editor, Artikel-CRUD, Kategorien/Tags, Dokument-Vorschau. AuthContext validiert User-Existenz beim Start. Alles kompiliert und funktioniert.
+**Nächste Blöcke laut Masterplan:** Block 13 (Settings vervollständigen), Block 14 (Docker/Deployment), Block 15 (Agent Console)
