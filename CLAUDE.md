@@ -223,6 +223,18 @@ sindojan_ops_remastered/
 | TASK-FE-022 | Knowledge Overview, Markdown-Editor (MDEditor), Artikel-Detail, Dokument-Management mit Vorschau, Settings-Tab für Kategorien/Tags | `65b1a2c` |
 | FIX-AUTH | AuthContext: /me-Validierung bei Start (stale Token nach DB-Reset), Select.Item empty-value Fixes, LazyInitializationException Fix | `65b1a2c` |
 
+### FIX-BLOCK-E: Unicode-Encoding ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| FIX-UNICODE | Unicode-Escape-Sequences (\u00F6 etc.) durch UTF-8 Zeichen ersetzt (9 Dateien) | `ccf7f5c` |
+
+### Block 12b: Settings vervollständigen ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-016 | V10 Migration (Tenant-Config-Felder, user_notification_settings), TenantConfig API, Budget API, Notification Settings, Available Tools Endpoint | `f6f788f` |
+| TASK-FE-023 | 5 neue Settings-Tabs (Benutzer, Firma, Agents erweitert, Budget, Benachrichtigungen), Switch-Komponente, use-settings Hooks | `f6f788f` |
+| FIX-LLM | TenantLlmConfigEntity: BaseEntity-Vererbung für tenant_id/RLS | `ea80f43` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:

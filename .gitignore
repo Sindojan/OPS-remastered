@@ -47,3 +47,11 @@ next-env.d.ts
 
 # Claude agents (local skill files)
 .claude-agents/
+
+# Backups
+backups/
+
+# Environment (nur .env.example und .env.dev committed)
+.env
+!.env.example
+!.env.dev
