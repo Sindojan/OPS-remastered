@@ -21,21 +21,21 @@ interface TopbarProps {
 }
 
 const routeNames: Record<string, string> = {
-  "/agents": "Agent Console",
-  "/agents/hierarchy": "Agent Hierarchy",
-  "/production": "Production Overview",
-  "/production/planner": "Production Planner",
-  "/machines": "Machines",
-  "/inventory": "Inventory",
-  "/parts": "Parts & Components",
-  "/process-plans": "Process Plans",
-  "/inbox": "Inbox",
-  "/reports": "Reports",
-  "/employees": "Employees",
-  "/my-day": "My Day",
-  "/knowledge": "Knowledge Base",
-  "/settings": "Settings",
-  "/system/companies": "Companies",
+  "/my-day": "Mein Tag",
+  "/agents": "Agenten-Konsole",
+  "/agents/hierarchy": "Agenten-Hierarchie",
+  "/production": "Produktionsübersicht",
+  "/production/planner": "Produktionsplaner",
+  "/machines": "Maschinen",
+  "/inventory": "Lager",
+  "/parts-and-processes": "Teile & Prozesse",
+  "/customers": "Kunden",
+  "/inbox": "Posteingang",
+  "/reports": "Berichte",
+  "/employees": "Mitarbeiter",
+  "/knowledge": "Wissensdatenbank",
+  "/settings": "Einstellungen",
+  "/system/companies": "Unternehmen",
 };
 
 export function Topbar({ onAgentPanelToggle, agentPanelOpen }: TopbarProps) {
@@ -43,7 +43,9 @@ export function Topbar({ onAgentPanelToggle, agentPanelOpen }: TopbarProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { agent, loading: agentLoading } = usePrimaryAgent();
-  const pageName = routeNames[pathname] ?? "Dashboard";
+  // Match exact path first, then try base path for detail pages
+  const basePath = "/" + pathname.split("/").filter(Boolean)[0];
+  const pageName = routeNames[pathname] ?? routeNames[basePath] ?? "Übersicht";
 
   const initials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
@@ -96,7 +98,7 @@ export function Topbar({ onAgentPanelToggle, agentPanelOpen }: TopbarProps) {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium">
-                  {user ? `${user.firstName} ${user.lastName}` : "Unknown"}
+                  {user ? `${user.firstName} ${user.lastName}` : "Unbekannt"}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {user?.email ?? ""}

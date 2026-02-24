@@ -65,20 +65,20 @@ const MACHINE_STATUS_COLORS: Record<MachineStatus, string> = {
 };
 
 const JOB_STATUS_LABELS: Record<JobStatus, string> = {
-  DRAFT: "Draft",
-  RELEASED: "Released",
-  IN_PRODUCTION: "In Production",
-  ON_HOLD: "On Hold",
-  COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
+  DRAFT: "Entwurf",
+  RELEASED: "Freigegeben",
+  IN_PRODUCTION: "In Produktion",
+  ON_HOLD: "Angehalten",
+  COMPLETED: "Abgeschlossen",
+  CANCELLED: "Storniert",
 };
 
 const MACHINE_STATUS_LABELS: Record<MachineStatus, string> = {
-  AVAILABLE: "Available",
-  IN_USE: "In Use",
-  MAINTENANCE: "Maintenance",
-  BLOCKED: "Blocked",
-  DECOMMISSIONED: "Decommissioned",
+  AVAILABLE: "Verfuegbar",
+  IN_USE: "In Betrieb",
+  MAINTENANCE: "Wartung",
+  BLOCKED: "Gesperrt",
+  DECOMMISSIONED: "Ausgemustert",
 };
 
 type DateRange = "today" | "week" | "month";
@@ -327,14 +327,14 @@ export default function ReportsPage() {
     try {
       const jobList = jobs ?? [];
       const headers = [
-        "Job Number",
-        "Title",
+        "Auftragsnummer",
+        "Titel",
         "Status",
-        "Priority",
-        "Quantity",
-        "Deadline",
-        "Created At",
-        "Completed At",
+        "Prioritaet",
+        "Menge",
+        "Frist",
+        "Erstellt am",
+        "Abgeschlossen am",
       ];
       const rows = jobList.map((j) => [
         j.jobNumber,
@@ -347,10 +347,10 @@ export default function ReportsPage() {
         j.completedAt ?? "",
       ]);
       downloadCsv("jobs-report.csv", headers, rows);
-      toast.success("CSV exported");
+      toast.success("CSV exportiert");
     } catch (err) {
-      toast.error("Export failed", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Export fehlgeschlagen", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [jobs]);
@@ -359,13 +359,13 @@ export default function ReportsPage() {
     try {
       const articleList = articles ?? [];
       const headers = [
-        "Article Number",
+        "Artikelnummer",
         "Name",
-        "Description",
-        "Min Stock",
-        "Reorder Point",
+        "Beschreibung",
+        "Mindestbestand",
+        "Nachbestellpunkt",
         "Status",
-        "Created At",
+        "Erstellt am",
       ];
       const rows = articleList.map((a) => [
         a.articleNumber,
@@ -377,10 +377,10 @@ export default function ReportsPage() {
         a.createdAt,
       ]);
       downloadCsv("inventory-report.csv", headers, rows);
-      toast.success("CSV exported");
+      toast.success("CSV exportiert");
     } catch (err) {
-      toast.error("Export failed", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Export fehlgeschlagen", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [articles]);
@@ -388,16 +388,16 @@ export default function ReportsPage() {
   // ── Render ──────────────────────────────────────────
 
   const dateRangeButtons: { label: string; value: DateRange }[] = [
-    { label: "Today", value: "today" },
-    { label: "This Week", value: "week" },
-    { label: "This Month", value: "month" },
+    { label: "Heute", value: "today" },
+    { label: "Diese Woche", value: "week" },
+    { label: "Dieser Monat", value: "month" },
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Reports"
-        description="Overview of key operational metrics"
+        title="Berichte"
+        description="Ueberblick ueber die wichtigsten Betriebskennzahlen"
         actions={
           <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
             {dateRangeButtons.map((btn) => (
@@ -430,65 +430,65 @@ export default function ReportsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
-            label="Open Jobs"
+            label="Offene Auftraege"
             value={String(kpis.openJobs)}
             trend={
               kpis.openJobs > 0
-                ? { direction: "up", value: `${kpis.openJobs} active` }
+                ? { direction: "up", value: `${kpis.openJobs} aktiv` }
                 : undefined
             }
           />
           <KpiCard
-            label="In Production"
+            label="In Produktion"
             value={String(kpis.inProduction)}
             trend={
               kpis.inProduction > 0
-                ? { direction: "up", value: "running" }
-                : { direction: "neutral", value: "idle" }
+                ? { direction: "up", value: "laufend" }
+                : { direction: "neutral", value: "ruhend" }
             }
           />
           <KpiCard
-            label="Completed Jobs"
+            label="Abgeschlossene Auftraege"
             value={String(kpis.completedJobs)}
-            trend={{ direction: "up", value: "total" }}
+            trend={{ direction: "up", value: "gesamt" }}
           />
           <KpiCard
-            label="Machine Availability"
+            label="Maschinenverfuegbarkeit"
             value={String(kpis.utilization)}
             unit="%"
             trend={
               kpis.utilization >= 70
-                ? { direction: "up", value: "healthy" }
-                : { direction: "down", value: "low" }
+                ? { direction: "up", value: "gut" }
+                : { direction: "down", value: "niedrig" }
             }
           />
           <KpiCard
-            label="Critical Stock"
+            label="Kritischer Bestand"
             value={String(kpis.criticalStock)}
             trend={
               kpis.criticalStock > 0
-                ? { direction: "down", value: `${kpis.criticalStock} below min` }
-                : { direction: "up", value: "all good" }
+                ? { direction: "down", value: `${kpis.criticalStock} unter Minimum` }
+                : { direction: "up", value: "alles gut" }
             }
           />
           <KpiCard
-            label="Open Tickets"
+            label="Offene Tickets"
             value={String(kpis.openTickets)}
             trend={
               kpis.openTickets > 5
-                ? { direction: "down", value: "high load" }
+                ? { direction: "down", value: "hohe Last" }
                 : { direction: "neutral", value: "normal" }
             }
           />
           <KpiCard
-            label="Active Employees"
+            label="Aktive Mitarbeiter"
             value={String(kpis.activeEmployees)}
-            trend={{ direction: "neutral", value: "on duty" }}
+            trend={{ direction: "neutral", value: "im Dienst" }}
           />
           <KpiCard
-            label="Total Articles"
+            label="Artikel gesamt"
             value={String(kpis.totalArticles)}
-            trend={{ direction: "neutral", value: "in catalog" }}
+            trend={{ direction: "neutral", value: "im Katalog" }}
           />
         </div>
       )}
@@ -500,7 +500,7 @@ export default function ReportsPage() {
         <Card className="py-0">
           <CardHeader className="pb-0 pt-5">
             <CardTitle className="text-sm font-semibold tracking-tight">
-              Jobs by Status
+              Auftraege nach Status
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-5">
@@ -550,7 +550,7 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <p className="text-sm text-muted-foreground">No job data</p>
+                  <p className="text-sm text-muted-foreground">Keine Auftragsdaten</p>
                 </div>
               )}
             </div>
@@ -561,7 +561,7 @@ export default function ReportsPage() {
         <Card className="py-0">
           <CardHeader className="pb-0 pt-5">
             <CardTitle className="text-sm font-semibold tracking-tight">
-              Jobs Completed (30 Days)
+              Abgeschlossene Auftraege (30 Tage)
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-5">
@@ -638,7 +638,7 @@ export default function ReportsPage() {
         <Card className="py-0">
           <CardHeader className="pb-0 pt-5">
             <CardTitle className="text-sm font-semibold tracking-tight">
-              Machine Status
+              Maschinenstatus
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-5">
@@ -702,7 +702,7 @@ export default function ReportsPage() {
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <p className="text-sm text-muted-foreground">
-                    No machine data
+                    Keine Maschinendaten
                   </p>
                 </div>
               )}
@@ -716,7 +716,7 @@ export default function ReportsPage() {
       <Card className="py-0">
         <CardHeader className="pb-0 pt-5">
           <CardTitle className="text-sm font-semibold tracking-tight">
-            Export Data
+            Daten exportieren
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 pb-5">
@@ -728,7 +728,7 @@ export default function ReportsPage() {
             className="gap-2"
           >
             <Download className="h-4 w-4" />
-            Export Jobs CSV
+            Auftraege CSV exportieren
           </Button>
           <Button
             variant="outline"
@@ -738,7 +738,7 @@ export default function ReportsPage() {
             className="gap-2"
           >
             <FileSpreadsheet className="h-4 w-4" />
-            Export Inventory CSV
+            Lager CSV exportieren
           </Button>
         </CardContent>
       </Card>

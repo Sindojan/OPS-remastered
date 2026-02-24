@@ -77,8 +77,8 @@ function getArticleStatusVariant(status: string) {
 // ─── Schemas ────────────────────────────────────────────
 
 const articleSchema = z.object({
-  articleNumber: z.string().min(1, "Article number is required"),
-  name: z.string().min(1, "Name is required"),
+  articleNumber: z.string().min(1, "Artikelnummer ist erforderlich"),
+  name: z.string().min(1, "Name ist erforderlich"),
   description: z.string().optional(),
   minStock: z.number().min(0).optional(),
   reorderPoint: z.number().min(0).optional(),
@@ -87,9 +87,9 @@ const articleSchema = z.object({
 type ArticleFormValues = z.infer<typeof articleSchema>;
 
 const supplierSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Name ist erforderlich"),
   contactName: z.string().optional(),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  email: z.string().email("Ungueltige E-Mail").optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
   taxId: z.string().optional(),
@@ -101,7 +101,7 @@ type SupplierFormValues = z.infer<typeof supplierSchema>;
 const articleColumns: ColumnDef<ArticleResponse>[] = [
   {
     id: "articleNumber",
-    header: "Article #",
+    header: "Artikel-Nr.",
     accessorKey: "articleNumber",
     cell: (row) => (
       <span className="font-mono text-xs font-medium text-primary">
@@ -116,7 +116,7 @@ const articleColumns: ColumnDef<ArticleResponse>[] = [
   },
   {
     id: "category",
-    header: "Category",
+    header: "Kategorie",
     cell: (row) => (
       <span className="text-muted-foreground text-xs">
         {row.categoryId ? row.categoryId.slice(0, 8) + "..." : "\u2013"}
@@ -126,7 +126,7 @@ const articleColumns: ColumnDef<ArticleResponse>[] = [
   },
   {
     id: "unit",
-    header: "Unit",
+    header: "Einheit",
     cell: (row) => (
       <span className="text-muted-foreground text-xs">
         {row.unitId ? row.unitId.slice(0, 8) + "..." : "\u2013"}
@@ -136,14 +136,14 @@ const articleColumns: ColumnDef<ArticleResponse>[] = [
   },
   {
     id: "minStock",
-    header: "Min Stock",
+    header: "Mindestbestand",
     cell: (row) => (
       <span className="font-mono text-xs">{formatNumber(row.minStock)}</span>
     ),
   },
   {
     id: "reorderPoint",
-    header: "Reorder Point",
+    header: "Nachbestellgrenze",
     cell: (row) => (
       <span className="font-mono text-xs">{formatNumber(row.reorderPoint)}</span>
     ),
@@ -170,7 +170,7 @@ const supplierColumns: ColumnDef<SupplierResponse>[] = [
   },
   {
     id: "contactName",
-    header: "Contact",
+    header: "Ansprechpartner",
     cell: (row) => (
       <span className="flex items-center gap-1.5 text-sm">
         {row.contactName ? (
@@ -186,7 +186,7 @@ const supplierColumns: ColumnDef<SupplierResponse>[] = [
   },
   {
     id: "email",
-    header: "Email",
+    header: "E-Mail",
     cell: (row) => (
       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
         {row.email ? (
@@ -202,7 +202,7 @@ const supplierColumns: ColumnDef<SupplierResponse>[] = [
   },
   {
     id: "phone",
-    header: "Phone",
+    header: "Telefon",
     cell: (row) => (
       <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
         {row.phone ? (
@@ -292,7 +292,7 @@ export default function InventoryPage() {
     try {
       const result = await mutations.createArticle(req);
       if (result) {
-        toast.success("Article created successfully");
+        toast.success("Artikel erfolgreich erstellt");
         setArticleDialogOpen(false);
         articleForm.reset({
           articleNumber: `ART-${Date.now().toString(36).toUpperCase()}`,
@@ -305,7 +305,7 @@ export default function InventoryPage() {
         refetchArticles();
       }
     } catch (err) {
-      toast.error("Failed to create article", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Artikel konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -321,24 +321,24 @@ export default function InventoryPage() {
     try {
       const result = await mutations.createSupplier(req);
       if (result) {
-        toast.success("Supplier created successfully");
+        toast.success("Lieferant erfolgreich erstellt");
         setSupplierDialogOpen(false);
         supplierForm.reset();
         refetchSuppliers();
       }
     } catch (err) {
-      toast.error("Failed to create supplier", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Lieferant konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
   const articleRowActions: RowAction<ArticleResponse>[] = [
     {
-      label: "View Detail",
+      label: "Details anzeigen",
       icon: <Eye className="h-3.5 w-3.5" />,
       onClick: (row) => router.push(`/inventory/articles/${row.id}`),
     },
     {
-      label: "Book Movement",
+      label: "Bewegung buchen",
       icon: <ArrowDownToLine className="h-3.5 w-3.5" />,
       onClick: (row) => router.push(`/inventory/articles/${row.id}?tab=movements`),
     },
@@ -346,7 +346,7 @@ export default function InventoryPage() {
 
   const supplierRowActions: RowAction<SupplierResponse>[] = [
     {
-      label: "View Detail",
+      label: "Details anzeigen",
       icon: <Eye className="h-3.5 w-3.5" />,
       onClick: (row) => router.push(`/inventory/suppliers/${row.id}`),
     },
@@ -356,13 +356,13 @@ export default function InventoryPage() {
   const articleFilterSlot = (
     <Select value={statusFilter} onValueChange={setStatusFilter}>
       <SelectTrigger size="sm" className="w-36">
-        <SelectValue placeholder="All Statuses" />
+        <SelectValue placeholder="Alle Status" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">All Statuses</SelectItem>
-        <SelectItem value="ACTIVE">Active</SelectItem>
-        <SelectItem value="INACTIVE">Inactive</SelectItem>
-        <SelectItem value="DISCONTINUED">Discontinued</SelectItem>
+        <SelectItem value="all">Alle Status</SelectItem>
+        <SelectItem value="ACTIVE">Aktiv</SelectItem>
+        <SelectItem value="INACTIVE">Inaktiv</SelectItem>
+        <SelectItem value="DISCONTINUED">Eingestellt</SelectItem>
       </SelectContent>
     </Select>
   );
@@ -372,8 +372,8 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Inventory"
-        description="Articles, stock levels, and supplier management"
+        title="Lager"
+        description="Artikel, Bestände und Lieferantenverwaltung"
       />
 
       {/* Critical Articles Banner */}
@@ -382,8 +382,8 @@ export default function InventoryPage() {
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
           <p className="text-sm text-amber-600 dark:text-amber-400">
             <span className="font-mono font-semibold">{criticalCount}</span>{" "}
-            article{criticalCount !== 1 ? "s" : ""} below minimum stock level.
-            Review and reorder to prevent shortages.
+            {criticalCount !== 1 ? "Artikel" : "Artikel"} unter Mindestbestand.
+            Überprüfen und nachbestellen, um Engpässe zu vermeiden.
           </p>
         </div>
       )}
@@ -400,32 +400,32 @@ export default function InventoryPage() {
         ) : (
           <>
             <KpiCard
-              label="Total Articles"
+              label="Artikel gesamt"
               value={formatNumber(totalArticles)}
               trend={
                 totalArticles > 0
-                  ? { direction: "neutral", value: `${totalArticles} tracked` }
+                  ? { direction: "neutral", value: `${totalArticles} erfasst` }
                   : undefined
               }
             />
             <KpiCard
-              label="Critical Articles"
+              label="Kritische Artikel"
               value={formatNumber(criticalCount)}
               trend={
                 criticalCount > 0
-                  ? { direction: "down", value: "Below min stock" }
-                  : { direction: "up", value: "All OK" }
+                  ? { direction: "down", value: "Unter Mindestbestand" }
+                  : { direction: "up", value: "Alles OK" }
               }
             />
             <KpiCard
-              label="Movements Today"
+              label="Bewegungen heute"
               value={"\u2013"}
-              trend={{ direction: "neutral", value: "Tracking pending" }}
+              trend={{ direction: "neutral", value: "Erfassung ausstehend" }}
             />
             <KpiCard
-              label="Total Value"
+              label="Gesamtwert"
               value={"\u2013"}
-              trend={{ direction: "neutral", value: "Valuation pending" }}
+              trend={{ direction: "neutral", value: "Bewertung ausstehend" }}
             />
           </>
         )}
@@ -436,11 +436,11 @@ export default function InventoryPage() {
         <TabsList>
           <TabsTrigger value="articles" className="gap-1.5">
             <Package className="h-3.5 w-3.5" />
-            Articles
+            Artikel
           </TabsTrigger>
           <TabsTrigger value="suppliers" className="gap-1.5">
             <Truck className="h-3.5 w-3.5" />
-            Suppliers
+            Lieferanten
           </TabsTrigger>
         </TabsList>
 
@@ -451,14 +451,14 @@ export default function InventoryPage() {
               <AlertTriangle className="h-8 w-8 text-destructive/60" />
               <p className="text-sm text-muted-foreground">{articlesError}</p>
               <Button variant="outline" size="sm" onClick={refetchArticles}>
-                Retry
+                Erneut versuchen
               </Button>
             </div>
           ) : (
             <DataTable<ArticleResponse>
               data={filteredArticles}
               columns={articleColumns}
-              searchPlaceholder="Search articles..."
+              searchPlaceholder="Artikel suchen..."
               searchKey="name"
               filterSlots={
                 <>
@@ -469,7 +469,7 @@ export default function InventoryPage() {
                     onClick={() => setArticleDialogOpen(true)}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    New Article
+                    Neuer Artikel
                   </Button>
                 </>
               }
@@ -478,8 +478,8 @@ export default function InventoryPage() {
               loading={articlesLoading}
               emptyState={{
                 icon: <Package className="h-8 w-8 text-muted-foreground/40" />,
-                title: "No articles yet",
-                description: "Create your first article to start tracking inventory.",
+                title: "Noch keine Artikel",
+                description: "Erstellen Sie Ihren ersten Artikel, um die Bestandsverfolgung zu starten.",
                 action: (
                   <Button
                     size="sm"
@@ -488,7 +488,7 @@ export default function InventoryPage() {
                     onClick={() => setArticleDialogOpen(true)}
                   >
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    New Article
+                    Neuer Artikel
                   </Button>
                 ),
               }}
@@ -503,14 +503,14 @@ export default function InventoryPage() {
               <AlertTriangle className="h-8 w-8 text-destructive/60" />
               <p className="text-sm text-muted-foreground">{suppliersError}</p>
               <Button variant="outline" size="sm" onClick={refetchSuppliers}>
-                Retry
+                Erneut versuchen
               </Button>
             </div>
           ) : (
             <DataTable<SupplierResponse>
               data={suppliers ?? []}
               columns={supplierColumns}
-              searchPlaceholder="Search suppliers..."
+              searchPlaceholder="Lieferanten suchen..."
               searchKey="name"
               filterSlots={
                 <Button
@@ -519,7 +519,7 @@ export default function InventoryPage() {
                   onClick={() => setSupplierDialogOpen(true)}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  New Supplier
+                  Neuer Lieferant
                 </Button>
               }
               rowActions={supplierRowActions}
@@ -527,8 +527,8 @@ export default function InventoryPage() {
               loading={suppliersLoading}
               emptyState={{
                 icon: <Truck className="h-8 w-8 text-muted-foreground/40" />,
-                title: "No suppliers yet",
-                description: "Add suppliers to manage your supply chain.",
+                title: "Noch keine Lieferanten",
+                description: "Lieferanten hinzufuegen, um Ihre Lieferkette zu verwalten.",
                 action: (
                   <Button
                     size="sm"
@@ -537,7 +537,7 @@ export default function InventoryPage() {
                     onClick={() => setSupplierDialogOpen(true)}
                   >
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    New Supplier
+                    Neuer Lieferant
                   </Button>
                 ),
               }}
@@ -550,15 +550,15 @@ export default function InventoryPage() {
       <Dialog open={articleDialogOpen} onOpenChange={setArticleDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>New Article</DialogTitle>
+            <DialogTitle>Neuer Artikel</DialogTitle>
             <DialogDescription>
-              Add a new article to the inventory system.
+              Neuen Artikel zum Lagersystem hinzufuegen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={articleForm.handleSubmit(handleCreateArticle as any)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="articleNumber">Article Number</Label>
+              <Label htmlFor="articleNumber">Artikelnummer</Label>
               <Input
                 id="articleNumber"
                 className="font-mono"
@@ -580,7 +580,7 @@ export default function InventoryPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="articleDesc">Description</Label>
+              <Label htmlFor="articleDesc">Beschreibung</Label>
               <Textarea
                 id="articleDesc"
                 rows={2}
@@ -589,7 +589,7 @@ export default function InventoryPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="minStock">Min Stock</Label>
+                <Label htmlFor="minStock">Mindestbestand</Label>
                 <Input
                   id="minStock"
                   type="number"
@@ -599,7 +599,7 @@ export default function InventoryPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reorderPoint">Reorder Point</Label>
+                <Label htmlFor="reorderPoint">Nachbestellgrenze</Label>
                 <Input
                   id="reorderPoint"
                   type="number"
@@ -619,8 +619,8 @@ export default function InventoryPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="ACTIVE">Aktiv</SelectItem>
+                  <SelectItem value="INACTIVE">Inaktiv</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -634,10 +634,10 @@ export default function InventoryPage() {
                 size="sm"
                 onClick={() => setArticleDialogOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Creating..." : "Create Article"}
+                {mutations.loading ? "Wird erstellt..." : "Artikel erstellen"}
               </Button>
             </DialogFooter>
           </form>
@@ -648,9 +648,9 @@ export default function InventoryPage() {
       <Dialog open={supplierDialogOpen} onOpenChange={setSupplierDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>New Supplier</DialogTitle>
+            <DialogTitle>Neuer Lieferant</DialogTitle>
             <DialogDescription>
-              Add a new supplier to your supply chain.
+              Neuen Lieferanten zur Lieferkette hinzufuegen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -665,12 +665,12 @@ export default function InventoryPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contactName">Contact Name</Label>
+              <Label htmlFor="contactName">Ansprechpartner</Label>
               <Input id="contactName" {...supplierForm.register("contactName")} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="supplierEmail">Email</Label>
+                <Label htmlFor="supplierEmail">E-Mail</Label>
                 <Input id="supplierEmail" type="email" {...supplierForm.register("email")} />
                 {supplierForm.formState.errors.email && (
                   <p className="text-xs text-destructive">
@@ -679,12 +679,12 @@ export default function InventoryPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="supplierPhone">Phone</Label>
+                <Label htmlFor="supplierPhone">Telefon</Label>
                 <Input id="supplierPhone" {...supplierForm.register("phone")} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplierAddress">Address</Label>
+              <Label htmlFor="supplierAddress">Adresse</Label>
               <Textarea
                 id="supplierAddress"
                 rows={2}
@@ -692,7 +692,7 @@ export default function InventoryPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="taxId">Tax ID</Label>
+              <Label htmlFor="taxId">Steuer-ID</Label>
               <Input id="taxId" className="font-mono" {...supplierForm.register("taxId")} />
             </div>
             {mutations.error && (
@@ -705,10 +705,10 @@ export default function InventoryPage() {
                 size="sm"
                 onClick={() => setSupplierDialogOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Creating..." : "Create Supplier"}
+                {mutations.loading ? "Wird erstellt..." : "Lieferant erstellen"}
               </Button>
             </DialogFooter>
           </form>

@@ -49,8 +49,8 @@ import { formatDate, humanizeStatus } from "@/lib/format";
 // ─── Schemas ────────────────────────────────────────────
 
 const createCustomerSchema = z.object({
-  customerNumber: z.string().min(1, "Customer number is required"),
-  companyName: z.string().min(1, "Company name is required"),
+  customerNumber: z.string().min(1, "Kundennummer ist erforderlich"),
+  companyName: z.string().min(1, "Firmenname ist erforderlich"),
   shortName: z.string().optional(),
   taxId: z.string().optional(),
 });
@@ -104,7 +104,7 @@ export default function CustomersPage() {
     () => [
       {
         id: "customerNumber",
-        header: "Customer #",
+        header: "Kunden-Nr.",
         cell: (row) => (
           <span className="font-mono text-xs font-semibold text-foreground">
             {row.customerNumber ?? "–"}
@@ -113,13 +113,13 @@ export default function CustomersPage() {
       },
       {
         id: "companyName",
-        header: "Company Name",
+        header: "Firmenname",
         accessorKey: "companyName",
         sortable: true,
       },
       {
         id: "shortName",
-        header: "Short Name",
+        header: "Kurzname",
         cell: (row) => (
           <span className="text-muted-foreground">
             {row.shortName ?? "–"}
@@ -128,7 +128,7 @@ export default function CustomersPage() {
       },
       {
         id: "city",
-        header: "City",
+        header: "Stadt",
         cell: (row) => {
           const addr = row.addresses?.[0];
           return (
@@ -151,7 +151,7 @@ export default function CustomersPage() {
       },
       {
         id: "createdAt",
-        header: "Created",
+        header: "Erstellt",
         accessorKey: "createdAt",
         sortable: true,
         cell: (row) => (
@@ -177,7 +177,7 @@ export default function CustomersPage() {
         };
         const result = await mutations.createCustomer(payload);
         if (result) {
-          toast.success("Customer created");
+          toast.success("Kunde erfolgreich erstellt");
           setCreateOpen(false);
           form.reset({
             customerNumber: `K-${Date.now().toString(36).toUpperCase().slice(-4)}`,
@@ -188,8 +188,8 @@ export default function CustomersPage() {
           refetch();
         }
       } catch (err) {
-        toast.error("Failed to create customer", {
-          description: err instanceof Error ? err.message : "Unknown error",
+        toast.error("Kunde konnte nicht erstellt werden", {
+          description: err instanceof Error ? err.message : "Unbekannter Fehler",
         });
       }
     },
@@ -204,7 +204,7 @@ export default function CustomersPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={refetch}>
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -215,18 +215,8 @@ export default function CustomersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Customers"
-        description="Customer management and relationships"
-        actions={
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Customer
-          </Button>
-        }
+        title="Kunden"
+        description="Kundenverwaltung und Beziehungen"
       />
 
       {/* KPI Cards */}
@@ -241,11 +231,11 @@ export default function CustomersPage() {
         ) : (
           <>
             <KpiCard
-              label="Total Customers"
+              label="Kunden gesamt"
               value={String(kpis?.total ?? 0)}
             />
             <KpiCard
-              label="Active"
+              label="Aktive"
               value={String(kpis?.active ?? 0)}
               trend={
                 kpis && kpis.total > 0
@@ -257,10 +247,10 @@ export default function CustomersPage() {
               }
             />
             <KpiCard
-              label="Inactive"
+              label="Inaktive"
               value={String(kpis?.inactive ?? 0)}
             />
-            <KpiCard label="Price Groups" value="–" />
+            <KpiCard label="Preisgruppen" value="–" />
           </>
         )}
       </div>
@@ -269,19 +259,19 @@ export default function CustomersPage() {
       <DataTable<CustomerResponse>
         data={filteredCustomers}
         columns={columns}
-        searchPlaceholder="Search customers..."
+        searchPlaceholder="Kunden suchen..."
         searchKey="companyName"
         loading={loading}
         pageSize={15}
         onRowClick={(row) => router.push(`/customers/${row.id}`)}
         filterSlots={
-          <div className="flex items-center gap-2">
+          <>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-9 w-40 text-sm">
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder="Alle Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Statuses</SelectItem>
+                <SelectItem value="ALL">Alle Status</SelectItem>
                 {CUSTOMER_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
                     {humanizeStatus(s)}
@@ -289,25 +279,33 @@ export default function CustomersPage() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Neuer Kunde
+            </Button>
+          </>
         }
         rowActions={[
           {
-            label: "View Details",
+            label: "Details anzeigen",
             icon: <Eye className="h-3.5 w-3.5" />,
             onClick: (row) => router.push(`/customers/${row.id}`),
           },
           {
-            label: "Deactivate",
+            label: "Deaktivieren",
             icon: <XCircle className="h-3.5 w-3.5" />,
             onClick: async (row) => {
               try {
                 await mutations.deleteCustomer(row.id);
-                toast.success("Customer deactivated");
+                toast.success("Kunde deaktiviert");
                 refetch();
               } catch (err) {
-                toast.error("Failed to deactivate", {
-                  description: err instanceof Error ? err.message : "Unknown error",
+                toast.error("Deaktivierung fehlgeschlagen", {
+                  description: err instanceof Error ? err.message : "Unbekannter Fehler",
                 });
               }
             },
@@ -316,8 +314,8 @@ export default function CustomersPage() {
         ]}
         emptyState={{
           icon: <Building2 className="h-8 w-8 text-muted-foreground/40" />,
-          title: "No customers found",
-          description: "Add your first customer to get started.",
+          title: "Keine Kunden gefunden",
+          description: "Erstellen Sie Ihren ersten Kunden.",
           action: (
             <Button
               variant="outline"
@@ -326,7 +324,7 @@ export default function CustomersPage() {
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New Customer
+              Neuer Kunde
             </Button>
           ),
         }}
@@ -338,10 +336,10 @@ export default function CustomersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-primary" />
-              New Customer
+              Neuer Kunde
             </DialogTitle>
             <DialogDescription>
-              Register a new customer in the system.
+              Neuen Kunden im System anlegen.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -350,7 +348,7 @@ export default function CustomersPage() {
           >
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="companyName">Company Name *</Label>
+                <Label htmlFor="companyName">Firmenname *</Label>
                 <Input
                   id="companyName"
                   placeholder="Acme Corp"
@@ -363,7 +361,7 @@ export default function CustomersPage() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="customerNumber">Customer # *</Label>
+                <Label htmlFor="customerNumber">Kunden-Nr. *</Label>
                 <Input
                   id="customerNumber"
                   className="font-mono"
@@ -379,7 +377,7 @@ export default function CustomersPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="shortName">Short Name</Label>
+                <Label htmlFor="shortName">Kurzname</Label>
                 <Input
                   id="shortName"
                   placeholder="ACME"
@@ -387,7 +385,7 @@ export default function CustomersPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="taxId">Tax ID</Label>
+                <Label htmlFor="taxId">Steuer-ID</Label>
                 <Input
                   id="taxId"
                   placeholder="DE123456789"
@@ -404,10 +402,10 @@ export default function CustomersPage() {
                 size="sm"
                 onClick={() => setCreateOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Creating..." : "Create Customer"}
+                {mutations.loading ? "Wird erstellt..." : "Kunde erstellen"}
               </Button>
             </DialogFooter>
           </form>

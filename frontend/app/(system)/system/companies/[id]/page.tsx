@@ -110,11 +110,11 @@ export default function CompanyDetailPage() {
     try {
       const body: CompanyUpdateRequest = { name: editName.trim() };
       await mutate("patch", `/api/system/companies/${companyId}`, body);
-      toast.success("Name updated.");
+      toast.success("Name aktualisiert.");
       setEditName(null);
       refetch();
     } catch {
-      toast.error("Failed to update name.");
+      toast.error("Fehler beim Aktualisieren des Namens.");
     }
   };
 
@@ -123,11 +123,11 @@ export default function CompanyDetailPage() {
     try {
       const body: CompanyUpdateRequest = { plan: newPlan };
       await mutate("patch", `/api/system/companies/${companyId}`, body);
-      toast.success("Plan updated.");
+      toast.success("Plan aktualisiert.");
       setEditPlan(null);
       refetch();
     } catch {
-      toast.error("Failed to update plan.");
+      toast.error("Fehler beim Aktualisieren des Plans.");
     }
   };
 
@@ -137,12 +137,12 @@ export default function CompanyDetailPage() {
       await mutate("post", `/api/system/companies/${companyId}/suspend`, {
         reason: suspendReason,
       });
-      toast.success("Company suspended.");
+      toast.success("Unternehmen gesperrt.");
       setSuspendOpen(false);
       setSuspendReason("");
       refetch();
     } catch {
-      toast.error("Failed to suspend company.");
+      toast.error("Fehler beim Sperren des Unternehmens.");
     }
   };
 
@@ -150,10 +150,10 @@ export default function CompanyDetailPage() {
   const handleReactivate = async () => {
     try {
       await mutate("post", `/api/system/companies/${companyId}/activate`);
-      toast.success("Company reactivated.");
+      toast.success("Unternehmen reaktiviert.");
       refetch();
     } catch {
-      toast.error("Failed to reactivate company.");
+      toast.error("Fehler beim Reaktivieren des Unternehmens.");
     }
   };
 
@@ -168,7 +168,7 @@ export default function CompanyDetailPage() {
         setResetPassword(res as unknown as string);
         refetchAdmins();
       } catch {
-        toast.error("Failed to reset password.");
+        toast.error("Fehler beim Zuruecksetzen des Passworts.");
       }
     },
     [companyId, mutate, refetchAdmins]
@@ -185,7 +185,7 @@ export default function CompanyDetailPage() {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="font-mono text-sm text-muted-foreground">
-          Loading...
+          Laden...
         </div>
       </div>
     );
@@ -194,9 +194,9 @@ export default function CompanyDetailPage() {
   if (!company) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-muted-foreground">Company not found.</p>
+        <p className="text-sm text-muted-foreground">Unternehmen nicht gefunden.</p>
         <Button variant="outline" size="sm" asChild>
-          <Link href="/system/companies">Back to Companies</Link>
+          <Link href="/system/companies">Zurueck zu Unternehmen</Link>
         </Button>
       </div>
     );
@@ -206,7 +206,7 @@ export default function CompanyDetailPage() {
     <>
       <PageHeader
         title={company.name}
-        breadcrumb={["System", "Companies", company.name]}
+        breadcrumb={["System", "Unternehmen", company.name]}
         actions={
           <div className="flex items-center gap-2">
             <DomainStatusBadge
@@ -222,7 +222,7 @@ export default function CompanyDetailPage() {
                 onClick={() => setSuspendOpen(true)}
               >
                 <Ban className="h-3.5 w-3.5" />
-                Suspend
+                Sperren
               </Button>
             )}
             {company.status === "SUSPENDED" && (
@@ -233,13 +233,13 @@ export default function CompanyDetailPage() {
                 onClick={handleReactivate}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Reactivate
+                Reaktivieren
               </Button>
             )}
             <Button variant="ghost" size="sm" className="gap-1.5" asChild>
               <Link href="/system/companies">
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Back
+                Zurueck
               </Link>
             </Button>
           </div>
@@ -248,9 +248,9 @@ export default function CompanyDetailPage() {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="stats">Statistics</TabsTrigger>
-          <TabsTrigger value="admins">Admin Users</TabsTrigger>
+          <TabsTrigger value="overview">Uebersicht</TabsTrigger>
+          <TabsTrigger value="stats">Statistiken</TabsTrigger>
+          <TabsTrigger value="admins">Admin-Benutzer</TabsTrigger>
         </TabsList>
 
         {/* ─── Overview Tab ──────────────────────────── */}
@@ -260,7 +260,7 @@ export default function CompanyDetailPage() {
               {/* Name */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">
-                  Company Name
+                  Firmenname
                 </Label>
                 {editName !== null ? (
                   <div className="flex items-center gap-2">
@@ -289,7 +289,7 @@ export default function CompanyDetailPage() {
                       className="h-6 text-xs text-muted-foreground"
                       onClick={() => setEditName(company.name)}
                     >
-                      Edit
+                      Bearbeiten
                     </Button>
                   </div>
                 )}
@@ -344,7 +344,7 @@ export default function CompanyDetailPage() {
                       className="h-6 text-xs text-muted-foreground"
                       onClick={() => setEditPlan(company.plan)}
                     >
-                      Change
+                      Aendern
                     </Button>
                   </div>
                 )}
@@ -353,7 +353,7 @@ export default function CompanyDetailPage() {
               {/* Created */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">
-                  Created At
+                  Erstellt am
                 </Label>
                 <p className="text-sm">{formatDateTime(company.createdAt)}</p>
               </div>
@@ -362,14 +362,14 @@ export default function CompanyDetailPage() {
               {company.suspendedAt && (
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">
-                    Suspended At
+                    Gesperrt am
                   </Label>
                   <p className="text-sm">
                     {formatDateTime(company.suspendedAt)}
                   </p>
                   {company.suspendReason && (
                     <p className="text-xs text-muted-foreground">
-                      Reason: {company.suspendReason}
+                      Grund: {company.suspendReason}
                     </p>
                   )}
                 </div>
@@ -382,27 +382,27 @@ export default function CompanyDetailPage() {
         <TabsContent value="stats">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
-              label="Users"
+              label="Benutzer"
               value={String(stats?.userCount ?? 0)}
               loading={statsLoading}
             />
             <KpiCard
-              label="Agent Runs (30d)"
+              label="Agent-Laeufe (30T)"
               value={String(stats?.activeAgentRuns30d ?? 0)}
               loading={statsLoading}
             />
             <KpiCard
-              label="Storage"
+              label="Speicher"
               value={String(stats?.storageUsedMb ?? 0)}
               unit="MB"
               loading={statsLoading}
             />
             <KpiCard
-              label="Last Active"
+              label="Zuletzt aktiv"
               value={
                 stats?.lastActiveAt
                   ? formatDate(stats.lastActiveAt)
-                  : "Never"
+                  : "Nie"
               }
               loading={statsLoading}
             />
@@ -413,10 +413,10 @@ export default function CompanyDetailPage() {
         <TabsContent value="admins">
           <Card className="p-6">
             {adminsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading...</p>
+              <p className="text-sm text-muted-foreground">Laden...</p>
             ) : !admins || admins.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No admin users found.
+                Keine Admin-Benutzer gefunden.
               </p>
             ) : (
               <div className="space-y-3">
@@ -440,7 +440,7 @@ export default function CompanyDetailPage() {
                       onClick={() => handleResetPassword(admin.id)}
                     >
                       <KeyRound className="h-3.5 w-3.5" />
-                      Reset Password
+                      Passwort zuruecksetzen
                     </Button>
                   </div>
                 ))}
@@ -462,19 +462,19 @@ export default function CompanyDetailPage() {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Suspend Company</DialogTitle>
+            <DialogTitle>Unternehmen sperren</DialogTitle>
             <DialogDescription>
-              Suspend &quot;{company.name}&quot;? Users will no longer be able to
-              log in.
+              &quot;{company.name}&quot; sperren? Benutzer koennen sich nicht mehr
+              anmelden.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="detail-suspend-reason">Reason</Label>
+            <Label htmlFor="detail-suspend-reason">Sperrgrund</Label>
             <Textarea
               id="detail-suspend-reason"
               value={suspendReason}
               onChange={(e) => setSuspendReason(e.target.value)}
-              placeholder="Reason for suspension..."
+              placeholder="Grund fuer die Sperrung..."
               rows={3}
             />
           </div>
@@ -487,10 +487,10 @@ export default function CompanyDetailPage() {
                 setSuspendReason("");
               }}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button variant="destructive" size="sm" onClick={handleSuspend}>
-              Suspend
+              Sperren
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -508,14 +508,14 @@ export default function CompanyDetailPage() {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Password Reset</DialogTitle>
+            <DialogTitle>Passwort zurueckgesetzt</DialogTitle>
             <DialogDescription>
-              The new password has been generated. Share it securely.
+              Das neue Passwort wurde generiert. Teilen Sie es sicher mit.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              New Password
+              Neues Passwort
             </p>
             <p className="font-mono text-sm select-all">
               {resetPassword}
@@ -531,7 +531,7 @@ export default function CompanyDetailPage() {
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
-              {copied ? "Copied" : "Copy Password"}
+              {copied ? "Kopiert" : "Passwort kopieren"}
             </Button>
           </div>
           <DialogFooter>
@@ -542,7 +542,7 @@ export default function CompanyDetailPage() {
                 setCopied(false);
               }}
             >
-              Done
+              Fertig
             </Button>
           </DialogFooter>
         </DialogContent>

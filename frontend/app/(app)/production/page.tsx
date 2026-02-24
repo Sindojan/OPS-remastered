@@ -62,17 +62,17 @@ const PRIORITIES = [1, 2, 3, 4, 5];
 
 // ─── Create Job Schema ─────────────────────────────────
 const createJobSchema = z.object({
-  jobNumber: z.string().min(1, "Job number is required"),
-  title: z.string().min(1, "Title is required"),
+  jobNumber: z.string().min(1, "Auftragsnummer ist erforderlich"),
+  title: z.string().min(1, "Titel ist erforderlich"),
   customerId: z.string().optional(),
   priority: z.coerce.number().min(1).max(5),
-  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
+  quantity: z.coerce.number().min(1, "Menge muss mindestens 1 sein"),
   deadline: z.string().optional().refine(
     (val) => {
       if (!val) return true;
       return new Date(val) > new Date();
     },
-    { message: "Deadline must be in the future" }
+    { message: "Fälligkeitsdatum muss in der Zukunft liegen" }
   ),
   notes: z.string().optional(),
 });
@@ -203,13 +203,13 @@ export default function ProductionOverviewPage() {
         };
         const result = await createJob(req);
         if (result) {
-          toast.success("Job created");
+          toast.success("Auftrag erfolgreich erstellt");
           setCreateOpen(false);
           form.reset({ jobNumber: `JOB-${Date.now()}`, title: "", customerId: "", priority: 3, quantity: 1, deadline: "", notes: "" });
           refetch();
         }
       } catch (err) {
-        toast.error("Failed to create job", { description: err instanceof Error ? err.message : "Unknown error" });
+        toast.error("Auftrag konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
       }
     },
     [createJob, form, refetch]
@@ -219,11 +219,11 @@ export default function ProductionOverviewPage() {
     if (!deleteTarget) return;
     try {
       await deleteJob(deleteTarget.id);
-      toast.success("Job deleted");
+      toast.success("Auftrag erfolgreich gelöscht");
       setDeleteTarget(null);
       refetch();
     } catch (err) {
-      toast.error("Failed to delete job", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Auftrag konnte nicht gelöscht werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [deleteTarget, deleteJob, refetch]);
 
@@ -233,11 +233,11 @@ export default function ProductionOverviewPage() {
       for (const id of bulkDeleteIds) {
         await deleteJob(id);
       }
-      toast.success(`${bulkDeleteIds.length} job(s) deleted`);
+      toast.success(`${bulkDeleteIds.length} Auftrag/Aufträge gelöscht`);
       setBulkDeleteIds(null);
       refetch();
     } catch (err) {
-      toast.error("Failed to delete jobs", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Aufträge konnten nicht gelöscht werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [bulkDeleteIds, deleteJob, refetch]);
 
@@ -248,13 +248,13 @@ export default function ProductionOverviewPage() {
         newStatus: selectedNewStatus as JobStatus,
         reason: statusReason || undefined,
       });
-      toast.success("Job status updated");
+      toast.success("Auftragsstatus aktualisiert");
       setStatusTarget(null);
       setSelectedNewStatus("");
       setStatusReason("");
       refetch();
     } catch (err) {
-      toast.error("Failed to change status", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Status konnte nicht geändert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [statusTarget, selectedNewStatus, statusReason, changeStatus, refetch]);
 
@@ -263,7 +263,7 @@ export default function ProductionOverviewPage() {
     () => [
       {
         id: "jobNumber",
-        header: "Job #",
+        header: "Auftrags-Nr.",
         accessorKey: "jobNumber",
         sortable: true,
         cell: (row) => (
@@ -274,7 +274,7 @@ export default function ProductionOverviewPage() {
       },
       {
         id: "title",
-        header: "Title",
+        header: "Titel",
         accessorKey: "title",
         sortable: true,
         cell: (row) => (
@@ -283,7 +283,7 @@ export default function ProductionOverviewPage() {
       },
       {
         id: "customerId",
-        header: "Customer",
+        header: "Kunde",
         accessorKey: "customerId",
         sortable: true,
         cell: (row) => (
@@ -308,7 +308,7 @@ export default function ProductionOverviewPage() {
       },
       {
         id: "priority",
-        header: "Priority",
+        header: "Priorität",
         accessorKey: "priority",
         sortable: true,
         sortFn: (a, b) => a.priority - b.priority,
@@ -331,7 +331,7 @@ export default function ProductionOverviewPage() {
       },
       {
         id: "deadline",
-        header: "Deadline",
+        header: "Fälligkeitsdatum",
         accessorKey: "deadline",
         sortable: true,
         cell: (row) => {
@@ -351,7 +351,7 @@ export default function ProductionOverviewPage() {
               {formatDate(row.deadline)}
               {days !== null && (
                 <span className="ml-1 text-[10px]">
-                  ({days < 0 ? `${Math.abs(days)}d overdue` : `${days}d`})
+                  ({days < 0 ? `${Math.abs(days)}T überfällig` : `${days}T`})
                 </span>
               )}
             </span>
@@ -360,7 +360,7 @@ export default function ProductionOverviewPage() {
       },
       {
         id: "createdAt",
-        header: "Created",
+        header: "Erstellt",
         accessorKey: "createdAt",
         sortable: true,
         cell: (row) => (
@@ -381,7 +381,7 @@ export default function ProductionOverviewPage() {
         <p className="text-sm text-muted-foreground">{jobsError}</p>
         <Button variant="outline" size="sm" onClick={refetch} className="gap-2">
           <RefreshCw className="h-3.5 w-3.5" />
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -391,12 +391,12 @@ export default function ProductionOverviewPage() {
     <div className="space-y-6">
       {/* ─── Header ──────────────────────────────────────── */}
       <PageHeader
-        title="Production"
-        description="Manage production jobs, track status, and monitor progress"
+        title="Produktion"
+        description="Produktionsaufträge verwalten, Status verfolgen und Fortschritt überwachen"
         actions={
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <Plus className="h-3.5 w-3.5" />
-            New Job
+            Neuer Auftrag
           </Button>
         }
       />
@@ -408,28 +408,28 @@ export default function ProductionOverviewPage() {
         ) : (
           <>
             <KpiCard
-              label="Open Jobs Today"
+              label="Offene Aufträge heute"
               value={formatNumber(kpis.openToday)}
-              trend={{ direction: kpis.openToday > 0 ? "up" : "neutral", value: "today" }}
+              trend={{ direction: kpis.openToday > 0 ? "up" : "neutral", value: "heute" }}
             />
             <KpiCard
-              label="In Production"
+              label="In Produktion"
               value={formatNumber(kpis.inProduction)}
-              trend={{ direction: kpis.inProduction > 0 ? "up" : "neutral", value: "active" }}
+              trend={{ direction: kpis.inProduction > 0 ? "up" : "neutral", value: "aktiv" }}
               sparkline={{ data: kpis.sparkData }}
             />
             <KpiCard
-              label="Completed This Week"
+              label="Diese Woche abgeschlossen"
               value={formatNumber(kpis.completedThisWeek)}
-              trend={{ direction: "up", value: "7 days" }}
+              trend={{ direction: "up", value: "7 Tage" }}
             />
             <KpiCard
-              label="Avg Lead Time"
+              label="Durchschn. Durchlaufzeit"
               value={String(kpis.avgLeadTime)}
-              unit="days"
+              unit="Tage"
               trend={{
                 direction: kpis.avgLeadTime > 5 ? "down" : "up",
-                value: kpis.avgLeadTime > 5 ? "above target" : "on target",
+                value: kpis.avgLeadTime > 5 ? "über Zielwert" : "im Zielbereich",
               }}
             />
           </>
@@ -440,7 +440,7 @@ export default function ProductionOverviewPage() {
       <DataTable<JobResponse>
         data={filteredJobs}
         columns={columns}
-        searchPlaceholder="Search jobs..."
+        searchPlaceholder="Aufträge suchen..."
         searchKey="jobNumber"
         loading={jobsLoading}
         selectable
@@ -454,7 +454,7 @@ export default function ProductionOverviewPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="all">Alle Status</SelectItem>
                 {JOB_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
                     {humanizeStatus(s)}
@@ -467,10 +467,10 @@ export default function ProductionOverviewPage() {
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="all">Alle Prioritäten</SelectItem>
                 {PRIORITIES.map((p) => (
                   <SelectItem key={p} value={String(p)}>
-                    Priority {p}
+                    Priorität {p}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -478,18 +478,18 @@ export default function ProductionOverviewPage() {
           </>
         }
         primaryAction={{
-          label: "View",
+          label: "Anzeigen",
           icon: <Eye className="h-3 w-3" />,
           onClick: (row) => router.push(`/production/jobs/${row.id}`),
         }}
         rowActions={[
           {
-            label: "Change Status",
+            label: "Status ändern",
             icon: <ArrowRightLeft className="h-3.5 w-3.5" />,
             onClick: (row) => setStatusTarget(row),
           },
           {
-            label: "Delete",
+            label: "Löschen",
             icon: <Trash2 className="h-3.5 w-3.5" />,
             variant: "destructive",
             onClick: (row) => {
@@ -501,7 +501,7 @@ export default function ProductionOverviewPage() {
         ]}
         bulkActions={[
           {
-            label: "Delete Selected",
+            label: "Ausgewählte löschen",
             icon: <Trash2 className="h-3.5 w-3.5" />,
             variant: "destructive",
             onClick: (ids) => {
@@ -517,12 +517,12 @@ export default function ProductionOverviewPage() {
         ]}
         emptyState={{
           icon: <Factory className="h-8 w-8 text-muted-foreground/40" />,
-          title: "No jobs found",
-          description: "Create your first production job to get started.",
+          title: "Keine Aufträge gefunden",
+          description: "Erstellen Sie Ihren ersten Produktionsauftrag.",
           action: (
             <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)} className="mt-2 gap-1.5">
               <Plus className="h-3.5 w-3.5" />
-              New Job
+              Neuer Auftrag
             </Button>
           ),
         }}
@@ -540,15 +540,15 @@ export default function ProductionOverviewPage() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create New Job</DialogTitle>
+            <DialogTitle>Neuen Auftrag erstellen</DialogTitle>
             <DialogDescription>
-              Fill in the details to create a new production job.
+              Füllen Sie die Details aus, um einen neuen Produktionsauftrag zu erstellen.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(handleCreateJob as any)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="jobNumber">Job Number</Label>
+                <Label htmlFor="jobNumber">Auftragsnummer</Label>
                 <Input
                   id="jobNumber"
                   {...form.register("jobNumber")}
@@ -559,7 +559,7 @@ export default function ProductionOverviewPage() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="priority">Priority</Label>
+                <Label htmlFor="priority">Priorität</Label>
                 <Select
                   value={String(form.watch("priority"))}
                   onValueChange={(v) => form.setValue("priority", Number(v))}
@@ -570,7 +570,7 @@ export default function ProductionOverviewPage() {
                   <SelectContent>
                     {PRIORITIES.map((p) => (
                       <SelectItem key={p} value={String(p)}>
-                        P{p} - {p === 1 ? "Low" : p === 2 ? "Normal" : p === 3 ? "Medium" : p === 4 ? "High" : "Critical"}
+                        P{p} - {p === 1 ? "Niedrig" : p === 2 ? "Normal" : p === 3 ? "Mittel" : p === 4 ? "Hoch" : "Kritisch"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -578,19 +578,19 @@ export default function ProductionOverviewPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" placeholder="Job title..." {...form.register("title")} />
+              <Label htmlFor="title">Titel</Label>
+              <Input id="title" placeholder="Auftragsbezeichnung..." {...form.register("title")} />
               {form.formState.errors.title && (
                 <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="customerId">Customer ID</Label>
+                <Label htmlFor="customerId">Kunden-ID</Label>
                 <Input id="customerId" placeholder="Optional" {...form.register("customerId")} className="font-mono text-xs" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="quantity">Quantity</Label>
+                <Label htmlFor="quantity">Menge</Label>
                 <Input id="quantity" type="number" min={1} {...form.register("quantity")} className="font-mono" />
                 {form.formState.errors.quantity && (
                   <p className="text-xs text-destructive">{form.formState.errors.quantity.message}</p>
@@ -598,23 +598,23 @@ export default function ProductionOverviewPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="deadline">Deadline</Label>
+              <Label htmlFor="deadline">Fälligkeitsdatum</Label>
               <Input id="deadline" type="date" {...form.register("deadline")} className="font-mono text-xs" />
               {form.formState.errors.deadline && (
                 <p className="text-xs text-destructive">{form.formState.errors.deadline.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea id="notes" placeholder="Additional notes..." rows={3} {...form.register("notes")} />
+              <Label htmlFor="notes">Notizen</Label>
+              <Textarea id="notes" placeholder="Zusätzliche Notizen..." rows={3} {...form.register("notes")} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(false)}>
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutating} className="gap-1.5">
                 {mutating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                Create Job
+                Auftrag erstellen
               </Button>
             </DialogFooter>
           </form>
@@ -634,11 +634,11 @@ export default function ProductionOverviewPage() {
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Change Job Status</DialogTitle>
+            <DialogTitle>Auftragsstatus ändern</DialogTitle>
             <DialogDescription>
               {statusTarget && (
                 <span>
-                  Current status:{" "}
+                  Aktueller Status:{" "}
                   <span className="font-mono font-semibold">{humanizeStatus(statusTarget.status)}</span>
                 </span>
               )}
@@ -647,10 +647,10 @@ export default function ProductionOverviewPage() {
           {statusTarget && (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>New Status</Label>
+                <Label>Neuer Status</Label>
                 <Select value={selectedNewStatus} onValueChange={(v) => setSelectedNewStatus(v as JobStatus)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status..." />
+                    <SelectValue placeholder="Status auswählen..." />
                   </SelectTrigger>
                   <SelectContent>
                     {VALID_TRANSITIONS[statusTarget.status]?.map((s) => (
@@ -661,27 +661,27 @@ export default function ProductionOverviewPage() {
                   </SelectContent>
                 </Select>
                 {VALID_TRANSITIONS[statusTarget.status]?.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No transitions available from this status.</p>
+                  <p className="text-xs text-muted-foreground">Keine Übergänge von diesem Status verfügbar.</p>
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label>Reason (optional)</Label>
+                <Label>Begründung (optional)</Label>
                 <Input
-                  placeholder="Reason for status change..."
+                  placeholder="Grund für Statusänderung..."
                   value={statusReason}
                   onChange={(e) => setStatusReason(e.target.value)}
                 />
               </div>
               <DialogFooter>
                 <Button variant="outline" size="sm" onClick={() => setStatusTarget(null)}>
-                  Cancel
+                  Abbrechen
                 </Button>
                 <Button
                   size="sm"
                   disabled={!selectedNewStatus || mutating}
                   onClick={handleChangeStatus}
                 >
-                  Confirm
+                  Bestätigen
                 </Button>
               </DialogFooter>
             </div>
@@ -692,10 +692,10 @@ export default function ProductionOverviewPage() {
       {/* ─── Delete Confirmation ─────────────────────────── */}
       <ConfirmationDialog
         open={!!deleteTarget}
-        title="Delete Job"
-        description={`Are you sure you want to delete job "${deleteTarget?.jobNumber}"? This action cannot be undone.`}
+        title="Auftrag löschen"
+        description={`Sind Sie sicher, dass Sie den Auftrag "${deleteTarget?.jobNumber}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`}
         variant="destructive"
-        confirmLabel="Delete"
+        confirmLabel="Löschen"
         onConfirm={handleDeleteJob}
         onCancel={() => setDeleteTarget(null)}
       />
@@ -703,10 +703,10 @@ export default function ProductionOverviewPage() {
       {/* ─── Bulk Delete Confirmation ────────────────────── */}
       <ConfirmationDialog
         open={!!bulkDeleteIds}
-        title="Delete Selected Jobs"
-        description={`Are you sure you want to delete ${bulkDeleteIds?.length ?? 0} selected jobs? Only DRAFT jobs can be deleted. This action cannot be undone.`}
+        title="Ausgewählte Aufträge löschen"
+        description={`Sind Sie sicher, dass Sie ${bulkDeleteIds?.length ?? 0} ausgewählte Aufträge löschen möchten? Nur ENTWURF-Aufträge können gelöscht werden. Diese Aktion kann nicht rückgängig gemacht werden.`}
         variant="destructive"
-        confirmLabel="Delete All"
+        confirmLabel="Alle löschen"
         onConfirm={handleBulkDelete}
         onCancel={() => setBulkDeleteIds(null)}
       />

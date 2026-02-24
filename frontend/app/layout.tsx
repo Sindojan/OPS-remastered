@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Owlsburg OPS",
-  description: "Operations Platform for Manufacturing",
+  description: "Operations-Plattform für die Fertigung",
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="de" suppressHydrationWarning>
       <body
         className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
       >

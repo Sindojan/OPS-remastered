@@ -28,7 +28,7 @@ function getWeekLabel(date: Date): string {
   const startOfYear = new Date(date.getFullYear(), 0, 1);
   const dayCount = Math.floor((date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
   const weekNumber = Math.ceil((dayCount + startOfYear.getDay() + 1) / 7);
-  return `CW ${weekNumber} / ${date.getFullYear()}`;
+  return `KW ${weekNumber} / ${date.getFullYear()}`;
 }
 
 function getWeekRange(date: Date): { start: Date; end: Date } {
@@ -126,7 +126,7 @@ export default function ProductionPlannerPage() {
           className="gap-2"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -136,8 +136,8 @@ export default function ProductionPlannerPage() {
     <div className="space-y-6">
       {/* ─── Header ──────────────────────────────────────── */}
       <PageHeader
-        title="Capacity Planner"
-        description="Overview of station workloads and job assignments"
+        title="Kapazitätsplaner"
+        description="Übersicht der Stationsauslastung und Auftragszuweisungen"
       />
 
       {/* ─── Week Navigation ─────────────────────────────── */}
@@ -157,7 +157,7 @@ export default function ProductionPlannerPage() {
         </Button>
         {weekOffset !== 0 && (
           <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)} className="text-xs">
-            Today
+            Heute
           </Button>
         )}
       </div>
@@ -209,7 +209,7 @@ export default function ProductionPlannerPage() {
                   <div className="mt-3 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Capacity
+                        Kapazität
                       </span>
                       <span className="font-mono text-[11px] font-semibold">
                         {stationJobs.length}/{capacity} ({utilization}%)
@@ -228,7 +228,7 @@ export default function ProductionPlannerPage() {
                 <div className="max-h-[200px] overflow-y-auto p-2">
                   {stationJobs.length === 0 ? (
                     <p className="py-4 text-center text-xs text-muted-foreground/60">
-                      No jobs assigned
+                      Keine Aufträge zugewiesen
                     </p>
                   ) : (
                     <div className="space-y-1.5">
@@ -266,7 +266,7 @@ export default function ProductionPlannerPage() {
                                       : "text-muted-foreground"
                                 }`}
                               >
-                                {days < 0 ? `${Math.abs(days)}d late` : `${days}d`}
+                                {days < 0 ? `${Math.abs(days)}T verspätet` : `${days}T`}
                               </span>
                             )}
                           </div>
@@ -285,9 +285,9 @@ export default function ProductionPlannerPage() {
               <div className="border-b p-4">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-amber-500" />
-                  <h3 className="text-sm font-semibold">Unassigned</h3>
+                  <h3 className="text-sm font-semibold">Nicht zugewiesen</h3>
                   <span className="ml-auto font-mono text-xs text-muted-foreground">
-                    {unassignedJobs.length} job(s)
+                    {unassignedJobs.length} Auftrag/Aufträge
                   </span>
                 </div>
               </div>
@@ -322,9 +322,9 @@ export default function ProductionPlannerPage() {
       ) : (
         <Card className="flex flex-col items-center justify-center gap-3 py-16">
           <Factory className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm font-medium text-muted-foreground">No stations configured</p>
+          <p className="text-sm font-medium text-muted-foreground">Keine Stationen konfiguriert</p>
           <p className="text-xs text-muted-foreground/60">
-            Create stations to start planning production capacity.
+            Erstellen Sie Stationen, um die Produktionskapazität zu planen.
           </p>
         </Card>
       )}

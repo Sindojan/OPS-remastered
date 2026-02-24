@@ -1,3 +1,5 @@
+import { t } from "@/lib/i18n";
+
 export function formatDate(isoString: string | null | undefined): string {
   if (!isoString) return "–";
   return new Date(isoString).toLocaleDateString("de-DE", {
@@ -33,11 +35,11 @@ export function formatRelativeDate(isoString: string | null | undefined): string
   const diffMs = date.getTime() - now.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  if (diffDays === -1) return "Yesterday";
-  if (diffDays > 0 && diffDays <= 7) return `in ${diffDays}d`;
-  if (diffDays < 0 && diffDays >= -7) return `${Math.abs(diffDays)}d ago`;
+  if (diffDays === 0) return "Heute";
+  if (diffDays === 1) return "Morgen";
+  if (diffDays === -1) return "Gestern";
+  if (diffDays > 0 && diffDays <= 7) return `in ${diffDays} T.`;
+  if (diffDays < 0 && diffDays >= -7) return `vor ${Math.abs(diffDays)} T.`;
   return formatDate(isoString);
 }
 
@@ -63,9 +65,9 @@ export function formatCurrency(value: number | null | undefined, currency = "EUR
 }
 
 export function humanizeStatus(status: string): string {
+  const translated = t(status);
+  if (translated !== status) return translated;
   return status
     .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/\bIn\b/g, "In")
-    .replace(/\bOn\b/g, "On");
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }

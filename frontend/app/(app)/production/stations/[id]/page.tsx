@@ -71,7 +71,7 @@ export default function StationDetailPage() {
     () => [
       {
         id: "jobNumber",
-        header: "Job #",
+        header: "Auftrags-Nr.",
         accessorKey: "jobNumber",
         sortable: true,
         cell: (row) => (
@@ -80,7 +80,7 @@ export default function StationDetailPage() {
       },
       {
         id: "title",
-        header: "Title",
+        header: "Titel",
         accessorKey: "title",
         sortable: true,
         cell: (row) => (
@@ -100,7 +100,7 @@ export default function StationDetailPage() {
       },
       {
         id: "priority",
-        header: "Priority",
+        header: "Priorität",
         accessorKey: "priority",
         sortable: true,
         sortFn: (a, b) => a.priority - b.priority,
@@ -112,7 +112,7 @@ export default function StationDetailPage() {
       },
       {
         id: "deadline",
-        header: "Deadline",
+        header: "Fälligkeitsdatum",
         accessorKey: "deadline",
         sortable: true,
         cell: (row) => {
@@ -136,7 +136,7 @@ export default function StationDetailPage() {
       },
       {
         id: "createdAt",
-        header: "Created",
+        header: "Erstellt",
         accessorKey: "createdAt",
         sortable: true,
         cell: (row) => (
@@ -167,15 +167,15 @@ export default function StationDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <AlertCircle className="h-10 w-10 text-destructive/60" />
-        <p className="text-sm text-muted-foreground">{error ?? "Station not found"}</p>
+        <p className="text-sm text-muted-foreground">{error ?? "Station nicht gefunden"}</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => router.push("/production/planner")} className="gap-2">
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back
+            Zurück
           </Button>
           <Button variant="outline" size="sm" onClick={refetch} className="gap-2">
             <RefreshCw className="h-3.5 w-3.5" />
-            Retry
+            Erneut versuchen
           </Button>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function StationDetailPage() {
       <PageHeader
         title={station.name}
         description={station.description ?? undefined}
-        breadcrumb={["Production", "Stations", station.name]}
+        breadcrumb={["Produktion", "Stationen", station.name]}
         actions={
           <div className="flex items-center gap-2">
             <DomainStatusBadge
@@ -208,12 +208,12 @@ export default function StationDetailPage() {
             </DomainStatusBadge>
             <Button variant="outline" size="sm" onClick={() => router.push("/production/planner")} className="gap-1.5">
               <ArrowLeft className="h-3.5 w-3.5" />
-              Back
+              Zurück
             </Button>
             {!editing && (
               <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
                 <Pencil className="h-3.5 w-3.5" />
-                Edit
+                Bearbeiten
               </Button>
             )}
           </div>
@@ -223,10 +223,10 @@ export default function StationDetailPage() {
       {/* ─── Edit Form or Key Data ───────────────────────── */}
       {editing ? (
         <Card className="p-4 space-y-4">
-          <p className="text-sm font-semibold">Edit Station</p>
+          <p className="text-sm font-semibold">Station bearbeiten</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Capacity Per Shift</Label>
+              <Label>Kapazität pro Schicht</Label>
               <Input
                 type="number"
                 min={1}
@@ -254,15 +254,15 @@ export default function StationDetailPage() {
           <div className="flex gap-2">
             <Button size="sm" onClick={() => setEditing(false)} className="gap-1.5">
               <Save className="h-3.5 w-3.5" />
-              Save
+              Speichern
             </Button>
             <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-1.5">
               <X className="h-3.5 w-3.5" />
-              Cancel
+              Abbrechen
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            Note: Station update API integration will be connected when the endpoint is available.
+            Hinweis: Die Stations-Update-API wird verbunden, sobald der Endpunkt verfügbar ist.
           </p>
         </Card>
       ) : (
@@ -277,21 +277,21 @@ export default function StationDetailPage() {
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Info className="h-4 w-4" />
-              <p className="text-[11px] font-medium uppercase tracking-wider">Description</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider">Beschreibung</p>
             </div>
-            <p className="mt-2 text-sm text-foreground/80">{station.description ?? "No description"}</p>
+            <p className="mt-2 text-sm text-foreground/80">{station.description ?? "Keine Beschreibung"}</p>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Gauge className="h-4 w-4" />
-              <p className="text-[11px] font-medium uppercase tracking-wider">Capacity / Shift</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider">Kapazität / Schicht</p>
             </div>
             <p className="mt-2 font-mono text-sm font-semibold">{formatNumber(station.capacityPerShift ?? 0)}</p>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Hash className="h-4 w-4" />
-              <p className="text-[11px] font-medium uppercase tracking-wider">Utilization</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider">Auslastung</p>
             </div>
             <div className="mt-2 space-y-1.5">
               <p className="font-mono text-sm font-semibold">
@@ -316,24 +316,24 @@ export default function StationDetailPage() {
 
       {/* ─── Jobs Table ──────────────────────────────────── */}
       <div>
-        <h2 className="mb-3 text-sm font-semibold">Assigned Jobs</h2>
+        <h2 className="mb-3 text-sm font-semibold">Zugewiesene Aufträge</h2>
         <DataTable<JobResponse>
           data={stationJobs}
           columns={columns}
-          searchPlaceholder="Search jobs..."
+          searchPlaceholder="Aufträge suchen..."
           searchKey="jobNumber"
           loading={jobsLoading}
           pageSize={10}
           onRowClick={(row) => router.push(`/production/jobs/${row.id}`)}
           primaryAction={{
-            label: "View",
+            label: "Anzeigen",
             icon: <Eye className="h-3 w-3" />,
             onClick: (row) => router.push(`/production/jobs/${row.id}`),
           }}
           emptyState={{
             icon: <Factory className="h-8 w-8 text-muted-foreground/40" />,
-            title: "No jobs assigned",
-            description: "Assign jobs to this station from the job detail page.",
+            title: "Keine Aufträge zugewiesen",
+            description: "Weisen Sie Aufträge über die Auftragsdetailseite dieser Station zu.",
           }}
         />
       </div>

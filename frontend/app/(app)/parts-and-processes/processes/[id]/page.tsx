@@ -62,7 +62,7 @@ type StepFormValues = z.infer<typeof stepSchema>;
 const stepColumns: ColumnDef<ProcessStepResponse>[] = [
   {
     id: "stepNumber",
-    header: "Step #",
+    header: "Schritt-Nr.",
     cell: (row) => (
       <span className="font-mono text-xs font-semibold">{row.stepNumber}</span>
     ),
@@ -85,7 +85,7 @@ const stepColumns: ColumnDef<ProcessStepResponse>[] = [
   },
   {
     id: "machine",
-    header: "Machine",
+    header: "Maschine",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
         {row.machineId ? row.machineId.slice(0, 8) + "..." : "\u2013"}
@@ -95,21 +95,21 @@ const stepColumns: ColumnDef<ProcessStepResponse>[] = [
   },
   {
     id: "setupTime",
-    header: "Setup (min)",
+    header: "Rüstzeit (min)",
     cell: (row) => (
       <span className="font-mono text-xs">{formatNumber(row.setupTimeMinutes)}</span>
     ),
   },
   {
     id: "processingTime",
-    header: "Process (min)",
+    header: "Taktzeit (min)",
     cell: (row) => (
       <span className="font-mono text-xs">{formatNumber(row.processingTimeMinutes)}</span>
     ),
   },
   {
     id: "notes",
-    header: "Notes",
+    header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
         {row.notes ?? "\u2013"}
@@ -161,7 +161,7 @@ export default function ProcessPlanDetailPage() {
     };
     try {
       await planMutations.addStep(planId, req);
-      toast.success("Step added");
+      toast.success("Schritt hinzugefügt");
       setStepDialogOpen(false);
       stepForm.reset({
         stepNumber: (steps?.length ?? 0) + 2,
@@ -175,17 +175,17 @@ export default function ProcessPlanDetailPage() {
       });
       refetchSteps();
     } catch (err) {
-      toast.error("Failed to add step", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Schritt konnte nicht hinzugefügt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
   const handleActivate = async () => {
     try {
       await planMutations.activatePlan(planId);
-      toast.success("Process plan activated");
+      toast.success("Arbeitsplan aktiviert");
       refetchPlan();
     } catch (err) {
-      toast.error("Failed to activate", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Aktivierung fehlgeschlagen", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -207,7 +207,7 @@ export default function ProcessPlanDetailPage() {
     return (
       <div className="flex flex-col items-center gap-4 py-16">
         <AlertTriangle className="h-10 w-10 text-destructive/60" />
-        <p className="text-sm text-muted-foreground">{planError ?? "Process plan not found"}</p>
+        <p className="text-sm text-muted-foreground">{planError ?? "Arbeitsplan nicht gefunden"}</p>
         <Button variant="outline" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
           Back
@@ -220,11 +220,11 @@ export default function ProcessPlanDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={plan.name}
-        breadcrumb={["Parts & Processes", "Process Plans", plan.name]}
+        breadcrumb={["Teile & Prozesse", "Arbeitspläne", plan.name]}
         actions={
           <Button variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back
+            Zurück
           </Button>
         }
       />
@@ -254,7 +254,7 @@ export default function ProcessPlanDetailPage() {
                 disabled={planMutations.loading}
               >
                 <CheckCircle className="h-3.5 w-3.5" />
-                Activate Plan
+                Plan aktivieren
               </Button>
             )}
           </div>
@@ -269,7 +269,7 @@ export default function ProcessPlanDetailPage() {
             <div className="flex items-center gap-2">
               <Settings className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Total Setup</p>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Rüstzeit gesamt</p>
                 <p className="font-mono text-lg font-bold">{formatNumber(totalSetup)} min</p>
               </div>
             </div>
@@ -279,7 +279,7 @@ export default function ProcessPlanDetailPage() {
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Total Processing</p>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Bearbeitungszeit gesamt</p>
                 <p className="font-mono text-lg font-bold">{formatNumber(totalProcessing)} min</p>
               </div>
             </div>
@@ -289,7 +289,7 @@ export default function ProcessPlanDetailPage() {
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Total Time</p>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Gesamtzeit</p>
                 <p className="font-mono text-lg font-bold text-primary">{formatNumber(totalTime)} min</p>
               </div>
             </div>
@@ -304,7 +304,7 @@ export default function ProcessPlanDetailPage() {
         <DataTable<ProcessStepResponse>
           data={steps ?? []}
           columns={stepColumns}
-          searchPlaceholder="Search steps..."
+          searchPlaceholder="Schritte suchen..."
           searchKey="name"
           filterSlots={
             <Button
@@ -325,13 +325,13 @@ export default function ProcessPlanDetailPage() {
               }}
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Step
+              Schritt hinzufügen
             </Button>
           }
           emptyState={{
             icon: <ListTree className="h-8 w-8 text-muted-foreground/40" />,
-            title: "No process steps",
-            description: "Add manufacturing steps to this process plan.",
+            title: "Keine Prozessschritte",
+            description: "Fügen Sie Fertigungsschritte zu diesem Arbeitsplan hinzu.",
             action: (
               <Button
                 size="sm"
@@ -340,7 +340,7 @@ export default function ProcessPlanDetailPage() {
                 onClick={() => setStepDialogOpen(true)}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add Step
+                Schritt hinzufügen
               </Button>
             ),
           }}
@@ -351,16 +351,16 @@ export default function ProcessPlanDetailPage() {
       <Dialog open={stepDialogOpen} onOpenChange={setStepDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Process Step</DialogTitle>
+            <DialogTitle>Prozessschritt hinzufügen</DialogTitle>
             <DialogDescription>
-              Add a manufacturing step to {plan.name}.
+              Fertigungsschritt zu {plan.name} hinzufügen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={stepForm.handleSubmit(handleAddStep as any)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="stepNum">Step Number</Label>
+                <Label htmlFor="stepNum">Schrittnummer</Label>
                 <Input
                   id="stepNum"
                   type="number"
@@ -380,12 +380,12 @@ export default function ProcessPlanDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="stepDesc">Description</Label>
+              <Label htmlFor="stepDesc">Beschreibung</Label>
               <Textarea id="stepDesc" rows={2} {...stepForm.register("description")} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="stationId">Station ID</Label>
+                <Label htmlFor="stationId">Stations-ID</Label>
                 <Input
                   id="stationId"
                   className="font-mono text-xs"
@@ -394,7 +394,7 @@ export default function ProcessPlanDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="machineId">Machine ID</Label>
+                <Label htmlFor="machineId">Maschinen-ID</Label>
                 <Input
                   id="machineId"
                   className="font-mono text-xs"
@@ -405,7 +405,7 @@ export default function ProcessPlanDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="setupTime">Setup Time (min)</Label>
+                <Label htmlFor="setupTime">Rüstzeit (min)</Label>
                 <Input
                   id="setupTime"
                   type="number"
@@ -415,7 +415,7 @@ export default function ProcessPlanDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="processTime">Processing Time (min)</Label>
+                <Label htmlFor="processTime">Bearbeitungszeit (min)</Label>
                 <Input
                   id="processTime"
                   type="number"
@@ -426,7 +426,7 @@ export default function ProcessPlanDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="stepNotes">Notes</Label>
+              <Label htmlFor="stepNotes">Notizen</Label>
               <Textarea id="stepNotes" rows={2} {...stepForm.register("notes")} />
             </div>
             {planMutations.error && (
@@ -434,10 +434,10 @@ export default function ProcessPlanDetailPage() {
             )}
             <DialogFooter>
               <Button type="button" variant="outline" size="sm" onClick={() => setStepDialogOpen(false)}>
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={planMutations.loading}>
-                {planMutations.loading ? "Adding..." : "Add Step"}
+                {planMutations.loading ? "Wird hinzugefügt..." : "Schritt hinzufügen"}
               </Button>
             </DialogFooter>
           </form>

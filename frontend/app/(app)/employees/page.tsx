@@ -54,10 +54,10 @@ import { toast } from "sonner";
 // ─── Schemas ────────────────────────────────────────────
 
 const createEmployeeSchema = z.object({
-  employeeNumber: z.string().min(1, "Employee number is required"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  employeeNumber: z.string().min(1, "Personalnummer ist erforderlich"),
+  firstName: z.string().min(1, "Vorname ist erforderlich"),
+  lastName: z.string().min(1, "Nachname ist erforderlich"),
+  email: z.string().email("Ungueltige E-Mail").optional().or(z.literal("")),
   phone: z.string().optional(),
   role: z.string().optional(),
   password: z.string().optional(),
@@ -69,35 +69,16 @@ type CreateEmployeeFormData = z.infer<typeof createEmployeeSchema>;
 
 const EMPLOYEE_STATUSES: EmployeeStatus[] = ["ACTIVE", "INACTIVE", "ON_LEAVE"];
 
-const EMPLOYEE_ROLES = [
-  "Operator",
-  "Technician",
-  "Shift Lead",
-  "Quality Inspector",
-  "Maintenance Technician",
-  "Warehouse Clerk",
-  "Logistics",
-  "Team Lead",
-  "Production Manager",
-  "Office / Admin",
+const SYSTEM_ROLES = [
+  { value: "WORKER", label: "Mitarbeiter" },
+  { value: "TEAM_LEAD", label: "Teamleiter" },
+  { value: "MANAGER", label: "Manager" },
+  { value: "ADMIN", label: "Admin" },
 ] as const;
 
-const ROLE_TO_SYSTEM_ROLE: Record<string, string> = {
-  "Operator": "WORKER",
-  "Technician": "WORKER",
-  "Shift Lead": "TEAM_LEAD",
-  "Quality Inspector": "WORKER",
-  "Maintenance Technician": "WORKER",
-  "Warehouse Clerk": "WORKER",
-  "Logistics": "WORKER",
-  "Team Lead": "TEAM_LEAD",
-  "Production Manager": "MANAGER",
-  "Office / Admin": "ADMIN",
-};
-
 const SYSTEM_ROLE_LABELS: Record<string, string> = {
-  WORKER: "Worker",
-  TEAM_LEAD: "Team Lead",
+  WORKER: "Mitarbeiter",
+  TEAM_LEAD: "Teamleiter",
   MANAGER: "Manager",
   ADMIN: "Admin",
 };
@@ -172,7 +153,7 @@ export default function EmployeesPage() {
     () => [
       {
         id: "employeeNumber",
-        header: "Employee #",
+        header: "Personal-Nr.",
         accessorKey: "employeeNumber",
         sortable: true,
         cell: (row) => (
@@ -194,7 +175,7 @@ export default function EmployeesPage() {
       },
       {
         id: "role",
-        header: "Role",
+        header: "Rolle",
         accessorKey: "role",
         sortable: true,
         cell: (row) => (
@@ -242,7 +223,7 @@ export default function EmployeesPage() {
       },
       {
         id: "hireDate",
-        header: "Hire Date",
+        header: "Einstellungsdatum",
         accessorKey: "hireDate",
         sortable: true,
         cell: (row) => (
@@ -259,7 +240,7 @@ export default function EmployeesPage() {
 
   const onCreateSubmit = useCallback(
     async (data: CreateEmployeeFormData) => {
-      const systemRole = data.role ? ROLE_TO_SYSTEM_ROLE[data.role] : undefined;
+      const systemRole = data.role || undefined;
       const payload: Record<string, unknown> = {
         employeeNumber: data.employeeNumber,
         firstName: data.firstName,
@@ -291,7 +272,7 @@ export default function EmployeesPage() {
               role: res.userCredentials.role,
             });
           }
-          toast.success("Employee created successfully");
+          toast.success("Mitarbeiter erfolgreich erstellt");
           setCreateOpen(false);
           form.reset({
             employeeNumber: `EMP-${Date.now().toString(36).toUpperCase().slice(-6)}`,
@@ -308,7 +289,7 @@ export default function EmployeesPage() {
           refetch();
         }
       } catch (err) {
-        toast.error("Failed to create employee", { description: err instanceof Error ? err.message : "Unknown error" });
+        toast.error("Fehler beim Erstellen des Mitarbeiters", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
       }
     },
     [mutations, form, refetch, useRandomPassword]
@@ -323,12 +304,12 @@ export default function EmployeesPage() {
         employeeNumber: deactivateTarget.employeeNumber,
       });
       if (result) {
-        toast.success("Employee deactivated successfully");
+        toast.success("Mitarbeiter erfolgreich deaktiviert");
         setDeactivateTarget(null);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to deactivate employee", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Fehler beim Deaktivieren des Mitarbeiters", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [mutations, deactivateTarget, refetch]);
 
@@ -340,7 +321,7 @@ export default function EmployeesPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={refetch}>
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -351,8 +332,8 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="People"
-        description="Employee management and workforce overview"
+        title="Mitarbeiter"
+        description="Mitarbeiterverwaltung und Personuebersicht"
         actions={
           <Button
             size="sm"
@@ -360,7 +341,7 @@ export default function EmployeesPage() {
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="h-3.5 w-3.5" />
-            New Employee
+            Neuer Mitarbeiter
           </Button>
         }
       />
@@ -377,29 +358,29 @@ export default function EmployeesPage() {
         ) : (
           <>
             <KpiCard
-              label="Active Employees"
+              label="Aktive Mitarbeiter"
               value={String(kpis?.active ?? 0)}
               trend={
                 kpis && kpis.total > 0
                   ? {
                       direction:
                         kpis.active / kpis.total > 0.8 ? "up" : "neutral",
-                      value: `${Math.round((kpis.active / kpis.total) * 100)}% of total`,
+                      value: `${Math.round((kpis.active / kpis.total) * 100)}% gesamt`,
                     }
                   : undefined
               }
             />
-            <KpiCard label="Present Today" value="–" />
+            <KpiCard label="Heute anwesend" value="–" />
             <KpiCard
-              label="On Leave Today"
+              label="Heute im Urlaub"
               value={String(kpis?.onLeave ?? 0)}
               trend={
                 kpis && kpis.onLeave > 0
-                  ? { direction: "down", value: `${kpis.onLeave} away` }
+                  ? { direction: "down", value: `${kpis.onLeave} abwesend` }
                   : undefined
               }
             />
-            <KpiCard label="Pending Requests" value="–" />
+            <KpiCard label="Offene Antraege" value="–" />
           </>
         )}
       </div>
@@ -408,7 +389,7 @@ export default function EmployeesPage() {
       <DataTable<EmployeeRow>
         data={tableData}
         columns={columns}
-        searchPlaceholder="Search by name..."
+        searchPlaceholder="Nach Name suchen..."
         searchKey="fullName"
         loading={loading}
         pageSize={15}
@@ -416,10 +397,10 @@ export default function EmployeesPage() {
         filterSlots={
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-9 w-40 text-sm">
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue placeholder="Alle Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Statuses</SelectItem>
+              <SelectItem value="ALL">Alle Status</SelectItem>
               {EMPLOYEE_STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>
                   {humanizeStatus(s)}
@@ -430,12 +411,12 @@ export default function EmployeesPage() {
         }
         rowActions={[
           {
-            label: "View Details",
+            label: "Details anzeigen",
             icon: <Eye className="h-3.5 w-3.5" />,
             onClick: (row) => router.push(`/people/${row.id}`),
           },
           {
-            label: "Deactivate",
+            label: "Deaktivieren",
             icon: <UserX className="h-3.5 w-3.5" />,
             onClick: (row) => setDeactivateTarget(row),
             variant: "destructive",
@@ -443,8 +424,8 @@ export default function EmployeesPage() {
         ]}
         emptyState={{
           icon: <Users className="h-8 w-8 text-muted-foreground/40" />,
-          title: "No employees found",
-          description: "Add your first employee to get started.",
+          title: "Keine Mitarbeiter gefunden",
+          description: "Erstellen Sie den ersten Mitarbeiter.",
           action: (
             <Button
               variant="outline"
@@ -453,7 +434,7 @@ export default function EmployeesPage() {
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New Employee
+              Neuer Mitarbeiter
             </Button>
           ),
         }}
@@ -462,14 +443,14 @@ export default function EmployeesPage() {
       {/* ═══ Deactivate Confirmation ═══ */}
       <ConfirmationDialog
         open={!!deactivateTarget}
-        title="Deactivate Employee"
+        title="Mitarbeiter deaktivieren"
         description={
           deactivateTarget
-            ? `Are you sure you want to deactivate ${deactivateTarget.firstName} ${deactivateTarget.lastName} (${deactivateTarget.employeeNumber})? They will no longer appear in active workforce lists.`
+            ? `Moechten Sie ${deactivateTarget.firstName} ${deactivateTarget.lastName} (${deactivateTarget.employeeNumber}) wirklich deaktivieren? Der Mitarbeiter erscheint nicht mehr in aktiven Personallisten.`
             : ""
         }
         variant="destructive"
-        confirmLabel="Deactivate"
+        confirmLabel="Deaktivieren"
         onConfirm={handleDeactivate}
         onCancel={() => setDeactivateTarget(null)}
       />
@@ -480,10 +461,10 @@ export default function EmployeesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
-              New Employee
+              Neuer Mitarbeiter
             </DialogTitle>
             <DialogDescription>
-              Register a new employee in the system.
+              Neuen Mitarbeiter im System registrieren.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -492,7 +473,7 @@ export default function EmployeesPage() {
           >
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="firstName">First Name *</Label>
+                <Label htmlFor="firstName">Vorname *</Label>
                 <Input
                   id="firstName"
                   placeholder="Max"
@@ -505,7 +486,7 @@ export default function EmployeesPage() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="lastName">Last Name *</Label>
+                <Label htmlFor="lastName">Nachname *</Label>
                 <Input
                   id="lastName"
                   placeholder="Mustermann"
@@ -521,7 +502,7 @@ export default function EmployeesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="employeeNumber">Employee # *</Label>
+                <Label htmlFor="employeeNumber">Personal-Nr. *</Label>
                 <Input
                   id="employeeNumber"
                   className="font-mono"
@@ -551,7 +532,7 @@ export default function EmployeesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Telefon</Label>
                 <Input
                   id="phone"
                   placeholder="+49 170 1234567"
@@ -559,27 +540,22 @@ export default function EmployeesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">Rolle</Label>
                 <Select
                   value={form.watch("role") || ""}
                   onValueChange={(v) => form.setValue("role", v)}
                 >
                   <SelectTrigger id="role">
-                    <SelectValue placeholder="Select role..." />
+                    <SelectValue placeholder="Rolle wählen..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {EMPLOYEE_ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
+                    {SYSTEM_ROLES.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {form.watch("role") && ROLE_TO_SYSTEM_ROLE[form.watch("role")!] && (
-                  <p className="text-[11px] text-muted-foreground">
-                    System role: <span className="font-semibold">{SYSTEM_ROLE_LABELS[ROLE_TO_SYSTEM_ROLE[form.watch("role")!]] || ROLE_TO_SYSTEM_ROLE[form.watch("role")!]}</span>
-                  </p>
-                )}
               </div>
             </div>
 
@@ -587,10 +563,10 @@ export default function EmployeesPage() {
             {form.watch("email") && form.watch("role") && (
               <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  User Account
+                  Benutzerkonto
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  A user account with role <span className="font-semibold">{SYSTEM_ROLE_LABELS[ROLE_TO_SYSTEM_ROLE[form.watch("role")!]] || "–"}</span> will be created automatically.
+                  Ein Benutzerkonto mit der Rolle <span className="font-semibold">{SYSTEM_ROLE_LABELS[form.watch("role")!] || "–"}</span> wird automatisch erstellt.
                 </p>
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -599,17 +575,17 @@ export default function EmployeesPage() {
                     onCheckedChange={(v) => setUseRandomPassword(!!v)}
                   />
                   <Label htmlFor="random-pw" className="text-sm font-normal">
-                    Generate random password
+                    Zufaelliges Passwort generieren
                   </Label>
                 </div>
                 {!useRandomPassword && (
                   <div className="space-y-1">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">Passwort</Label>
                     <div className="relative">
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Min. 8 characters"
+                        placeholder="Min. 8 Zeichen"
                         {...form.register("password")}
                       />
                       <Button
@@ -633,7 +609,7 @@ export default function EmployeesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="hireDate">Hire Date</Label>
+                <Label htmlFor="hireDate">Einstellungsdatum</Label>
                 <Input
                   id="hireDate"
                   type="date"
@@ -641,7 +617,7 @@ export default function EmployeesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="stationId">Station ID</Label>
+                <Label htmlFor="stationId">Stations-ID</Label>
                 <Input
                   id="stationId"
                   placeholder="Station UUID"
@@ -658,10 +634,10 @@ export default function EmployeesPage() {
                 size="sm"
                 onClick={() => setCreateOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Creating..." : "Create Employee"}
+                {mutations.loading ? "Erstellen..." : "Mitarbeiter erstellen"}
               </Button>
             </DialogFooter>
           </form>
@@ -679,9 +655,9 @@ export default function EmployeesPage() {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>User Account Created</DialogTitle>
+            <DialogTitle>Benutzerkonto erstellt</DialogTitle>
             <DialogDescription>
-              Save these login credentials. The password cannot be retrieved later.
+              Speichern Sie diese Zugangsdaten. Das Passwort kann spaeter nicht abgerufen werden.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
@@ -694,7 +670,7 @@ export default function EmployeesPage() {
               <p className="font-mono text-sm select-all">{createdCredentials?.password}</p>
             </div>
             <div>
-              <span className="text-xs font-medium text-muted-foreground">System Role</span>
+              <span className="text-xs font-medium text-muted-foreground">Systemrolle</span>
               <p className="text-sm font-semibold">
                 {createdCredentials?.role && SYSTEM_ROLE_LABELS[createdCredentials.role]
                   ? SYSTEM_ROLE_LABELS[createdCredentials.role]
@@ -715,7 +691,7 @@ export default function EmployeesPage() {
               }}
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copied" : "Copy Credentials"}
+              {copied ? "Kopiert" : "Zugangsdaten kopieren"}
             </Button>
           </div>
           <DialogFooter>
@@ -726,7 +702,7 @@ export default function EmployeesPage() {
                 setCopied(false);
               }}
             >
-              Done
+              Fertig
             </Button>
           </DialogFooter>
         </DialogContent>

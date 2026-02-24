@@ -79,7 +79,7 @@ const PRIORITIES: ConversationPriority[] = ["LOW", "NORMAL", "HIGH", "URGENT"];
 // ─── Schemas ────────────────────────────────────────────
 
 const createConversationSchema = z.object({
-  subject: z.string().min(1, "Subject is required"),
+  subject: z.string().min(1, "Betreff ist erforderlich"),
   customerId: z.string().optional(),
   priority: z.string().optional(),
   source: z.string().optional(),
@@ -205,7 +205,7 @@ export default function InboxPage() {
         source: "MANUAL",
       });
       if (result) {
-        toast.success("Conversation created");
+        toast.success("Konversation erstellt");
         setCreateOpen(false);
         form.reset({
           subject: "",
@@ -220,8 +220,8 @@ export default function InboxPage() {
         }
       }
     } catch (err) {
-      toast.error("Failed to create conversation", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Fehler beim Erstellen der Konversation", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, form, refetch, handleSelectConversation]);
@@ -231,14 +231,14 @@ export default function InboxPage() {
     try {
       const result = await mutations.updateStatus(selectedId, newStatus);
       if (result) {
-        toast.success("Status updated");
+        toast.success("Status aktualisiert");
         setStatusDialogOpen(false);
         refetch();
         refetchConversation();
       }
     } catch (err) {
-      toast.error("Failed to update status", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Fehler beim Aktualisieren des Status", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, selectedId, newStatus, refetch, refetchConversation]);
@@ -248,14 +248,14 @@ export default function InboxPage() {
     try {
       const result = await mutations.updatePriority(selectedId, newPriority);
       if (result) {
-        toast.success("Priority updated");
+        toast.success("Prioritaet aktualisiert");
         setPriorityDialogOpen(false);
         refetch();
         refetchConversation();
       }
     } catch (err) {
-      toast.error("Failed to update priority", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Fehler beim Aktualisieren der Prioritaet", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, selectedId, newPriority, refetch, refetchConversation]);
@@ -265,15 +265,15 @@ export default function InboxPage() {
     try {
       const result = await mutations.assign(selectedId, assignTo);
       if (result) {
-        toast.success("Conversation assigned");
+        toast.success("Konversation zugewiesen");
         setAssignDialogOpen(false);
         setAssignTo("");
         refetch();
         refetchConversation();
       }
     } catch (err) {
-      toast.error("Failed to assign conversation", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Fehler beim Zuweisen der Konversation", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, selectedId, assignTo, refetch, refetchConversation]);
@@ -291,8 +291,8 @@ export default function InboxPage() {
         refetchMessages();
       }
     } catch (err) {
-      toast.error("Failed to send message", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Fehler beim Senden der Nachricht", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     } finally {
       setSending(false);
@@ -349,9 +349,9 @@ export default function InboxPage() {
   function getSourceLabel(source: string) {
     switch (source) {
       case "EMAIL":
-        return "Email";
+        return "E-Mail";
       case "MANUAL":
-        return "Manual";
+        return "Manuell";
       case "AGENT":
         return "Agent";
       default:
@@ -367,7 +367,7 @@ export default function InboxPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={refetch}>
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -378,8 +378,8 @@ export default function InboxPage() {
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col">
       <PageHeader
-        title="Inbox"
-        description="Conversations and support threads"
+        title="Posteingang"
+        description="Konversationen und Support-Threads"
       />
 
       <div className="flex min-h-0 flex-1 gap-0 rounded-lg border">
@@ -391,7 +391,7 @@ export default function InboxPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search conversations..."
+                  placeholder="Konversationen suchen..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="h-8 pl-8 text-sm"
@@ -403,7 +403,7 @@ export default function InboxPage() {
                 onClick={() => setCreateOpen(true)}
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span className="hidden lg:inline">New</span>
+                <span className="hidden lg:inline">Neu</span>
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -412,7 +412,7 @@ export default function InboxPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All Statuses</SelectItem>
+                  <SelectItem value="ALL">Alle Status</SelectItem>
                   {CONVERSATION_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>
                       {humanizeStatus(s)}
@@ -422,10 +422,10 @@ export default function InboxPage() {
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger className="h-7 flex-1 text-xs">
-                  <SelectValue placeholder="Priority" />
+                  <SelectValue placeholder="Prioritaet" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All Priorities</SelectItem>
+                  <SelectItem value="ALL">Alle Prioritaeten</SelectItem>
                   {PRIORITIES.map((p) => (
                     <SelectItem key={p} value={p}>
                       {humanizeStatus(p)}
@@ -455,10 +455,10 @@ export default function InboxPage() {
                 <Mail className="h-8 w-8 text-muted-foreground/40" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    No conversations found
+                    Keine Konversationen gefunden
                   </p>
                   <p className="text-xs text-muted-foreground/60">
-                    Create a new conversation to get started
+                    Erstellen Sie eine neue Konversation
                   </p>
                 </div>
                 <Button
@@ -467,7 +467,7 @@ export default function InboxPage() {
                   onClick={() => setCreateOpen(true)}
                 >
                   <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  New Conversation
+                  Neue Konversation
                 </Button>
               </div>
             ) : (
@@ -521,7 +521,7 @@ export default function InboxPage() {
             <div className="flex flex-1 flex-col items-center justify-center gap-3">
               <Mail className="h-10 w-10 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">
-                Select a conversation
+                Konversation auswaehlen
               </p>
             </div>
           ) : (
@@ -547,12 +547,12 @@ export default function InboxPage() {
                     </DomainStatusBadge>
                     {selectedConversation.customerId && (
                       <span className="font-mono text-[11px] text-muted-foreground">
-                        Customer: {selectedConversation.customerId.slice(0, 8)}...
+                        Kunde: {selectedConversation.customerId.slice(0, 8)}...
                       </span>
                     )}
                     {selectedConversation.assignedTo && (
                       <span className="font-mono text-[11px] text-muted-foreground">
-                        Assigned: {selectedConversation.assignedTo.slice(0, 8)}...
+                        Zugewiesen: {selectedConversation.assignedTo.slice(0, 8)}...
                       </span>
                     )}
                   </div>
@@ -579,7 +579,7 @@ export default function InboxPage() {
                       setPriorityDialogOpen(true);
                     }}
                   >
-                    Priority
+                    Prioritaet
                   </Button>
                   <Button
                     variant="outline"
@@ -587,7 +587,7 @@ export default function InboxPage() {
                     className="h-7 gap-1 text-xs"
                     onClick={() => setAssignDialogOpen(true)}
                   >
-                    Assign
+                    Zuweisen
                   </Button>
                 </div>
               </div>
@@ -618,10 +618,10 @@ export default function InboxPage() {
                     <div className="flex flex-col items-center justify-center gap-2 py-12">
                       <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
                       <p className="text-sm text-muted-foreground">
-                        No messages yet
+                        Noch keine Nachrichten
                       </p>
                       <p className="text-xs text-muted-foreground/60">
-                        Send the first message below
+                        Senden Sie die erste Nachricht
                       </p>
                     </div>
                   ) : (
@@ -675,7 +675,7 @@ export default function InboxPage() {
               <div className="border-t p-3">
                 <div className="flex items-end gap-2">
                   <Textarea
-                    placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+                    placeholder="Nachricht eingeben... (Enter zum Senden, Shift+Enter fuer neue Zeile)"
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -689,7 +689,7 @@ export default function InboxPage() {
                     disabled={sending || !replyContent.trim()}
                   >
                     <Send className="h-3.5 w-3.5" />
-                    Send
+                    Senden
                   </Button>
                 </div>
               </div>
@@ -704,10 +704,10 @@ export default function InboxPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
-              New Conversation
+              Neue Konversation
             </DialogTitle>
             <DialogDescription>
-              Start a new support conversation.
+              Neue Support-Konversation starten.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -716,10 +716,10 @@ export default function InboxPage() {
             className="space-y-4"
           >
             <div className="space-y-1.5">
-              <Label htmlFor="subject">Subject *</Label>
+              <Label htmlFor="subject">Betreff *</Label>
               <Input
                 id="subject"
-                placeholder="Enter conversation subject"
+                placeholder="Betreff eingeben"
                 {...form.register("subject")}
               />
               {form.formState.errors.subject && (
@@ -729,17 +729,17 @@ export default function InboxPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="customerId">Customer ID</Label>
+              <Label htmlFor="customerId">Kunden-ID</Label>
               <Input
                 id="customerId"
-                placeholder="Optional customer UUID"
+                placeholder="Optionale Kunden-UUID"
                 className="font-mono text-xs"
                 {...form.register("customerId")}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Priority</Label>
+                <Label>Prioritaet</Label>
                 <Select
                   value={form.watch("priority") || "NORMAL"}
                   onValueChange={(v) => form.setValue("priority", v)}
@@ -757,7 +757,7 @@ export default function InboxPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Source</Label>
+                <Label>Quelle</Label>
                 <Select
                   value={form.watch("source") || "MANUAL"}
                   onValueChange={(v) => form.setValue("source", v)}
@@ -766,8 +766,8 @@ export default function InboxPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MANUAL">Manual</SelectItem>
-                    <SelectItem value="EMAIL">Email</SelectItem>
+                    <SelectItem value="MANUAL">Manuell</SelectItem>
+                    <SelectItem value="EMAIL">E-Mail</SelectItem>
                     <SelectItem value="AGENT">Agent</SelectItem>
                   </SelectContent>
                 </Select>
@@ -780,10 +780,10 @@ export default function InboxPage() {
                 size="sm"
                 onClick={() => setCreateOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Creating..." : "Create Conversation"}
+                {mutations.loading ? "Erstellen..." : "Konversation erstellen"}
               </Button>
             </DialogFooter>
           </form>
@@ -794,14 +794,14 @@ export default function InboxPage() {
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Change Status</DialogTitle>
+            <DialogTitle>Status aendern</DialogTitle>
             <DialogDescription>
-              Update conversation status.
+              Konversationsstatus aktualisieren.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Current Status</Label>
+              <Label>Aktueller Status</Label>
               {selectedConversation && (
                 <DomainStatusBadge
                   variant={getConversationStatusVariant(
@@ -813,7 +813,7 @@ export default function InboxPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>New Status</Label>
+              <Label>Neuer Status</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger className="text-sm">
                   <SelectValue />
@@ -834,14 +834,14 @@ export default function InboxPage() {
               size="sm"
               onClick={() => setStatusDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleChangeStatus}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Updating..." : "Update Status"}
+              {mutations.loading ? "Aktualisieren..." : "Status aktualisieren"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -851,14 +851,14 @@ export default function InboxPage() {
       <Dialog open={priorityDialogOpen} onOpenChange={setPriorityDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Change Priority</DialogTitle>
+            <DialogTitle>Prioritaet aendern</DialogTitle>
             <DialogDescription>
-              Update conversation priority.
+              Konversationsprioritaet aktualisieren.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Current Priority</Label>
+              <Label>Aktuelle Prioritaet</Label>
               {selectedConversation && (
                 <DomainStatusBadge
                   variant={getPriorityVariant(selectedConversation.priority)}
@@ -868,7 +868,7 @@ export default function InboxPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>New Priority</Label>
+              <Label>Neue Prioritaet</Label>
               <Select value={newPriority} onValueChange={setNewPriority}>
                 <SelectTrigger className="text-sm">
                   <SelectValue />
@@ -889,14 +889,14 @@ export default function InboxPage() {
               size="sm"
               onClick={() => setPriorityDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleChangePriority}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Updating..." : "Update Priority"}
+              {mutations.loading ? "Aktualisieren..." : "Prioritaet aktualisieren"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -906,15 +906,15 @@ export default function InboxPage() {
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Assign Conversation</DialogTitle>
+            <DialogTitle>Konversation zuweisen</DialogTitle>
             <DialogDescription>
-              Assign this conversation to a user.
+              Diese Konversation einem Benutzer zuweisen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label>Assign To (User ID)</Label>
+            <Label>Zuweisen an (Benutzer-ID)</Label>
             <Input
-              placeholder="User UUID"
+              placeholder="Benutzer-UUID"
               className="font-mono text-xs"
               value={assignTo}
               onChange={(e) => setAssignTo(e.target.value)}
@@ -926,14 +926,14 @@ export default function InboxPage() {
               size="sm"
               onClick={() => setAssignDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleAssign}
               disabled={mutations.loading || !assignTo.trim()}
             >
-              {mutations.loading ? "Assigning..." : "Assign"}
+              {mutations.loading ? "Zuweisen..." : "Zuweisen"}
             </Button>
           </DialogFooter>
         </DialogContent>

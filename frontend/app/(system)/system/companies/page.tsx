@@ -124,7 +124,7 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
 
   const handleSubmit = async () => {
     if (!name.trim() || !slug.trim() || !adminEmail.trim() || !adminFirstName.trim() || !adminLastName.trim()) {
-      toast.error("Please fill in all required fields.");
+      toast.error("Bitte fuellen Sie alle Pflichtfelder aus.");
       return;
     }
 
@@ -144,11 +144,11 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
       const res = await mutate("post", "/api/system/companies", body);
       if (res) {
         setResult(res);
-        toast.success("Company created successfully.");
+        toast.success("Unternehmen erfolgreich erstellt.");
         onSuccess();
       }
     } catch {
-      toast.error("Failed to create company.");
+      toast.error("Fehler beim Erstellen des Unternehmens.");
     }
   };
 
@@ -165,12 +165,12 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {result ? "Company Created" : "Create Company"}
+            {result ? "Unternehmen erstellt" : "Unternehmen erstellen"}
           </DialogTitle>
           <DialogDescription>
             {result
-              ? "Save the admin login credentials below."
-              : "Set up a new company with an admin account."}
+              ? "Speichern Sie die Admin-Zugangsdaten."
+              : "Neues Unternehmen mit einem Admin-Konto einrichten."}
           </DialogDescription>
         </DialogHeader>
 
@@ -179,7 +179,7 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
             <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
               <div>
                 <span className="text-xs font-medium text-muted-foreground">
-                  Company
+                  Unternehmen
                 </span>
                 <p className="text-sm font-medium">{result.name}</p>
               </div>
@@ -198,17 +198,17 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
             </div>
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Admin Login Credentials
+                Admin-Zugangsdaten
               </p>
               <div>
                 <span className="text-xs font-medium text-muted-foreground">
-                  Email
+                  E-Mail
                 </span>
                 <p className="font-mono text-sm">{result.adminEmail}</p>
               </div>
               <div>
                 <span className="text-xs font-medium text-muted-foreground">
-                  Password
+                  Passwort
                 </span>
                 <p className="font-mono text-sm">{result.adminPassword}</p>
               </div>
@@ -223,19 +223,19 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
                 ) : (
                   <Copy className="h-3.5 w-3.5" />
                 )}
-                {copied ? "Copied" : "Copy Credentials"}
+                {copied ? "Kopiert" : "Zugangsdaten kopieren"}
               </Button>
             </div>
             <DialogFooter>
               <Button variant="default" size="sm" onClick={handleClose}>
-                Done
+                Fertig
               </Button>
             </DialogFooter>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="company-name">Company Name *</Label>
+              <Label htmlFor="company-name">Firmenname *</Label>
               <Input
                 id="company-name"
                 value={name}
@@ -257,7 +257,7 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
                 className="font-mono"
               />
               <p className="text-[11px] text-muted-foreground">
-                Auto-generated from name. Edit to override.
+                Automatisch aus dem Namen generiert. Bearbeiten zum Ueberschreiben.
               </p>
             </div>
 
@@ -280,11 +280,11 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
 
             <div className="border-t pt-4 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Admin Account
+                Admin-Konto
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label htmlFor="admin-first">First Name *</Label>
+                  <Label htmlFor="admin-first">Vorname *</Label>
                   <Input
                     id="admin-first"
                     value={adminFirstName}
@@ -292,7 +292,7 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="admin-last">Last Name *</Label>
+                  <Label htmlFor="admin-last">Nachname *</Label>
                   <Input
                     id="admin-last"
                     value={adminLastName}
@@ -317,13 +317,13 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
                   onCheckedChange={(v) => setRandomPassword(!!v)}
                 />
                 <Label htmlFor="random-pw" className="text-sm font-normal">
-                  Generate random password
+                  Zufaelliges Passwort generieren
                 </Label>
               </div>
 
               {!randomPassword && (
                 <div className="space-y-1">
-                  <Label htmlFor="admin-pw">Password *</Label>
+                  <Label htmlFor="admin-pw">Passwort *</Label>
                   <div className="relative">
                     <Input
                       id="admin-pw"
@@ -351,10 +351,10 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
 
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={handleClose}>
-                Cancel
+                Abbrechen
               </Button>
               <Button size="sm" onClick={handleSubmit} disabled={loading}>
-                {loading ? "Creating..." : "Create Company"}
+                {loading ? "Erstellen..." : "Unternehmen erstellen"}
               </Button>
             </DialogFooter>
           </div>
@@ -384,32 +384,32 @@ function SuspendDialog({ open, company, onConfirm, onCancel }: SuspendDialogProp
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Suspend Company</DialogTitle>
+          <DialogTitle>Unternehmen sperren</DialogTitle>
           <DialogDescription>
-            Suspend &quot;{company?.name}&quot;? Users will no longer be able to
-            log in.
+            &quot;{company?.name}&quot; sperren? Benutzer koennen sich nicht mehr
+            anmelden.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="suspend-reason">Reason</Label>
+          <Label htmlFor="suspend-reason">Sperrgrund</Label>
           <Textarea
             id="suspend-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Reason for suspension..."
+            placeholder="Grund fuer die Sperrung..."
             rows={3}
           />
         </div>
         <DialogFooter className="mt-2 gap-2 sm:gap-0">
           <Button variant="outline" size="sm" onClick={onCancel}>
-            Cancel
+            Abbrechen
           </Button>
           <Button
             variant="destructive"
             size="sm"
             onClick={() => onConfirm(reason)}
           >
-            Suspend
+            Sperren
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -469,11 +469,11 @@ export default function CompaniesPage() {
         `/api/system/companies/${suspendTarget.id}/suspend`,
         { reason }
       );
-      toast.success(`"${suspendTarget.name}" suspended.`);
+      toast.success(`"${suspendTarget.name}" gesperrt.`);
       setSuspendTarget(null);
       refetch();
     } catch {
-      toast.error("Failed to suspend company.");
+      toast.error("Fehler beim Sperren des Unternehmens.");
     }
   };
 
@@ -484,11 +484,11 @@ export default function CompaniesPage() {
         "post",
         `/api/system/companies/${reactivateTarget.id}/activate`
       );
-      toast.success(`"${reactivateTarget.name}" reactivated.`);
+      toast.success(`"${reactivateTarget.name}" reaktiviert.`);
       setReactivateTarget(null);
       refetch();
     } catch {
-      toast.error("Failed to reactivate company.");
+      toast.error("Fehler beim Reaktivieren des Unternehmens.");
     }
   };
 
@@ -496,11 +496,11 @@ export default function CompaniesPage() {
     if (!deleteTarget) return;
     try {
       await mutate("delete", `/api/system/companies/${deleteTarget.id}`);
-      toast.success(`"${deleteTarget.name}" deleted.`);
+      toast.success(`"${deleteTarget.name}" geloescht.`);
       setDeleteTarget(null);
       refetch();
     } catch {
-      toast.error("Failed to delete company.");
+      toast.error("Fehler beim Loeschen des Unternehmens.");
     }
   };
 
@@ -540,7 +540,7 @@ export default function CompaniesPage() {
     },
     {
       id: "createdAt",
-      header: "Created",
+      header: "Erstellt",
       accessorKey: "createdAt",
       cell: (row) => (
         <span className="text-xs text-muted-foreground">
@@ -555,7 +555,7 @@ export default function CompaniesPage() {
     (row: CompanyResponse): RowAction<CompanyResponse>[] => {
       const actions: RowAction<CompanyResponse>[] = [
         {
-          label: "View Details",
+          label: "Details anzeigen",
           icon: <Eye className="h-3.5 w-3.5" />,
           onClick: (r) => router.push(`/system/companies/${r.id}`),
         },
@@ -563,7 +563,7 @@ export default function CompaniesPage() {
 
       if (row.status === "ACTIVE") {
         actions.push({
-          label: "Suspend",
+          label: "Sperren",
           icon: <Ban className="h-3.5 w-3.5" />,
           onClick: (r) => setSuspendTarget(r),
           variant: "destructive",
@@ -572,14 +572,14 @@ export default function CompaniesPage() {
 
       if (row.status === "SUSPENDED") {
         actions.push({
-          label: "Reactivate",
+          label: "Reaktivieren",
           icon: <RotateCcw className="h-3.5 w-3.5" />,
           onClick: (r) => setReactivateTarget(r),
         });
       }
 
       actions.push({
-        label: "Delete",
+        label: "Loeschen",
         icon: <Trash2 className="h-3.5 w-3.5" />,
         onClick: (r) => setDeleteTarget(r),
         variant: "destructive",
@@ -595,23 +595,23 @@ export default function CompaniesPage() {
   const allRowActions: RowAction<CompanyResponse>[] = useMemo(
     () => [
       {
-        label: "View Details",
+        label: "Details anzeigen",
         icon: <Eye className="h-3.5 w-3.5" />,
         onClick: (r) => router.push(`/system/companies/${r.id}`),
       },
       {
-        label: "Suspend",
+        label: "Sperren",
         icon: <Ban className="h-3.5 w-3.5" />,
         onClick: (r) => setSuspendTarget(r),
         variant: "destructive" as const,
       },
       {
-        label: "Reactivate",
+        label: "Reaktivieren",
         icon: <RotateCcw className="h-3.5 w-3.5" />,
         onClick: (r) => setReactivateTarget(r),
       },
       {
-        label: "Delete",
+        label: "Loeschen",
         icon: <Trash2 className="h-3.5 w-3.5" />,
         onClick: (r) => setDeleteTarget(r),
         variant: "destructive" as const,
@@ -626,22 +626,22 @@ export default function CompaniesPage() {
   return (
     <>
       <PageHeader
-        title="Companies"
-        description="Manage all companies on the platform."
-        breadcrumb={["System", "Companies"]}
+        title="Unternehmen"
+        description="Alle Unternehmen auf der Plattform verwalten."
+        breadcrumb={["System", "Unternehmen"]}
         actions={
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <Plus className="h-3.5 w-3.5" />
-            New Company
+            Neues Unternehmen
           </Button>
         }
       />
 
       {/* KPIs */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <KpiCard label="Total Companies" value={String(totalCompanies)} loading={loading} />
-        <KpiCard label="Active" value={String(activeCompanies)} loading={loading} />
-        <KpiCard label="Created This Month" value={String(thisMonth)} loading={loading} />
+        <KpiCard label="Unternehmen gesamt" value={String(totalCompanies)} loading={loading} />
+        <KpiCard label="Aktive" value={String(activeCompanies)} loading={loading} />
+        <KpiCard label="Diesen Monat erstellt" value={String(thisMonth)} loading={loading} />
       </div>
 
       {/* Table */}
@@ -649,14 +649,14 @@ export default function CompaniesPage() {
         data={filteredCompanies}
         columns={columns}
         searchKey="name"
-        searchPlaceholder="Search companies..."
+        searchPlaceholder="Unternehmen suchen..."
         loading={loading}
         rowActions={allRowActions}
         onRowClick={(row) => router.push(`/system/companies/${row.id}`)}
         emptyState={{
           icon: <Building2 className="h-8 w-8 text-muted-foreground/40" />,
-          title: "No companies yet",
-          description: "Create the first company to get started.",
+          title: "Noch keine Unternehmen",
+          description: "Erstellen Sie das erste Unternehmen.",
         }}
         filterSlots={
           <>
@@ -665,10 +665,10 @@ export default function CompaniesPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Status</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="SUSPENDED">Suspended</SelectItem>
-                <SelectItem value="DELETED">Deleted</SelectItem>
+                <SelectItem value="ALL">Alle Status</SelectItem>
+                <SelectItem value="ACTIVE">Aktiv</SelectItem>
+                <SelectItem value="SUSPENDED">Gesperrt</SelectItem>
+                <SelectItem value="DELETED">Geloescht</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPlan} onValueChange={setFilterPlan}>
@@ -676,7 +676,7 @@ export default function CompaniesPage() {
                 <SelectValue placeholder="Plan" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Plans</SelectItem>
+                <SelectItem value="ALL">Alle Plaene</SelectItem>
                 <SelectItem value="BASIC">Basic</SelectItem>
                 <SelectItem value="PROFESSIONAL">Professional</SelectItem>
                 <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
@@ -707,10 +707,10 @@ export default function CompaniesPage() {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Reactivate Company</DialogTitle>
+            <DialogTitle>Unternehmen reaktivieren</DialogTitle>
             <DialogDescription>
-              Reactivate &quot;{reactivateTarget?.name}&quot;? Users will be able
-              to log in again.
+              &quot;{reactivateTarget?.name}&quot; reaktivieren? Benutzer koennen sich
+              wieder anmelden.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-2 gap-2 sm:gap-0">
@@ -719,10 +719,10 @@ export default function CompaniesPage() {
               size="sm"
               onClick={() => setReactivateTarget(null)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button size="sm" onClick={handleReactivate}>
-              Reactivate
+              Reaktivieren
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -740,10 +740,10 @@ export default function CompaniesPage() {
                 <Trash2 className="h-4 w-4 text-destructive" />
               </div>
               <div>
-                <DialogTitle className="text-base">Delete Company</DialogTitle>
+                <DialogTitle className="text-base">Unternehmen loeschen</DialogTitle>
                 <DialogDescription className="mt-1 text-sm">
-                  Permanently delete &quot;{deleteTarget?.name}&quot;? This
-                  action cannot be undone. All data will be lost.
+                  &quot;{deleteTarget?.name}&quot; endgueltig loeschen? Diese
+                  Aktion kann nicht rueckgaengig gemacht werden. Alle Daten gehen verloren.
                 </DialogDescription>
               </div>
             </div>
@@ -754,10 +754,10 @@ export default function CompaniesPage() {
               size="sm"
               onClick={() => setDeleteTarget(null)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button variant="destructive" size="sm" onClick={handleDelete}>
-              Delete
+              Loeschen
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -98,7 +98,7 @@ function getMovementTypeVariant(type: StockMovementType) {
 
 const movementSchema = z.object({
   type: z.enum(["INBOUND", "OUTBOUND", "TRANSFER", "CORRECTION"]),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
+  quantity: z.number().min(1, "Menge muss mindestens 1 sein"),
   fromLocationId: z.string().optional(),
   toLocationId: z.string().optional(),
   notes: z.string().optional(),
@@ -110,14 +110,14 @@ type MovementFormValues = z.infer<typeof movementSchema>;
 const movementColumns: ColumnDef<MovementResponse>[] = [
   {
     id: "createdAt",
-    header: "Date",
+    header: "Datum",
     cell: (row) => (
       <span className="font-mono text-xs">{formatDateTime(row.createdAt)}</span>
     ),
   },
   {
     id: "type",
-    header: "Type",
+    header: "Typ",
     cell: (row) => (
       <DomainStatusBadge variant={getMovementTypeVariant(row.type)}>
         {humanizeStatus(row.type)}
@@ -126,7 +126,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
   },
   {
     id: "quantity",
-    header: "Quantity",
+    header: "Menge",
     cell: (row) => (
       <span className="font-mono text-sm font-semibold">
         {row.type === "OUTBOUND" ? "-" : "+"}
@@ -136,7 +136,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
   },
   {
     id: "fromLocation",
-    header: "From",
+    header: "Von",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
         {row.fromLocationId ? row.fromLocationId.slice(0, 8) + "..." : "\u2013"}
@@ -146,7 +146,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
   },
   {
     id: "toLocation",
-    header: "To",
+    header: "Nach",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
         {row.toLocationId ? row.toLocationId.slice(0, 8) + "..." : "\u2013"}
@@ -156,7 +156,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
   },
   {
     id: "reference",
-    header: "Reference",
+    header: "Referenz",
     cell: (row) => (
       <span className="font-mono text-xs text-muted-foreground">
         {row.referenceType ? `${row.referenceType}` : "\u2013"}
@@ -166,7 +166,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
   },
   {
     id: "performedBy",
-    header: "Performed By",
+    header: "Durchgefuehrt von",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
         {row.performedBy ?? "\u2013"}
@@ -176,7 +176,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
   },
   {
     id: "notes",
-    header: "Notes",
+    header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
         {row.notes ?? "\u2013"}
@@ -240,12 +240,12 @@ export default function ArticleDetailPage() {
         reorderPoint: editReorderPoint,
       });
       if (result) {
-        toast.success("Article updated successfully");
+        toast.success("Artikel erfolgreich aktualisiert");
         setIsEditing(false);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to update article", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Artikel konnte nicht aktualisiert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -261,13 +261,13 @@ export default function ArticleDetailPage() {
     try {
       const result = await mutations.createMovement(req);
       if (result) {
-        toast.success("Movement booked successfully");
+        toast.success("Bewegung erfolgreich gebucht");
         setMovementDialogOpen(false);
         movementForm.reset();
         refetchMovements();
       }
     } catch (err) {
-      toast.error("Failed to book movement", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Bewegung konnte nicht gebucht werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -299,14 +299,14 @@ export default function ArticleDetailPage() {
     return (
       <div className="flex flex-col items-center gap-4 py-16">
         <AlertTriangle className="h-10 w-10 text-destructive/60" />
-        <p className="text-sm text-muted-foreground">{error ?? "Article not found"}</p>
+        <p className="text-sm text-muted-foreground">{error ?? "Artikel nicht gefunden"}</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => router.push("/inventory")}>
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back to Inventory
+            Zurueck zum Lager
           </Button>
           <Button variant="outline" size="sm" onClick={refetch}>
-            Retry
+            Erneut versuchen
           </Button>
         </div>
       </div>
@@ -323,7 +323,7 @@ export default function ArticleDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={`${article.articleNumber} \u2014 ${article.name}`}
-        breadcrumb={["Inventory", article.articleNumber]}
+        breadcrumb={["Lager", article.articleNumber]}
         actions={
           <Button
             variant="outline"
@@ -331,7 +331,7 @@ export default function ArticleDetailPage() {
             onClick={() => router.push("/inventory")}
           >
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back
+            Zurueck
           </Button>
         }
       />
@@ -340,19 +340,19 @@ export default function ArticleDetailPage() {
         <TabsList>
           <TabsTrigger value="overview" className="gap-1.5">
             <Package className="h-3.5 w-3.5" />
-            Overview
+            Uebersicht
           </TabsTrigger>
           <TabsTrigger value="movements" className="gap-1.5">
             <ArrowDownToLine className="h-3.5 w-3.5" />
-            Movements
+            Bewegungen
           </TabsTrigger>
           <TabsTrigger value="suppliers" className="gap-1.5">
             <Truck className="h-3.5 w-3.5" />
-            Suppliers
+            Lieferanten
           </TabsTrigger>
           <TabsTrigger value="bom" className="gap-1.5">
             <Layers className="h-3.5 w-3.5" />
-            BOM Usage
+            Verwendung
           </TabsTrigger>
         </TabsList>
 
@@ -363,22 +363,22 @@ export default function ArticleDetailPage() {
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Article Details
+                Artikeldetails
               </h2>
               {!isEditing ? (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
                   <Pencil className="h-3 w-3" />
-                  Edit
+                  Bearbeiten
                 </Button>
               ) : (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsEditing(false)}>
                     <X className="h-3 w-3" />
-                    Cancel
+                    Abbrechen
                   </Button>
                   <Button size="sm" className="gap-1.5" onClick={handleSaveEdit} disabled={mutations.loading}>
                     <Save className="h-3 w-3" />
-                    {mutations.loading ? "Saving..." : "Save"}
+                    {mutations.loading ? "Wird gespeichert..." : "Speichern"}
                   </Button>
                 </div>
               )}
@@ -387,7 +387,7 @@ export default function ArticleDetailPage() {
             {isEditing ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Article Number</Label>
+                  <Label className="text-xs text-muted-foreground">Artikelnummer</Label>
                   <Input value={article.articleNumber} disabled className="font-mono" />
                 </div>
                 <div className="space-y-2">
@@ -395,7 +395,7 @@ export default function ArticleDetailPage() {
                   <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                 </div>
                 <div className="col-span-full space-y-2">
-                  <Label className="text-xs text-muted-foreground">Description</Label>
+                  <Label className="text-xs text-muted-foreground">Beschreibung</Label>
                   <Textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
@@ -403,7 +403,7 @@ export default function ArticleDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Min Stock</Label>
+                  <Label className="text-xs text-muted-foreground">Mindestbestand</Label>
                   <Input
                     type="number"
                     min={0}
@@ -413,7 +413,7 @@ export default function ArticleDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Reorder Point</Label>
+                  <Label className="text-xs text-muted-foreground">Nachbestellgrenze</Label>
                   <Input
                     type="number"
                     min={0}
@@ -428,23 +428,23 @@ export default function ArticleDetailPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <DetailField label="Article Number" value={article.articleNumber} mono />
+                <DetailField label="Artikelnummer" value={article.articleNumber} mono />
                 <DetailField label="Name" value={article.name} />
                 <DetailField
-                  label="Description"
+                  label="Beschreibung"
                   value={article.description ?? "\u2013"}
                   className="col-span-full"
                 />
                 <DetailField
-                  label="Category"
+                  label="Kategorie"
                   value={article.categoryId ? article.categoryId.slice(0, 8) + "..." : "\u2013"}
                 />
                 <DetailField
-                  label="Unit"
+                  label="Einheit"
                   value={article.unitId ? article.unitId.slice(0, 8) + "..." : "\u2013"}
                 />
-                <DetailField label="Min Stock" value={formatNumber(article.minStock)} mono />
-                <DetailField label="Reorder Point" value={formatNumber(article.reorderPoint)} mono />
+                <DetailField label="Mindestbestand" value={formatNumber(article.minStock)} mono />
+                <DetailField label="Nachbestellgrenze" value={formatNumber(article.reorderPoint)} mono />
                 <div className="space-y-1">
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                     Status
@@ -462,23 +462,23 @@ export default function ArticleDetailPage() {
             <Card className="relative overflow-hidden p-6">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Stock Levels
+                Bestandsniveaus
               </h2>
               <div className="space-y-4">
                 <StockBar
-                  label="Total"
+                  label="Gesamt"
                   value={totalQty}
                   max={maxQty}
                   color="bg-primary"
                 />
                 <StockBar
-                  label="Reserved"
+                  label="Reserviert"
                   value={reservedQty}
                   max={maxQty}
                   color="bg-amber-500"
                 />
                 <StockBar
-                  label="Available"
+                  label="Verfuegbar"
                   value={availableQty}
                   max={maxQty}
                   color="bg-emerald-500"
@@ -486,9 +486,9 @@ export default function ArticleDetailPage() {
                 {article.minStock != null && article.minStock > 0 && (
                   <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <BarChart3 className="h-3 w-3" />
-                    Min Stock: <span className="font-mono font-semibold">{formatNumber(article.minStock)}</span>
+                    Mindestbestand: <span className="font-mono font-semibold">{formatNumber(article.minStock)}</span>
                     {availableQty < article.minStock && (
-                      <span className="ml-2 text-amber-500">Below minimum</span>
+                      <span className="ml-2 text-amber-500">Unter Mindestbestand</span>
                     )}
                   </div>
                 )}
@@ -505,20 +505,20 @@ export default function ArticleDetailPage() {
             <DataTable<MovementResponse>
               data={filteredMovements}
               columns={movementColumns}
-              searchPlaceholder="Search movements..."
+              searchPlaceholder="Bewegungen suchen..."
               searchKey="notes"
               filterSlots={
                 <>
                   <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
                     <SelectTrigger size="sm" className="w-36">
-                      <SelectValue placeholder="All Types" />
+                      <SelectValue placeholder="Alle Typen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="INBOUND">Inbound</SelectItem>
-                      <SelectItem value="OUTBOUND">Outbound</SelectItem>
-                      <SelectItem value="TRANSFER">Transfer</SelectItem>
-                      <SelectItem value="CORRECTION">Correction</SelectItem>
+                      <SelectItem value="all">Alle Typen</SelectItem>
+                      <SelectItem value="INBOUND">Eingang</SelectItem>
+                      <SelectItem value="OUTBOUND">Ausgang</SelectItem>
+                      <SelectItem value="TRANSFER">Umlagerung</SelectItem>
+                      <SelectItem value="CORRECTION">Korrektur</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
@@ -527,14 +527,14 @@ export default function ArticleDetailPage() {
                     onClick={() => setMovementDialogOpen(true)}
                   >
                     <ArrowDownToLine className="h-3.5 w-3.5" />
-                    Book Movement
+                    Bewegung buchen
                   </Button>
                 </>
               }
               emptyState={{
                 icon: <ArrowDownToLine className="h-8 w-8 text-muted-foreground/40" />,
-                title: "No movements yet",
-                description: "Book a stock movement to start tracking.",
+                title: "Noch keine Bewegungen",
+                description: "Buchen Sie eine Lagerbewegung, um die Verfolgung zu starten.",
                 action: (
                   <Button
                     size="sm"
@@ -542,7 +542,7 @@ export default function ArticleDetailPage() {
                     className="mt-2"
                     onClick={() => setMovementDialogOpen(true)}
                   >
-                    Book Movement
+                    Bewegung buchen
                   </Button>
                 ),
               }}
@@ -557,10 +557,10 @@ export default function ArticleDetailPage() {
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <Truck className="h-10 w-10 text-muted-foreground/30" />
               <h3 className="text-sm font-medium text-foreground/70">
-                Supplier Information
+                Lieferanteninformationen
               </h3>
               <p className="max-w-sm text-xs text-muted-foreground">
-                Supplier-article relationships and pricing details will be displayed here once linked.
+                Lieferanten-Artikel-Beziehungen und Preisdetails werden hier angezeigt, sobald sie verknuepft sind.
               </p>
             </div>
           </Card>
@@ -573,11 +573,11 @@ export default function ArticleDetailPage() {
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <Layers className="h-10 w-10 text-muted-foreground/30" />
               <h3 className="text-sm font-medium text-foreground/70">
-                BOM Usage Tracking
+                Stuecklistenverwendung
               </h3>
               <p className="max-w-sm text-xs text-muted-foreground">
-                BOM usage tracking coming soon. This will show all bills of materials
-                referencing this article.
+                Stuecklistenverwendung kommt bald. Hier werden alle Stuecklisten angezeigt,
+                die diesen Artikel referenzieren.
               </p>
             </div>
           </Card>
@@ -588,15 +588,15 @@ export default function ArticleDetailPage() {
       <Dialog open={movementDialogOpen} onOpenChange={setMovementDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Book Stock Movement</DialogTitle>
+            <DialogTitle>Lagerbewegung buchen</DialogTitle>
             <DialogDescription>
-              Record a stock movement for {article.articleNumber}.
+              Lagerbewegung fuer {article.articleNumber} erfassen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={movementForm.handleSubmit(handleCreateMovement as any)} className="space-y-4">
             <div className="space-y-2">
-              <Label>Movement Type</Label>
+              <Label>Bewegungsart</Label>
               <Select
                 value={movementForm.watch("type")}
                 onValueChange={(v) =>
@@ -607,10 +607,10 @@ export default function ArticleDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="INBOUND">Inbound</SelectItem>
-                  <SelectItem value="OUTBOUND">Outbound</SelectItem>
-                  <SelectItem value="TRANSFER">Transfer</SelectItem>
-                  <SelectItem value="CORRECTION">Correction</SelectItem>
+                  <SelectItem value="INBOUND">Eingang</SelectItem>
+                  <SelectItem value="OUTBOUND">Ausgang</SelectItem>
+                  <SelectItem value="TRANSFER">Umlagerung</SelectItem>
+                  <SelectItem value="CORRECTION">Korrektur</SelectItem>
                 </SelectContent>
               </Select>
               {movementForm.formState.errors.type && (
@@ -620,7 +620,7 @@ export default function ArticleDetailPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="moveQty">Quantity</Label>
+              <Label htmlFor="moveQty">Menge</Label>
               <Input
                 id="moveQty"
                 type="number"
@@ -636,26 +636,26 @@ export default function ArticleDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="fromLoc">From Location</Label>
+                <Label htmlFor="fromLoc">Von Lagerort</Label>
                 <Input
                   id="fromLoc"
-                  placeholder="Location ID"
+                  placeholder="Lagerort-ID"
                   className="font-mono text-xs"
                   {...movementForm.register("fromLocationId")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="toLoc">To Location</Label>
+                <Label htmlFor="toLoc">Nach Lagerort</Label>
                 <Input
                   id="toLoc"
-                  placeholder="Location ID"
+                  placeholder="Lagerort-ID"
                   className="font-mono text-xs"
                   {...movementForm.register("toLocationId")}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="moveNotes">Notes</Label>
+              <Label htmlFor="moveNotes">Notizen</Label>
               <Textarea
                 id="moveNotes"
                 rows={2}
@@ -672,10 +672,10 @@ export default function ArticleDetailPage() {
                 size="sm"
                 onClick={() => setMovementDialogOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Booking..." : "Book Movement"}
+                {mutations.loading ? "Wird gebucht..." : "Bewegung buchen"}
               </Button>
             </DialogFooter>
           </form>

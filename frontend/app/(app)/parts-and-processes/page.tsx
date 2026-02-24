@@ -50,10 +50,10 @@ import { toast } from "sonner";
 // ─── Schemas ────────────────────────────────────────────
 
 const partSchema = z.object({
-  partNumber: z.string().min(1, "Part number is required"),
-  name: z.string().min(1, "Name is required"),
+  partNumber: z.string().min(1, "Teilenummer ist erforderlich"),
+  name: z.string().min(1, "Name ist erforderlich"),
   description: z.string().optional(),
-  type: z.string().min(1, "Type is required"),
+  type: z.string().min(1, "Typ ist erforderlich"),
 });
 type PartFormValues = z.infer<typeof partSchema>;
 
@@ -62,7 +62,7 @@ type PartFormValues = z.infer<typeof partSchema>;
 const partColumns: ColumnDef<PartResponse>[] = [
   {
     id: "partNumber",
-    header: "Part #",
+    header: "Teil-Nr.",
     accessorKey: "partNumber",
     cell: (row) => (
       <span className="font-mono text-xs font-medium text-primary">
@@ -78,7 +78,7 @@ const partColumns: ColumnDef<PartResponse>[] = [
   },
   {
     id: "type",
-    header: "Type",
+    header: "Typ",
     cell: (row) => (
       <DomainStatusBadge variant={getPartTypeVariant(row.type)}>
         {humanizeStatus(row.type)}
@@ -96,7 +96,7 @@ const partColumns: ColumnDef<PartResponse>[] = [
   },
   {
     id: "createdAt",
-    header: "Created",
+    header: "Erstellt",
     cell: (row) => (
       <span className="font-mono text-xs text-muted-foreground">
         {formatDate(row.createdAt)}
@@ -150,7 +150,7 @@ export default function PartsAndProcessesPage() {
     try {
       const result = await mutations.createPart(req);
       if (result) {
-        toast.success("Part created successfully");
+        toast.success("Teil erfolgreich erstellt");
         setPartDialogOpen(false);
         partForm.reset({
           partNumber: `PRT-${Date.now().toString(36).toUpperCase()}`,
@@ -161,13 +161,13 @@ export default function PartsAndProcessesPage() {
         refetchParts();
       }
     } catch (err) {
-      toast.error("Failed to create part", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Teil konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
   const partRowActions: RowAction<PartResponse>[] = [
     {
-      label: "View Detail",
+      label: "Details anzeigen",
       icon: <Eye className="h-3.5 w-3.5" />,
       onClick: (row) => router.push(`/parts-and-processes/parts/${row.id}`),
     },
@@ -176,13 +176,13 @@ export default function PartsAndProcessesPage() {
   const typeFilterSlot = (
     <Select value={typeFilter} onValueChange={setTypeFilter}>
       <SelectTrigger size="sm" className="w-40">
-        <SelectValue placeholder="All Types" />
+        <SelectValue placeholder="Alle Typen" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">All Types</SelectItem>
-        <SelectItem value="PRODUCT">Product</SelectItem>
-        <SelectItem value="COMPONENT">Component</SelectItem>
-        <SelectItem value="RAW_MATERIAL">Raw Material</SelectItem>
+        <SelectItem value="all">Alle Typen</SelectItem>
+        <SelectItem value="PRODUCT">Produkt</SelectItem>
+        <SelectItem value="COMPONENT">Komponente</SelectItem>
+        <SelectItem value="RAW_MATERIAL">Rohmaterial</SelectItem>
       </SelectContent>
     </Select>
   );
@@ -190,8 +190,8 @@ export default function PartsAndProcessesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Parts & Processes"
-        description="Manage parts, bills of materials, and process plans"
+        title="Teile & Prozesse"
+        description="Teile, Stücklisten und Arbeitspläne verwalten"
       />
 
       {/* KPI Cards */}
@@ -206,24 +206,24 @@ export default function PartsAndProcessesPage() {
         ) : (
           <>
             <KpiCard
-              label="Total Parts"
+              label="Teile gesamt"
               value={formatNumber(totalParts)}
-              trend={totalParts > 0 ? { direction: "neutral", value: `${totalParts} tracked` } : undefined}
+              trend={totalParts > 0 ? { direction: "neutral", value: `${totalParts} erfasst` } : undefined}
             />
             <KpiCard
-              label="Products"
+              label="Produkte"
               value={formatNumber(productCount)}
-              trend={{ direction: "neutral", value: "Finished goods" }}
+              trend={{ direction: "neutral", value: "Fertigteile" }}
             />
             <KpiCard
-              label="Components"
+              label="Komponenten"
               value={formatNumber(componentCount)}
-              trend={{ direction: "neutral", value: "Assemblies" }}
+              trend={{ direction: "neutral", value: "Baugruppen" }}
             />
             <KpiCard
-              label="Raw Materials"
+              label="Rohmaterialien"
               value={formatNumber(rawMaterialCount)}
-              trend={{ direction: "neutral", value: "Base materials" }}
+              trend={{ direction: "neutral", value: "Grundmaterialien" }}
             />
           </>
         )}
@@ -234,15 +234,15 @@ export default function PartsAndProcessesPage() {
         <TabsList>
           <TabsTrigger value="parts" className="gap-1.5">
             <Puzzle className="h-3.5 w-3.5" />
-            Parts
+            Teile
           </TabsTrigger>
           <TabsTrigger value="bom" className="gap-1.5">
             <Layers className="h-3.5 w-3.5" />
-            Bill of Materials
+            Stücklisten
           </TabsTrigger>
           <TabsTrigger value="processes" className="gap-1.5">
             <ListTree className="h-3.5 w-3.5" />
-            Process Plans
+            Arbeitspläne
           </TabsTrigger>
         </TabsList>
 
@@ -253,14 +253,14 @@ export default function PartsAndProcessesPage() {
               <AlertTriangle className="h-8 w-8 text-destructive/60" />
               <p className="text-sm text-muted-foreground">{partsError}</p>
               <Button variant="outline" size="sm" onClick={refetchParts}>
-                Retry
+                Erneut versuchen
               </Button>
             </div>
           ) : (
             <DataTable<PartResponse>
               data={filteredParts}
               columns={partColumns}
-              searchPlaceholder="Search parts..."
+              searchPlaceholder="Teile suchen..."
               searchKey="name"
               filterSlots={
                 <>
@@ -271,7 +271,7 @@ export default function PartsAndProcessesPage() {
                     onClick={() => setPartDialogOpen(true)}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    New Part
+                    Neues Teil
                   </Button>
                 </>
               }
@@ -280,8 +280,8 @@ export default function PartsAndProcessesPage() {
               loading={partsLoading}
               emptyState={{
                 icon: <Puzzle className="h-8 w-8 text-muted-foreground/40" />,
-                title: "No parts yet",
-                description: "Create your first part to start building BOMs and process plans.",
+                title: "Noch keine Teile",
+                description: "Erstellen Sie Ihr erstes Teil, um mit Stücklisten und Arbeitsplänen zu beginnen.",
                 action: (
                   <Button
                     size="sm"
@@ -290,7 +290,7 @@ export default function PartsAndProcessesPage() {
                     onClick={() => setPartDialogOpen(true)}
                   >
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    New Part
+                    Neues Teil
                   </Button>
                 ),
               }}
@@ -305,11 +305,11 @@ export default function PartsAndProcessesPage() {
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <Layers className="h-10 w-10 text-muted-foreground/30" />
               <h3 className="text-sm font-medium text-foreground/70">
-                Bill of Materials
+                Stücklisten
               </h3>
               <p className="max-w-sm text-xs text-muted-foreground">
-                Select a part from the Parts tab to view and manage its Bill of Materials.
-                Each part can have multiple BOM versions with different component configurations.
+                Wählen Sie ein Teil im Teile-Tab, um dessen Stückliste anzuzeigen und zu verwalten.
+                Jedes Teil kann mehrere Stücklistenversionen mit verschiedenen Komponentenkonfigurationen haben.
               </p>
             </div>
           </Card>
@@ -322,11 +322,11 @@ export default function PartsAndProcessesPage() {
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <ListTree className="h-10 w-10 text-muted-foreground/30" />
               <h3 className="text-sm font-medium text-foreground/70">
-                Process Plans
+                Arbeitspläne
               </h3>
               <p className="max-w-sm text-xs text-muted-foreground">
-                Select a part from the Parts tab to view and manage its Process Plans.
-                Process plans define the manufacturing steps, stations, and time estimates.
+                Wählen Sie ein Teil im Teile-Tab, um dessen Arbeitspläne anzuzeigen und zu verwalten.
+                Arbeitspläne definieren die Fertigungsschritte, Stationen und Zeitschätzungen.
               </p>
             </div>
           </Card>
@@ -337,15 +337,15 @@ export default function PartsAndProcessesPage() {
       <Dialog open={partDialogOpen} onOpenChange={setPartDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>New Part</DialogTitle>
+            <DialogTitle>Neues Teil</DialogTitle>
             <DialogDescription>
-              Create a new part for BOM and process plan management.
+              Neues Teil für Stücklisten- und Arbeitsplanverwaltung erstellen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={partForm.handleSubmit(handleCreatePart as any)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="partNumber">Part Number</Label>
+              <Label htmlFor="partNumber">Teilenummer</Label>
               <Input
                 id="partNumber"
                 className="font-mono"
@@ -367,7 +367,7 @@ export default function PartsAndProcessesPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="partDesc">Description</Label>
+              <Label htmlFor="partDesc">Beschreibung</Label>
               <Textarea
                 id="partDesc"
                 rows={2}
@@ -375,7 +375,7 @@ export default function PartsAndProcessesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>Typ</Label>
               <Select
                 value={partForm.watch("type")}
                 onValueChange={(v) => partForm.setValue("type", v)}
@@ -384,9 +384,9 @@ export default function PartsAndProcessesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PRODUCT">Product</SelectItem>
-                  <SelectItem value="COMPONENT">Component</SelectItem>
-                  <SelectItem value="RAW_MATERIAL">Raw Material</SelectItem>
+                  <SelectItem value="PRODUCT">Produkt</SelectItem>
+                  <SelectItem value="COMPONENT">Komponente</SelectItem>
+                  <SelectItem value="RAW_MATERIAL">Rohmaterial</SelectItem>
                 </SelectContent>
               </Select>
               {partForm.formState.errors.type && (
@@ -405,10 +405,10 @@ export default function PartsAndProcessesPage() {
                 size="sm"
                 onClick={() => setPartDialogOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Creating..." : "Create Part"}
+                {mutations.loading ? "Wird erstellt..." : "Teil erstellen"}
               </Button>
             </DialogFooter>
           </form>

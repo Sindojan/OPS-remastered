@@ -47,30 +47,30 @@ interface NavSection {
 
 const ALL_NAV_SECTIONS: NavSection[] = [
   {
-    label: "Operations",
+    label: "Betrieb",
     items: [
-      { label: "My Day", href: "/my-day", icon: Sun },
-      { label: "Console", href: "/agents", icon: Bot },
-      { label: "Production", href: "/production", icon: Factory },
-      { label: "Machines", href: "/machines", icon: Cog },
-      { label: "Inventory", href: "/inventory", icon: Package },
-      { label: "Parts & Processes", href: "/parts-and-processes", icon: Puzzle },
+      { label: "Mein Tag", href: "/my-day", icon: Sun },
+      { label: "Konsole", href: "/agents", icon: Bot },
+      { label: "Produktion", href: "/production", icon: Factory },
+      { label: "Maschinen", href: "/machines", icon: Cog },
+      { label: "Lager", href: "/inventory", icon: Package },
+      { label: "Teile & Prozesse", href: "/parts-and-processes", icon: Puzzle },
     ],
   },
   {
-    label: "Communication",
+    label: "Kommunikation",
     items: [
-      { label: "Inbox", href: "/inbox", icon: Inbox },
-      { label: "Reports", href: "/reports", icon: BarChart3 },
+      { label: "Posteingang", href: "/inbox", icon: Inbox },
+      { label: "Berichte", href: "/reports", icon: BarChart3 },
     ],
   },
   {
-    label: "Organization",
+    label: "Organisation",
     items: [
-      { label: "Customers", href: "/customers", icon: Building2 },
-      { label: "People", href: "/employees", icon: Users },
-      { label: "Knowledge", href: "/knowledge", icon: BookOpen },
-      { label: "Settings", href: "/settings", icon: Settings },
+      { label: "Kunden", href: "/customers", icon: Building2 },
+      { label: "Mitarbeiter", href: "/employees", icon: Users },
+      { label: "Wissensdatenbank", href: "/knowledge", icon: BookOpen },
+      { label: "Einstellungen", href: "/settings", icon: Settings },
     ],
   },
 ];
@@ -252,7 +252,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           ) : (
             <>
               <ChevronsLeft className="h-4 w-4" />
-              <span className="text-xs">Collapse</span>
+              <span className="text-xs">Einklappen</span>
             </>
           )}
         </Button>

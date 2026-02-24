@@ -50,8 +50,8 @@ import { formatDate, humanizeStatus } from "@/lib/format";
 // ─── Schemas ────────────────────────────────────────────
 
 const createMachineSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  machineNumber: z.string().min(1, "Machine number is required"),
+  name: z.string().min(1, "Name ist erforderlich"),
+  machineNumber: z.string().min(1, "Maschinennummer ist erforderlich"),
   type: z.string().optional(),
   stationId: z.string().optional(),
   capacityPerHour: z.string().optional(),
@@ -143,7 +143,7 @@ export default function MachinesPage() {
     () => [
       {
         id: "machineNumber",
-        header: "Machine #",
+        header: "Maschinen-Nr.",
         accessorKey: "machineNumber",
         sortable: true,
         cell: (row) => (
@@ -160,7 +160,7 @@ export default function MachinesPage() {
       },
       {
         id: "type",
-        header: "Type",
+        header: "Typ",
         accessorKey: "type",
         sortable: true,
         cell: (row) => (
@@ -197,7 +197,7 @@ export default function MachinesPage() {
       },
       {
         id: "capacityPerHour",
-        header: "Cap/Hour",
+        header: "Kap./Stunde",
         accessorKey: "capacityPerHour",
         sortable: true,
         cell: (row) => (
@@ -208,7 +208,7 @@ export default function MachinesPage() {
       },
       {
         id: "manufacturer",
-        header: "Manufacturer",
+        header: "Hersteller",
         accessorKey: "manufacturer",
         sortable: true,
         cell: (row) => (
@@ -242,7 +242,7 @@ export default function MachinesPage() {
         };
         const result = await mutations.createMachine(payload);
         if (result) {
-          toast.success("Machine created");
+          toast.success("Maschine erfolgreich erstellt");
           setCreateOpen(false);
           form.reset({
             name: "",
@@ -258,7 +258,7 @@ export default function MachinesPage() {
           refetch();
         }
       } catch (err) {
-        toast.error("Failed to create machine", { description: err instanceof Error ? err.message : "Unknown error" });
+        toast.error("Maschine konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
       }
     },
     [mutations, form, refetch]
@@ -269,13 +269,13 @@ export default function MachinesPage() {
     try {
       const result = await mutations.changeStatus(statusTarget.id, newStatus);
       if (result) {
-        toast.success("Machine status updated");
+        toast.success("Maschinenstatus aktualisiert");
         setStatusDialogOpen(false);
         setStatusTarget(null);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to change status", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Status konnte nicht geändert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [mutations, statusTarget, newStatus, refetch]);
 
@@ -288,7 +288,7 @@ export default function MachinesPage() {
         severity: incidentSeverity as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
       });
       if (result) {
-        toast.success("Incident reported");
+        toast.success("Störung gemeldet");
         setIncidentDialogOpen(false);
         setIncidentTarget(null);
         setIncidentType("");
@@ -297,7 +297,7 @@ export default function MachinesPage() {
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to report incident", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Störung konnte nicht gemeldet werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [
     mutations,
@@ -316,7 +316,7 @@ export default function MachinesPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={refetch}>
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -327,8 +327,8 @@ export default function MachinesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Machines"
-        description="Machine fleet management and monitoring"
+        title="Maschinen"
+        description="Maschinenflotte verwalten und überwachen"
         actions={
           <Button
             size="sm"
@@ -336,7 +336,7 @@ export default function MachinesPage() {
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="h-3.5 w-3.5" />
-            New Machine
+            Neue Maschine
           </Button>
         }
       />
@@ -353,11 +353,11 @@ export default function MachinesPage() {
         ) : (
           <>
             <KpiCard
-              label="Total Machines"
+              label="Maschinen gesamt"
               value={String(kpis?.total ?? 0)}
             />
             <KpiCard
-              label="Available"
+              label="Verfügbar"
               value={String(kpis?.available ?? 0)}
               trend={
                 kpis && kpis.total > 0
@@ -369,7 +369,7 @@ export default function MachinesPage() {
               }
             />
             <KpiCard
-              label="Maintenance / Blocked"
+              label="Wartung / Blockiert"
               value={String(kpis?.maintenanceBlocked ?? 0)}
               trend={
                 kpis && kpis.maintenanceBlocked > 0
@@ -377,7 +377,7 @@ export default function MachinesPage() {
                   : undefined
               }
             />
-            <KpiCard label="Maintenance Due" value="–" />
+            <KpiCard label="Wartung fällig" value="–" />
           </>
         )}
       </div>
@@ -386,7 +386,7 @@ export default function MachinesPage() {
       <DataTable<MachineResponse>
         data={filteredMachines}
         columns={columns}
-        searchPlaceholder="Search machines..."
+        searchPlaceholder="Maschinen suchen..."
         searchKey="name"
         loading={loading}
         pageSize={15}
@@ -398,7 +398,7 @@ export default function MachinesPage() {
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Statuses</SelectItem>
+                <SelectItem value="ALL">Alle Status</SelectItem>
                 {MACHINE_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
                     {humanizeStatus(s)}
@@ -407,7 +407,7 @@ export default function MachinesPage() {
               </SelectContent>
             </Select>
             <Input
-              placeholder="Filter by type..."
+              placeholder="Nach Typ filtern..."
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="h-9 w-40 text-sm"
@@ -416,12 +416,12 @@ export default function MachinesPage() {
         }
         rowActions={[
           {
-            label: "View Details",
+            label: "Details anzeigen",
             icon: <Eye className="h-3.5 w-3.5" />,
             onClick: (row) => router.push(`/machines/${row.id}`),
           },
           {
-            label: "Change Status",
+            label: "Status ändern",
             icon: <Settings2 className="h-3.5 w-3.5" />,
             onClick: (row) => {
               setStatusTarget(row);
@@ -430,7 +430,7 @@ export default function MachinesPage() {
             },
           },
           {
-            label: "Report Incident",
+            label: "Störung melden",
             icon: <AlertTriangle className="h-3.5 w-3.5" />,
             onClick: (row) => {
               setIncidentTarget(row);
@@ -441,8 +441,8 @@ export default function MachinesPage() {
         ]}
         emptyState={{
           icon: <Factory className="h-8 w-8 text-muted-foreground/40" />,
-          title: "No machines found",
-          description: "Add your first machine to get started.",
+          title: "Keine Maschinen gefunden",
+          description: "Fügen Sie Ihre erste Maschine hinzu.",
           action: (
             <Button
               variant="outline"
@@ -451,7 +451,7 @@ export default function MachinesPage() {
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New Machine
+              Neue Maschine
             </Button>
           ),
         }}
@@ -463,10 +463,10 @@ export default function MachinesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Cog className="h-4 w-4 text-primary" />
-              New Machine
+              Neue Maschine
             </DialogTitle>
             <DialogDescription>
-              Register a new machine in the fleet.
+              Neue Maschine in der Flotte registrieren.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -488,7 +488,7 @@ export default function MachinesPage() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="machineNumber">Machine # *</Label>
+                <Label htmlFor="machineNumber">Maschinen-Nr. *</Label>
                 <Input
                   id="machineNumber"
                   className="font-mono"
@@ -504,7 +504,7 @@ export default function MachinesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="type">Typ</Label>
                 <Input
                   id="type"
                   placeholder="CNC, Press, Sewing..."
@@ -512,7 +512,7 @@ export default function MachinesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="stationId">Station ID</Label>
+                <Label htmlFor="stationId">Stations-ID</Label>
                 <Input
                   id="stationId"
                   placeholder="Station UUID"
@@ -524,7 +524,7 @@ export default function MachinesPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="capacityPerHour">Capacity/Hour</Label>
+                <Label htmlFor="capacityPerHour">Kapazität/Stunde</Label>
                 <Input
                   id="capacityPerHour"
                   type="number"
@@ -534,7 +534,7 @@ export default function MachinesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="manufacturer">Manufacturer</Label>
+                <Label htmlFor="manufacturer">Hersteller</Label>
                 <Input
                   id="manufacturer"
                   placeholder="Siemens, Haas..."
@@ -542,7 +542,7 @@ export default function MachinesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="model">Model</Label>
+                <Label htmlFor="model">Modell</Label>
                 <Input
                   id="model"
                   placeholder="Model X200"
@@ -553,7 +553,7 @@ export default function MachinesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="serialNumber">Serial Number</Label>
+                <Label htmlFor="serialNumber">Seriennummer</Label>
                 <Input
                   id="serialNumber"
                   placeholder="SN-123456"
@@ -562,7 +562,7 @@ export default function MachinesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="purchaseDate">Purchase Date</Label>
+                <Label htmlFor="purchaseDate">Kaufdatum</Label>
                 <Input
                   id="purchaseDate"
                   type="date"
@@ -578,10 +578,10 @@ export default function MachinesPage() {
                 size="sm"
                 onClick={() => setCreateOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={mutations.loading}>
-                {mutations.loading ? "Creating..." : "Create Machine"}
+                {mutations.loading ? "Wird erstellt..." : "Maschine erstellen"}
               </Button>
             </DialogFooter>
           </form>
@@ -592,16 +592,16 @@ export default function MachinesPage() {
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Change Machine Status</DialogTitle>
+            <DialogTitle>Maschinenstatus ändern</DialogTitle>
             <DialogDescription>
               {statusTarget
-                ? `Update status for ${statusTarget.machineNumber} – ${statusTarget.name}`
+                ? `Status aktualisieren für ${statusTarget.machineNumber} – ${statusTarget.name}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Current Status</Label>
+              <Label>Aktueller Status</Label>
               {statusTarget && (
                 <DomainStatusBadge
                   variant={getMachineStatusVariant(statusTarget.status)}
@@ -611,7 +611,7 @@ export default function MachinesPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>New Status</Label>
+              <Label>Neuer Status</Label>
               <Select
                 value={newStatus}
                 onValueChange={(v) => setNewStatus(v as MachineStatus)}
@@ -635,14 +635,14 @@ export default function MachinesPage() {
               size="sm"
               onClick={() => setStatusDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleChangeStatus}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Updating..." : "Update Status"}
+              {mutations.loading ? "Wird aktualisiert..." : "Status aktualisieren"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -654,34 +654,34 @@ export default function MachinesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-4 w-4" />
-              Report Incident
+              Störung melden
             </DialogTitle>
             <DialogDescription>
               {incidentTarget
-                ? `Report an incident for ${incidentTarget.machineNumber} – ${incidentTarget.name}`
+                ? `Störung melden für ${incidentTarget.machineNumber} – ${incidentTarget.name}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Incident Type *</Label>
+              <Label>Störungsart *</Label>
               <Input
-                placeholder="Mechanical Failure, Electrical, etc."
+                placeholder="Mechanischer Defekt, Elektrisch, etc."
                 value={incidentType}
                 onChange={(e) => setIncidentType(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Description</Label>
+              <Label>Beschreibung</Label>
               <textarea
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Describe what happened..."
+                placeholder="Beschreiben Sie, was passiert ist..."
                 value={incidentDescription}
                 onChange={(e) => setIncidentDescription(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Severity</Label>
+              <Label>Schweregrad</Label>
               <Select
                 value={incidentSeverity}
                 onValueChange={setIncidentSeverity}
@@ -690,10 +690,10 @@ export default function MachinesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="LOW">Low</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HIGH">High</SelectItem>
-                  <SelectItem value="CRITICAL">Critical</SelectItem>
+                  <SelectItem value="LOW">Niedrig</SelectItem>
+                  <SelectItem value="MEDIUM">Mittel</SelectItem>
+                  <SelectItem value="HIGH">Hoch</SelectItem>
+                  <SelectItem value="CRITICAL">Kritisch</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -704,7 +704,7 @@ export default function MachinesPage() {
               size="sm"
               onClick={() => setIncidentDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               variant="destructive"
@@ -712,7 +712,7 @@ export default function MachinesPage() {
               onClick={handleReportIncident}
               disabled={mutations.loading || !incidentType.trim()}
             >
-              {mutations.loading ? "Reporting..." : "Report Incident"}
+              {mutations.loading ? "Wird gemeldet..." : "Störung melden"}
             </Button>
           </DialogFooter>
         </DialogContent>

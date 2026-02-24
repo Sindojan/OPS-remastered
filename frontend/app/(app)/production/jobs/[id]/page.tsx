@@ -68,7 +68,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 // ─── Edit Schema ────────────────────────────────────────
 const editJobSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Titel ist erforderlich"),
   priority: z.coerce.number().min(1).max(5),
   deadline: z.string().optional(),
   notes: z.string().optional(),
@@ -78,7 +78,7 @@ type EditJobFormData = z.infer<typeof editJobSchema>;
 
 // ─── Quality Check Schema ───────────────────────────────
 const qualityCheckSchema = z.object({
-  checkType: z.string().min(1, "Check type is required"),
+  checkType: z.string().min(1, "Prüfart ist erforderlich"),
   result: z.enum(["PASS", "FAIL", "PARTIAL"]),
   defectCount: z.coerce.number().min(0),
   notes: z.string().optional(),
@@ -169,11 +169,11 @@ export default function JobDetailPage() {
           ...(data.notes ? { notes: data.notes } : {}),
         };
         await updateJob(job.id, req);
-        toast.success("Job updated");
+        toast.success("Auftrag erfolgreich aktualisiert");
         setEditing(false);
         refetch();
       } catch (err) {
-        toast.error("Failed to update job", { description: err instanceof Error ? err.message : "Unknown error" });
+        toast.error("Auftrag konnte nicht aktualisiert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
       }
     },
     [job, updateJob, refetch]
@@ -192,12 +192,12 @@ export default function JobDetailPage() {
           ...(data.notes ? { notes: data.notes } : {}),
         };
         await createQualityCheck(req);
-        toast.success("Quality check added");
+        toast.success("Qualitätsprüfung hinzugefügt");
         setAddingQC(false);
         qcForm.reset({ checkType: "", result: "PASS", defectCount: 0, notes: "" });
         refetchQC();
       } catch (err) {
-        toast.error("Failed to add quality check", { description: err instanceof Error ? err.message : "Unknown error" });
+        toast.error("Qualitätsprüfung konnte nicht hinzugefügt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
       }
     },
     [job, createQualityCheck, qcForm, refetchQC]
@@ -229,15 +229,15 @@ export default function JobDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <AlertCircle className="h-10 w-10 text-destructive/60" />
-        <p className="text-sm text-muted-foreground">{error ?? "Job not found"}</p>
+        <p className="text-sm text-muted-foreground">{error ?? "Auftrag nicht gefunden"}</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => router.push("/production")} className="gap-2">
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back
+            Zurück
           </Button>
           <Button variant="outline" size="sm" onClick={refetch} className="gap-2">
             <RefreshCw className="h-3.5 w-3.5" />
-            Retry
+            Erneut versuchen
           </Button>
         </div>
       </div>
@@ -249,7 +249,7 @@ export default function JobDetailPage() {
       {/* ─── Header ──────────────────────────────────────── */}
       <PageHeader
         title={`${job.jobNumber} - ${job.title}`}
-        breadcrumb={["Production", job.jobNumber]}
+        breadcrumb={["Produktion", job.jobNumber]}
         actions={
           <div className="flex items-center gap-2">
             <DomainStatusBadge variant={getJobStatusVariant(job.status)} pulse={job.status === "IN_PRODUCTION"}>
@@ -260,12 +260,12 @@ export default function JobDetailPage() {
             </DomainStatusBadge>
             <Button variant="outline" size="sm" onClick={() => router.push("/production")} className="gap-1.5">
               <ArrowLeft className="h-3.5 w-3.5" />
-              Back
+              Zurück
             </Button>
             {!editing && (
               <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
                 <Pencil className="h-3.5 w-3.5" />
-                Edit
+                Bearbeiten
               </Button>
             )}
           </div>
@@ -277,19 +277,19 @@ export default function JobDetailPage() {
         <TabsList variant="line">
           <TabsTrigger value="overview" className="gap-1.5">
             <ClipboardList className="h-3.5 w-3.5" />
-            Overview
+            Übersicht
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            Status History
+            Statusverlauf
           </TabsTrigger>
           <TabsTrigger value="quality" className="gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Quality Checks
+            Qualitätsprüfungen
           </TabsTrigger>
           <TabsTrigger value="documents" className="gap-1.5">
             <FileText className="h-3.5 w-3.5" />
-            Documents
+            Dokumente
           </TabsTrigger>
         </TabsList>
 
@@ -299,7 +299,7 @@ export default function JobDetailPage() {
             <form onSubmit={editForm.handleSubmit(handleSave as any)} className="space-y-4">
               <Card className="p-4 space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-title">Title</Label>
+                  <Label htmlFor="edit-title">Titel</Label>
                   <Input id="edit-title" {...editForm.register("title")} />
                   {editForm.formState.errors.title && (
                     <p className="text-xs text-destructive">{editForm.formState.errors.title.message}</p>
@@ -307,7 +307,7 @@ export default function JobDetailPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label>Priority</Label>
+                    <Label>Priorität</Label>
                     <Select
                       value={String(editForm.watch("priority"))}
                       onValueChange={(v) => editForm.setValue("priority", Number(v))}
@@ -325,33 +325,33 @@ export default function JobDetailPage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="edit-deadline">Deadline</Label>
+                    <Label htmlFor="edit-deadline">Fälligkeitsdatum</Label>
                     <Input id="edit-deadline" type="date" {...editForm.register("deadline")} className="font-mono text-xs" />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-notes">Notes</Label>
+                  <Label htmlFor="edit-notes">Notizen</Label>
                   <Textarea id="edit-notes" rows={3} {...editForm.register("notes")} />
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" disabled={mutating} className="gap-1.5">
                     <Save className="h-3.5 w-3.5" />
-                    Save
+                    Speichern
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-1.5">
                     <X className="h-3.5 w-3.5" />
-                    Cancel
+                    Abbrechen
                   </Button>
                 </div>
               </Card>
             </form>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <InfoCard icon={<User className="h-4 w-4" />} label="Customer" value={job.customerId ?? "-"} mono />
-              <InfoCard icon={<Hash className="h-4 w-4" />} label="Quantity" value={formatNumber(job.quantity)} mono />
+              <InfoCard icon={<User className="h-4 w-4" />} label="Kunde" value={job.customerId ?? "-"} mono />
+              <InfoCard icon={<Hash className="h-4 w-4" />} label="Menge" value={formatNumber(job.quantity)} mono />
               <InfoCard
                 icon={<Calendar className="h-4 w-4" />}
-                label="Deadline"
+                label="Fälligkeitsdatum"
                 value={formatDate(job.deadline)}
                 mono
                 accent={
@@ -366,30 +366,30 @@ export default function JobDetailPage() {
                 suffix={
                   deadlineDays !== null
                     ? deadlineDays < 0
-                      ? `${Math.abs(deadlineDays)}d overdue`
-                      : `${deadlineDays}d remaining`
+                      ? `${Math.abs(deadlineDays)}T überfällig`
+                      : `${deadlineDays}T verbleibend`
                     : undefined
                 }
               />
-              <InfoCard icon={<Factory className="h-4 w-4" />} label="Station" value={stationName ?? "Unassigned"} />
-              <InfoCard icon={<Clock className="h-4 w-4" />} label="Created" value={formatDateTime(job.createdAt)} mono />
+              <InfoCard icon={<Factory className="h-4 w-4" />} label="Station" value={stationName ?? "Nicht zugewiesen"} />
+              <InfoCard icon={<Clock className="h-4 w-4" />} label="Erstellt" value={formatDateTime(job.createdAt)} mono />
               <InfoCard
                 icon={<Clock className="h-4 w-4" />}
-                label="Started"
-                value={job.startedAt ? formatDateTime(job.startedAt) : "Not started"}
+                label="Gestartet"
+                value={job.startedAt ? formatDateTime(job.startedAt) : "Noch nicht gestartet"}
                 mono
               />
               {job.completedAt && (
                 <InfoCard
                   icon={<CheckCircle2 className="h-4 w-4" />}
-                  label="Completed"
+                  label="Abgeschlossen"
                   value={formatDateTime(job.completedAt)}
                   mono
                 />
               )}
               {job.notes && (
                 <Card className="col-span-full p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Notes</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Notizen</p>
                   <p className="mt-1.5 text-sm text-foreground/80 whitespace-pre-wrap">{job.notes}</p>
                 </Card>
               )}
@@ -402,7 +402,7 @@ export default function JobDetailPage() {
           {job.statusHistory.length === 0 ? (
             <Card className="flex flex-col items-center justify-center gap-2 py-12">
               <Clock className="h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">No status changes recorded yet.</p>
+              <p className="text-sm text-muted-foreground">Noch keine Statusänderungen aufgezeichnet.</p>
             </Card>
           ) : (
             <div className="relative space-y-0">
@@ -456,11 +456,11 @@ export default function JobDetailPage() {
         <TabsContent value="quality" className="mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {qualityChecks ? `${qualityChecks.length} check(s) recorded` : "Loading..."}
+              {qualityChecks ? `${qualityChecks.length} Prüfung(en) aufgezeichnet` : "Wird geladen..."}
             </p>
             <Button size="sm" variant="outline" onClick={() => setAddingQC(true)} className="gap-1.5">
               <Plus className="h-3.5 w-3.5" />
-              Add Check
+              Prüfung hinzufügen
             </Button>
           </div>
 
@@ -468,17 +468,17 @@ export default function JobDetailPage() {
           {addingQC && (
             <Card className="p-4">
               <form onSubmit={qcForm.handleSubmit(handleAddQC as any)} className="space-y-4">
-                <p className="text-sm font-semibold">New Quality Check</p>
+                <p className="text-sm font-semibold">Neue Qualitätsprüfung</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="checkType">Check Type</Label>
-                    <Input id="checkType" placeholder="e.g. Visual Inspection" {...qcForm.register("checkType")} />
+                    <Label htmlFor="checkType">Prüfart</Label>
+                    <Input id="checkType" placeholder="z.B. Sichtprüfung" {...qcForm.register("checkType")} />
                     {qcForm.formState.errors.checkType && (
                       <p className="text-xs text-destructive">{qcForm.formState.errors.checkType.message}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Result</Label>
+                    <Label>Ergebnis</Label>
                     <Select
                       value={qcForm.watch("result")}
                       onValueChange={(v) => qcForm.setValue("result", v as QualityResult)}
@@ -487,30 +487,30 @@ export default function JobDetailPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PASS">Pass</SelectItem>
-                        <SelectItem value="FAIL">Fail</SelectItem>
-                        <SelectItem value="PARTIAL">Partial</SelectItem>
+                        <SelectItem value="PASS">Bestanden</SelectItem>
+                        <SelectItem value="FAIL">Nicht bestanden</SelectItem>
+                        <SelectItem value="PARTIAL">Teilweise</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="defectCount">Defect Count</Label>
+                    <Label htmlFor="defectCount">Fehleranzahl</Label>
                     <Input id="defectCount" type="number" min={0} {...qcForm.register("defectCount")} className="font-mono" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="qcNotes">Notes</Label>
+                    <Label htmlFor="qcNotes">Notizen</Label>
                     <Input id="qcNotes" placeholder="Optional" {...qcForm.register("notes")} />
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" disabled={mutating} className="gap-1.5">
                     <Plus className="h-3.5 w-3.5" />
-                    Submit
+                    Absenden
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => setAddingQC(false)}>
-                    Cancel
+                    Abbrechen
                   </Button>
                 </div>
               </form>
@@ -544,7 +544,7 @@ export default function JobDetailPage() {
                       <span className="font-mono text-sm font-semibold">
                         {qc.defectCount}
                       </span>
-                      <p className="text-[10px] text-muted-foreground">defects</p>
+                      <p className="text-[10px] text-muted-foreground">Fehler</p>
                     </div>
                   </div>
                   {qc.notes && (
@@ -552,7 +552,7 @@ export default function JobDetailPage() {
                   )}
                   {qc.defects && qc.defects.length > 0 && (
                     <div className="mt-3 space-y-1.5">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Defects</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Mängel</p>
                       {qc.defects.map((d) => (
                         <div key={d.id} className="flex items-center gap-2 rounded-md border px-3 py-1.5">
                           <DomainStatusBadge variant={getSeverityVariant(d.severity)}>
@@ -572,7 +572,7 @@ export default function JobDetailPage() {
           ) : (
             <Card className="flex flex-col items-center justify-center gap-2 py-12">
               <ShieldCheck className="h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">No quality checks recorded.</p>
+              <p className="text-sm text-muted-foreground">Keine Qualitätsprüfungen aufgezeichnet.</p>
             </Card>
           )}
         </TabsContent>
@@ -581,9 +581,9 @@ export default function JobDetailPage() {
         <TabsContent value="documents" className="mt-4">
           <Card className="flex flex-col items-center justify-center gap-3 py-16">
             <FileText className="h-10 w-10 text-muted-foreground/30" />
-            <p className="text-sm font-medium text-muted-foreground">Coming soon</p>
+            <p className="text-sm font-medium text-muted-foreground">Demnächst verfügbar</p>
             <p className="text-xs text-muted-foreground/60">
-              Document management will be available in a future update.
+              Dokumentenverwaltung wird in einem zukünftigen Update verfügbar sein.
             </p>
           </Card>
         </TabsContent>

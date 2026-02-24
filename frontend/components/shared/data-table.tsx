@@ -98,7 +98,7 @@ export interface DataTableProps<T extends { id: string }> {
 export function DataTable<T extends { id: string }>({
   data,
   columns,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = "Suchen...",
   searchKey,
   filterSlots,
   selectable = false,
@@ -288,7 +288,7 @@ export function DataTable<T extends { id: string }>({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <Columns3 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Columns</span>
+              <span className="hidden sm:inline">Spalten</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-48 p-2">
@@ -312,7 +312,7 @@ export function DataTable<T extends { id: string }>({
       {selectable && selectedIds.size > 0 && bulkActions.length > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
           <span className="font-mono text-xs font-medium text-primary">
-            {selectedIds.size} selected
+            {selectedIds.size} ausgewählt
           </span>
           <div className="mx-2 h-4 w-px bg-border" />
           {bulkActions.map((action, i) => (
@@ -336,7 +336,7 @@ export function DataTable<T extends { id: string }>({
             onClick={() => setSelectedIds(new Set())}
             className="text-xs text-muted-foreground"
           >
-            Clear
+            Aufheben
           </Button>
         </div>
       )}
@@ -387,7 +387,7 @@ export function DataTable<T extends { id: string }>({
               ))}
               {hasActions && (
                 <TableHead className="w-12 text-right text-[11px] font-semibold uppercase tracking-wider">
-                  Actions
+                  Aktionen
                 </TableHead>
               )}
             </TableRow>
@@ -408,7 +408,7 @@ export function DataTable<T extends { id: string }>({
                       <PackageOpen className="h-8 w-8 text-muted-foreground/40" />
                     )}
                     <p className="text-sm font-medium text-foreground/70">
-                      {emptyState?.title ?? "No data"}
+                      {emptyState?.title ?? "Keine Daten"}
                     </p>
                     {emptyState?.description && (
                       <p className="text-xs text-muted-foreground">
@@ -517,7 +517,7 @@ export function DataTable<T extends { id: string }>({
         <div className="flex items-center justify-between px-1">
           <p className="font-mono text-xs text-muted-foreground">
             {currentPage * pageSize + 1}&ndash;
-            {Math.min((currentPage + 1) * pageSize, sortedData.length)} of{" "}
+            {Math.min((currentPage + 1) * pageSize, sortedData.length)} von{" "}
             {sortedData.length}
           </p>
           <div className="flex items-center gap-1">

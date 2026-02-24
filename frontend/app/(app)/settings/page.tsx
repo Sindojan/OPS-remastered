@@ -151,13 +151,13 @@ function LlmConfigTab() {
         apiKey: apiKey || undefined,
         defaultModel,
       });
-      toast.success("Configuration saved successfully");
+      toast.success("Konfiguration erfolgreich gespeichert");
       setHasApiKey(true);
       setApiKey("");
       await fetchModels();
     } catch (err) {
-      toast.error("Failed to save configuration", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Fehler beim Speichern der Konfiguration", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     } finally {
       setSaving(false);
@@ -169,10 +169,10 @@ function LlmConfigTab() {
     setSaveMessage(null);
     try {
       await fetchModels();
-      toast.success(`Connection successful. ${models.length} models available.`);
+      toast.success(`Verbindung erfolgreich. ${models.length} Modelle verfuegbar.`);
     } catch (err) {
-      toast.error("Connection test failed", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Verbindungstest fehlgeschlagen", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     } finally {
       setTesting(false);
@@ -199,11 +199,11 @@ function LlmConfigTab() {
             <Key className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium">API Key Status</p>
+            <p className="text-sm font-medium">API-Schluessel-Status</p>
             <p className="text-xs text-muted-foreground">
               {hasApiKey
-                ? "API key is configured and ready"
-                : "No API key configured yet"}
+                ? "API-Schluessel ist konfiguriert und bereit"
+                : "Noch kein API-Schluessel konfiguriert"}
             </p>
           </div>
           <Badge
@@ -219,7 +219,7 @@ function LlmConfigTab() {
             ) : (
               <XCircle className="h-3 w-3" />
             )}
-            {hasApiKey ? "Configured" : "Not configured"}
+            {hasApiKey ? "Konfiguriert" : "Nicht konfiguriert"}
           </Badge>
         </CardContent>
       </Card>
@@ -227,28 +227,28 @@ function LlmConfigTab() {
       {/* Configuration form */}
       <Card className="border-border/50">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">Provider Settings</CardTitle>
+          <CardTitle className="text-base">Anbieter-Einstellungen</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Provider */}
           <div className="space-y-2">
-            <Label htmlFor="provider">Provider</Label>
+            <Label htmlFor="provider">Anbieter</Label>
             <Select value={provider} onValueChange={setProvider}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select provider" />
+                <SelectValue placeholder="Anbieter waehlen" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="anthropic">Anthropic</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Currently only Anthropic is supported
+              Derzeit wird nur Anthropic unterstuetzt
             </p>
           </div>
 
           {/* API Key */}
           <div className="space-y-2">
-            <Label htmlFor="apiKey">API Key</Label>
+            <Label htmlFor="apiKey">API-Schluessel</Label>
             <Input
               id="apiKey"
               type="password"
@@ -261,24 +261,24 @@ function LlmConfigTab() {
             />
             <p className="text-xs text-muted-foreground">
               {hasApiKey
-                ? "Enter a new key to replace the existing one"
-                : "Enter your Anthropic API key"}
+                ? "Neuen Schluessel eingeben, um den bestehenden zu ersetzen"
+                : "Geben Sie Ihren Anthropic API-Schluessel ein"}
             </p>
           </div>
 
           {/* Default Model */}
           <div className="space-y-2">
-            <Label htmlFor="defaultModel">Default Model</Label>
+            <Label htmlFor="defaultModel">Standard-Modell</Label>
             <div className="relative">
               <Select value={defaultModel} onValueChange={setDefaultModel} disabled={modelsLoading}>
                 <SelectTrigger className="w-full">
                   {modelsLoading ? (
                     <span className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Loading models...
+                      Modelle laden...
                     </span>
                   ) : (
-                    <SelectValue placeholder="Select default model" />
+                    <SelectValue placeholder="Standard-Modell waehlen" />
                   )}
                 </SelectTrigger>
                 <SelectContent>
@@ -292,8 +292,8 @@ function LlmConfigTab() {
             </div>
             <p className="text-xs text-muted-foreground">
               {apiKey
-                ? "Models loaded using the entered API key"
-                : "Used for agent instances that don\u2019t specify a model"}
+                ? "Modelle mit dem eingegebenen API-Schluessel geladen"
+                : "Wird fuer Agenten-Instanzen verwendet, die kein Modell angeben"}
             </p>
           </div>
 
@@ -323,7 +323,7 @@ function LlmConfigTab() {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {saving ? "Saving..." : "Save Configuration"}
+              {saving ? "Speichern..." : "Konfiguration speichern"}
             </Button>
             <Button
               variant="outline"
@@ -336,7 +336,7 @@ function LlmConfigTab() {
               ) : (
                 <Zap className="h-4 w-4" />
               )}
-              {testing ? "Testing..." : "Test Connection"}
+              {testing ? "Testen..." : "Verbindung testen"}
             </Button>
           </div>
         </CardContent>
@@ -423,10 +423,10 @@ function AgentInstancesTab() {
           inst.id === instanceId ? { ...inst, model: newModel } : inst
         )
       );
-      toast.success("Model updated");
+      toast.success("Modell aktualisiert");
     } catch (err) {
-      toast.error("Failed to update model", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Fehler beim Aktualisieren des Modells", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
       // Revert on error - refetch
       await fetchData();
@@ -451,7 +451,7 @@ function AgentInstancesTab() {
     },
     {
       id: "role",
-      header: "Role",
+      header: "Rolle",
       accessorKey: "role",
       cell: (row) => (
         <span className="font-mono text-xs text-muted-foreground">
@@ -478,7 +478,7 @@ function AgentInstancesTab() {
     },
     {
       id: "model",
-      header: "Model",
+      header: "Modell",
       accessorKey: "model",
       sortable: false,
       cell: (row) => (
@@ -489,15 +489,15 @@ function AgentInstancesTab() {
             disabled={updatingId === row.id}
           >
             <SelectTrigger className="h-8 w-56" size="sm">
-              <SelectValue placeholder="Select model">
+              <SelectValue placeholder="Modell waehlen">
                 {updatingId === row.id ? (
                   <span className="flex items-center gap-1.5 text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Updating...
+                    Aktualisieren...
                   </span>
                 ) : (
                   <span className="font-mono text-xs">
-                    {row.model || "Not set"}
+                    {row.model || "Nicht gesetzt"}
                   </span>
                 )}
               </SelectValue>
@@ -521,12 +521,12 @@ function AgentInstancesTab() {
       columns={columns}
       loading={loading}
       searchKey="name"
-      searchPlaceholder="Search agent instances..."
+      searchPlaceholder="Agenten-Instanzen suchen..."
       emptyState={{
         icon: <Bot className="h-8 w-8 text-muted-foreground/40" />,
-        title: "No agent instances",
+        title: "Keine Agenten-Instanzen",
         description:
-          "Agent instances will appear here once they are created via the API.",
+          "Agenten-Instanzen erscheinen hier, sobald sie ueber die API erstellt wurden.",
       }}
     />
   );
@@ -728,9 +728,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
         <PageHeader
-          title="Settings"
-          description="System configuration and LLM provider management"
-          breadcrumb={["System", "Settings"]}
+          title="Einstellungen"
+          description="Systemkonfiguration und LLM-Anbieterverwaltung"
+          breadcrumb={["System", "Einstellungen"]}
           actions={
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="gap-1 font-mono text-xs">
@@ -745,11 +745,11 @@ export default function SettingsPage() {
           <TabsList>
             <TabsTrigger value="llm" className="gap-1.5">
               <Key className="h-3.5 w-3.5" />
-              LLM Configuration
+              LLM-Konfiguration
             </TabsTrigger>
             <TabsTrigger value="instances" className="gap-1.5">
               <Bot className="h-3.5 w-3.5" />
-              Agent Instances
+              Agenten-Instanzen
             </TabsTrigger>
             <TabsTrigger value="roles" className="gap-1.5">
               <Shield className="h-3.5 w-3.5" />

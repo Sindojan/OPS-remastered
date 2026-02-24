@@ -27,7 +27,7 @@ export default function SystemLayout({
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="font-mono text-sm text-muted-foreground">
-          Loading...
+          Laden...
         </div>
       </div>
     );

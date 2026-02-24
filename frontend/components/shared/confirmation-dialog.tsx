@@ -29,8 +29,8 @@ export function ConfirmationDialog({
   onConfirm,
   onCancel,
   variant = "default",
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel = "Bestätigen",
+  cancelLabel = "Abbrechen",
 }: ConfirmationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>

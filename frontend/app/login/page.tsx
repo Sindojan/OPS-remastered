@@ -36,7 +36,7 @@ export default function LoginPage() {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="font-mono text-sm text-muted-foreground">Loading...</div>
+        <div className="font-mono text-sm text-muted-foreground">Laden...</div>
       </div>
     );
   }

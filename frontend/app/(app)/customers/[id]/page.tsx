@@ -119,13 +119,13 @@ export default function CustomerDetailPage() {
         customerNumber: editCustomerNumber || undefined,
       });
       if (result) {
-        toast.success("Customer updated");
+        toast.success("Kunde aktualisiert");
         setEditMode(false);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to update customer", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Kunde konnte nicht aktualisiert werden", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, customer, editCompanyName, editShortName, editTaxId, editCustomerNumber, refetch]);
@@ -138,12 +138,12 @@ export default function CustomerDetailPage() {
         companyName: customer.companyName,
       });
       if (result) {
-        toast.success(`Customer ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+        toast.success(`Kunde ${newStatus === "ACTIVE" ? "aktiviert" : "deaktiviert"}`);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to change status", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Statusänderung fehlgeschlagen", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, customer, refetch]);
@@ -185,16 +185,16 @@ export default function CustomerDetailPage() {
 
       if (editingContact) {
         await mutations.updateContact(customer.id, editingContact.id, data);
-        toast.success("Contact updated");
+        toast.success("Kontakt aktualisiert");
       } else {
         await mutations.addContact(customer.id, data);
-        toast.success("Contact added");
+        toast.success("Kontakt hinzugefügt");
       }
       setContactDialogOpen(false);
       refetch();
     } catch (err) {
-      toast.error("Failed to save contact", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Kontakt konnte nicht gespeichert werden", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [
@@ -207,11 +207,11 @@ export default function CustomerDetailPage() {
     if (!customer) return;
     try {
       await mutations.deleteContact(customer.id, contact.id);
-      toast.success("Contact deleted");
+      toast.success("Kontakt gelöscht");
       refetch();
     } catch (err) {
-      toast.error("Failed to delete contact", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Kontakt konnte nicht gelöscht werden", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, customer, refetch]);
@@ -250,16 +250,16 @@ export default function CustomerDetailPage() {
 
       if (editingAddress) {
         await mutations.updateAddress(customer.id, editingAddress.id, data);
-        toast.success("Address updated");
+        toast.success("Adresse aktualisiert");
       } else {
         await mutations.addAddress(customer.id, data);
-        toast.success("Address added");
+        toast.success("Adresse hinzugefügt");
       }
       setAddressDialogOpen(false);
       refetch();
     } catch (err) {
-      toast.error("Failed to save address", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Adresse konnte nicht gespeichert werden", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [
@@ -272,11 +272,11 @@ export default function CustomerDetailPage() {
     if (!customer) return;
     try {
       await mutations.deleteAddress(customer.id, address.id);
-      toast.success("Address deleted");
+      toast.success("Adresse gelöscht");
       refetch();
     } catch (err) {
-      toast.error("Failed to delete address", {
-        description: err instanceof Error ? err.message : "Unknown error",
+      toast.error("Adresse konnte nicht gelöscht werden", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
   }, [mutations, customer, refetch]);
@@ -297,7 +297,7 @@ export default function CustomerDetailPage() {
       },
       {
         id: "email",
-        header: "Email",
+        header: "E-Mail",
         accessorKey: "email",
         cell: (row) => (
           <span className="text-muted-foreground">{row.email ?? "–"}</span>
@@ -305,7 +305,7 @@ export default function CustomerDetailPage() {
       },
       {
         id: "phone",
-        header: "Phone",
+        header: "Telefon",
         accessorKey: "phone",
         cell: (row) => (
           <span className="font-mono text-xs text-muted-foreground">
@@ -323,10 +323,10 @@ export default function CustomerDetailPage() {
       },
       {
         id: "isPrimary",
-        header: "Primary",
+        header: "Primär",
         cell: (row) =>
           row.isPrimary ? (
-            <DomainStatusBadge variant="primary">Primary</DomainStatusBadge>
+            <DomainStatusBadge variant="primary">Primär</DomainStatusBadge>
           ) : null,
       },
     ],
@@ -337,7 +337,7 @@ export default function CustomerDetailPage() {
     () => [
       {
         id: "type",
-        header: "Type",
+        header: "Typ",
         accessorKey: "type",
         cell: (row) => (
           <DomainStatusBadge
@@ -355,7 +355,7 @@ export default function CustomerDetailPage() {
       },
       {
         id: "street",
-        header: "Street",
+        header: "Straße",
         accessorKey: "street",
       },
       {
@@ -368,12 +368,12 @@ export default function CustomerDetailPage() {
       },
       {
         id: "city",
-        header: "City",
+        header: "Stadt",
         accessorKey: "city",
       },
       {
         id: "country",
-        header: "Country",
+        header: "Land",
         accessorKey: "country",
         cell: (row) => (
           <span className="text-muted-foreground">{row.country ?? "–"}</span>
@@ -393,7 +393,7 @@ export default function CustomerDetailPage() {
       },
       {
         id: "discountPercent",
-        header: "Discount %",
+        header: "Rabatt %",
         accessorKey: "discountPercent",
         cell: (row) => (
           <span className="font-mono text-xs font-semibold">
@@ -403,7 +403,7 @@ export default function CustomerDetailPage() {
       },
       {
         id: "validFrom",
-        header: "Valid From",
+        header: "Gültig ab",
         accessorKey: "validFrom",
         cell: (row) => (
           <span className="font-mono text-xs text-muted-foreground">
@@ -413,7 +413,7 @@ export default function CustomerDetailPage() {
       },
       {
         id: "validUntil",
-        header: "Valid Until",
+        header: "Gültig bis",
         accessorKey: "validUntil",
         cell: (row) => (
           <span className="font-mono text-xs text-muted-foreground">
@@ -433,7 +433,7 @@ export default function CustomerDetailPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={refetch}>
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -465,7 +465,7 @@ export default function CustomerDetailPage() {
       {/* Header */}
       <PageHeader
         title={customer.companyName}
-        breadcrumb={["Customers", customer.companyName]}
+        breadcrumb={["Kunden", customer.companyName]}
         actions={
           <div className="flex items-center gap-2">
             <DomainStatusBadge variant={getCustomerStatusVariant(customer.status)}>
@@ -477,7 +477,7 @@ export default function CustomerDetailPage() {
               onClick={() => router.push("/customers")}
             >
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-              Back
+              Zurück
             </Button>
           </div>
         }
@@ -488,11 +488,11 @@ export default function CustomerDetailPage() {
         <TabsList>
           <TabsTrigger value="overview" className="gap-1.5">
             <Building2 className="h-3.5 w-3.5" />
-            Overview
+            Übersicht
           </TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5">
             <Users className="h-3.5 w-3.5" />
-            Contacts
+            Ansprechpartner
             {customer.contacts.length > 0 && (
               <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-bold text-muted-foreground">
                 {customer.contacts.length}
@@ -501,15 +501,15 @@ export default function CustomerDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="addresses" className="gap-1.5">
             <MapPin className="h-3.5 w-3.5" />
-            Addresses
+            Adressen
           </TabsTrigger>
           <TabsTrigger value="pricegroups" className="gap-1.5">
             <Tag className="h-3.5 w-3.5" />
-            Price Groups
+            Preisgruppen
           </TabsTrigger>
           <TabsTrigger value="orders" className="gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
-            Order History
+            Auftragshistorie
           </TabsTrigger>
         </TabsList>
 
@@ -517,25 +517,25 @@ export default function CustomerDetailPage() {
         <TabsContent value="overview" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Customer Details
+              Kundendetails
             </h3>
             <div className="flex gap-2">
               {!editMode ? (
                 <>
                   <Button variant="outline" size="sm" onClick={startEdit}>
-                    Edit
+                    Bearbeiten
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleToggleStatus}>
-                    {customer.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                    {customer.status === "ACTIVE" ? "Deaktivieren" : "Aktivieren"}
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>
-                    Cancel
+                    Abbrechen
                   </Button>
                   <Button size="sm" onClick={handleSaveEdit} disabled={mutations.loading}>
-                    {mutations.loading ? "Saving..." : "Save Changes"}
+                    {mutations.loading ? "Wird gespeichert..." : "Änderungen speichern"}
                   </Button>
                 </>
               )}
@@ -546,7 +546,7 @@ export default function CustomerDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Tag className="h-3.5 w-3.5" />
-                Customer Number
+                Kundennummer
               </div>
               {editMode ? (
                 <Input
@@ -564,7 +564,7 @@ export default function CustomerDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Building2 className="h-3.5 w-3.5" />
-                Company Name
+                Firmenname
               </div>
               {editMode ? (
                 <Input
@@ -581,7 +581,7 @@ export default function CustomerDetailPage() {
 
             <Card className="p-4">
               <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Short Name
+                Kurzname
               </div>
               {editMode ? (
                 <Input
@@ -598,7 +598,7 @@ export default function CustomerDetailPage() {
 
             <Card className="p-4">
               <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Tax ID
+                Steuer-ID
               </div>
               {editMode ? (
                 <Input
@@ -627,7 +627,7 @@ export default function CustomerDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
-                Created At
+                Erstellt am
               </div>
               <p className="mt-1.5 font-mono text-sm font-semibold">
                 {formatDate(customer.createdAt)}
@@ -640,7 +640,7 @@ export default function CustomerDetailPage() {
         <TabsContent value="contacts" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Contacts
+              Ansprechpartner
             </h3>
             <Button
               variant="outline"
@@ -649,7 +649,7 @@ export default function CustomerDetailPage() {
               onClick={() => openContactDialog()}
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Contact
+              Kontakt hinzufügen
             </Button>
           </div>
 
@@ -659,12 +659,12 @@ export default function CustomerDetailPage() {
             pageSize={10}
             rowActions={[
               {
-                label: "Edit",
+                label: "Bearbeiten",
                 icon: <Pencil className="h-3.5 w-3.5" />,
                 onClick: (row) => openContactDialog(row),
               },
               {
-                label: "Delete",
+                label: "Löschen",
                 icon: <Trash2 className="h-3.5 w-3.5" />,
                 onClick: (row) => handleDeleteContact(row),
                 variant: "destructive",
@@ -672,8 +672,8 @@ export default function CustomerDetailPage() {
             ]}
             emptyState={{
               icon: <Users className="h-8 w-8 text-muted-foreground/40" />,
-              title: "No contacts",
-              description: "Add contacts for this customer.",
+              title: "Keine Ansprechpartner",
+              description: "Fügen Sie Ansprechpartner für diesen Kunden hinzu.",
             }}
           />
         </TabsContent>
@@ -682,7 +682,7 @@ export default function CustomerDetailPage() {
         <TabsContent value="addresses" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Addresses
+              Adressen
             </h3>
             <Button
               variant="outline"
@@ -691,7 +691,7 @@ export default function CustomerDetailPage() {
               onClick={() => openAddressDialog()}
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Address
+              Adresse hinzufügen
             </Button>
           </div>
 
@@ -701,12 +701,12 @@ export default function CustomerDetailPage() {
             pageSize={10}
             rowActions={[
               {
-                label: "Edit",
+                label: "Bearbeiten",
                 icon: <Pencil className="h-3.5 w-3.5" />,
                 onClick: (row) => openAddressDialog(row),
               },
               {
-                label: "Delete",
+                label: "Löschen",
                 icon: <Trash2 className="h-3.5 w-3.5" />,
                 onClick: (row) => handleDeleteAddress(row),
                 variant: "destructive",
@@ -714,8 +714,8 @@ export default function CustomerDetailPage() {
             ]}
             emptyState={{
               icon: <MapPin className="h-8 w-8 text-muted-foreground/40" />,
-              title: "No addresses",
-              description: "Add addresses for this customer.",
+              title: "Keine Adressen",
+              description: "Fügen Sie Adressen für diesen Kunden hinzu.",
             }}
           />
         </TabsContent>
@@ -723,7 +723,7 @@ export default function CustomerDetailPage() {
         {/* ═══ Price Groups Tab ═══ */}
         <TabsContent value="pricegroups" className="space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Price Groups
+            Preisgruppen
           </h3>
 
           <DataTable<PriceGroupResponse>
@@ -732,8 +732,8 @@ export default function CustomerDetailPage() {
             pageSize={10}
             emptyState={{
               icon: <Tag className="h-8 w-8 text-muted-foreground/40" />,
-              title: "No price groups",
-              description: "No price groups assigned to this customer yet.",
+              title: "Keine Preisgruppen",
+              description: "Diesem Kunden sind noch keine Preisgruppen zugeordnet.",
             }}
           />
         </TabsContent>
@@ -744,10 +744,10 @@ export default function CustomerDetailPage() {
             <Calendar className="h-10 w-10 text-muted-foreground/30" />
             <div>
               <p className="text-sm font-semibold text-foreground/70">
-                Order history coming soon
+                Auftragshistorie folgt in Kürze
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Track customer orders, deliveries, and invoices.
+                Verfolgen Sie Kundenaufträge, Lieferungen und Rechnungen.
               </p>
             </div>
           </Card>
@@ -760,18 +760,18 @@ export default function CustomerDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
-              {editingContact ? "Edit Contact" : "Add Contact"}
+              {editingContact ? "Kontakt bearbeiten" : "Kontakt hinzufügen"}
             </DialogTitle>
             <DialogDescription>
               {editingContact
-                ? `Edit contact ${editingContact.firstName} ${editingContact.lastName}`
-                : "Add a new contact for this customer."}
+                ? `Kontakt ${editingContact.firstName} ${editingContact.lastName} bearbeiten`
+                : "Neuen Ansprechpartner für diesen Kunden hinzufügen."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>First Name *</Label>
+                <Label>Vorname *</Label>
                 <Input
                   value={contactFirstName}
                   onChange={(e) => setContactFirstName(e.target.value)}
@@ -779,7 +779,7 @@ export default function CustomerDetailPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Last Name *</Label>
+                <Label>Nachname *</Label>
                 <Input
                   value={contactLastName}
                   onChange={(e) => setContactLastName(e.target.value)}
@@ -789,7 +789,7 @@ export default function CustomerDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Email</Label>
+                <Label>E-Mail</Label>
                 <Input
                   type="email"
                   value={contactEmail}
@@ -798,7 +798,7 @@ export default function CustomerDetailPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Phone</Label>
+                <Label>Telefon</Label>
                 <Input
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
@@ -823,7 +823,7 @@ export default function CustomerDetailPage() {
                     onChange={(e) => setContactIsPrimary(e.target.checked)}
                     className="h-4 w-4 rounded border-input"
                   />
-                  Primary Contact
+                  Primärkontakt
                 </label>
               </div>
             </div>
@@ -834,14 +834,14 @@ export default function CustomerDetailPage() {
               size="sm"
               onClick={() => setContactDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleSaveContact}
               disabled={mutations.loading || !contactFirstName.trim() || !contactLastName.trim()}
             >
-              {mutations.loading ? "Saving..." : editingContact ? "Update Contact" : "Add Contact"}
+              {mutations.loading ? "Wird gespeichert..." : editingContact ? "Kontakt aktualisieren" : "Kontakt hinzufügen"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -853,39 +853,39 @@ export default function CustomerDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
-              {editingAddress ? "Edit Address" : "Add Address"}
+              {editingAddress ? "Adresse bearbeiten" : "Adresse hinzufügen"}
             </DialogTitle>
             <DialogDescription>
               {editingAddress
-                ? "Update address details."
-                : "Add a new address for this customer."}
+                ? "Adressdetails aktualisieren."
+                : "Neue Adresse für diesen Kunden hinzufügen."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Type</Label>
+              <Label>Typ</Label>
               <Select value={addressType} onValueChange={setAddressType}>
                 <SelectTrigger className="text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BILLING">Billing</SelectItem>
-                  <SelectItem value="SHIPPING">Shipping</SelectItem>
-                  <SelectItem value="BOTH">Both</SelectItem>
+                  <SelectItem value="BILLING">Rechnung</SelectItem>
+                  <SelectItem value="SHIPPING">Lieferung</SelectItem>
+                  <SelectItem value="BOTH">Beides</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Street *</Label>
+              <Label>Straße *</Label>
               <Input
                 value={addressStreet}
                 onChange={(e) => setAddressStreet(e.target.value)}
-                placeholder="123 Main St"
+                placeholder="Musterstraße 1"
               />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>ZIP *</Label>
+                <Label>PLZ *</Label>
                 <Input
                   value={addressZip}
                   onChange={(e) => setAddressZip(e.target.value)}
@@ -894,7 +894,7 @@ export default function CustomerDetailPage() {
                 />
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label>City *</Label>
+                <Label>Stadt *</Label>
                 <Input
                   value={addressCity}
                   onChange={(e) => setAddressCity(e.target.value)}
@@ -903,11 +903,11 @@ export default function CustomerDetailPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Country</Label>
+              <Label>Land</Label>
               <Input
                 value={addressCountry}
                 onChange={(e) => setAddressCountry(e.target.value)}
-                placeholder="Germany"
+                placeholder="Deutschland"
               />
             </div>
           </div>
@@ -917,7 +917,7 @@ export default function CustomerDetailPage() {
               size="sm"
               onClick={() => setAddressDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
@@ -929,7 +929,7 @@ export default function CustomerDetailPage() {
                 !addressCity.trim()
               }
             >
-              {mutations.loading ? "Saving..." : editingAddress ? "Update Address" : "Add Address"}
+              {mutations.loading ? "Wird gespeichert..." : editingAddress ? "Adresse aktualisieren" : "Adresse hinzufügen"}
             </Button>
           </DialogFooter>
         </DialogContent>

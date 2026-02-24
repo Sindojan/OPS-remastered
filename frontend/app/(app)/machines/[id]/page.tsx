@@ -159,12 +159,12 @@ export default function MachineDetailPage() {
     try {
       const result = await mutations.changeStatus(machine.id, newStatus);
       if (result) {
-        toast.success("Machine status updated");
+        toast.success("Maschinenstatus aktualisiert");
         setStatusDialogOpen(false);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to change status", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Status konnte nicht geändert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [mutations, machine, newStatus, refetch]);
 
@@ -181,12 +181,12 @@ export default function MachineDetailPage() {
         serialNumber: editSerial || undefined,
       });
       if (result) {
-        toast.success("Machine updated");
+        toast.success("Maschine erfolgreich aktualisiert");
         setEditMode(false);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to update machine", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Maschine konnte nicht aktualisiert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [
     mutations,
@@ -223,7 +223,7 @@ export default function MachineDetailPage() {
         nextDueAt: intervalNextDue || undefined,
       });
       if (result) {
-        toast.success("Maintenance interval created");
+        toast.success("Wartungsintervall erstellt");
         setIntervalDialogOpen(false);
         setIntervalDays("");
         setIntervalHours("");
@@ -232,7 +232,7 @@ export default function MachineDetailPage() {
         refetchIntervals();
       }
     } catch (err) {
-      toast.error("Failed to create interval", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Intervall konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [
     mutations,
@@ -256,7 +256,7 @@ export default function MachineDetailPage() {
         notes: performNotes || undefined,
       });
       if (result) {
-        toast.success("Maintenance recorded");
+        toast.success("Wartung erfasst");
         setPerformDialogOpen(false);
         setPerformIntervalId(null);
         setPerformDuration("");
@@ -265,7 +265,7 @@ export default function MachineDetailPage() {
         refetchRecords();
       }
     } catch (err) {
-      toast.error("Failed to record maintenance", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Wartung konnte nicht erfasst werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [
     mutations,
@@ -286,7 +286,7 @@ export default function MachineDetailPage() {
         severity: incidentSeverity,
       });
       if (result) {
-        toast.success("Incident reported");
+        toast.success("Störung gemeldet");
         setIncidentDialogOpen(false);
         setIncidentType("");
         setIncidentDescription("");
@@ -294,7 +294,7 @@ export default function MachineDetailPage() {
         refetchIncidents();
       }
     } catch (err) {
-      toast.error("Failed to report incident", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Störung konnte nicht gemeldet werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [
     mutations,
@@ -314,14 +314,14 @@ export default function MachineDetailPage() {
         resolveNotes || undefined
       );
       if (result) {
-        toast.success("Incident resolved");
+        toast.success("Störung behoben");
         setResolveDialogOpen(false);
         setResolveTarget(null);
         setResolveNotes("");
         refetchIncidents();
       }
     } catch (err) {
-      toast.error("Failed to resolve incident", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Störung konnte nicht behoben werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   }, [mutations, machine, resolveTarget, resolveNotes, refetchIncidents]);
 
@@ -338,30 +338,30 @@ export default function MachineDetailPage() {
     () => [
       {
         id: "type",
-        header: "Type",
+        header: "Typ",
         accessorKey: "type",
         cell: (row) => (
           <DomainStatusBadge variant={row.type === "TIME_BASED" ? "info" : "primary"}>
-            {row.type === "TIME_BASED" ? "Time Based" : "Hours Based"}
+            {row.type === "TIME_BASED" ? "Zeitbasiert" : "Stundenbasiert"}
           </DomainStatusBadge>
         ),
       },
       {
         id: "interval",
-        header: "Interval",
+        header: "Intervall",
         cell: (row) => (
           <span className="font-mono text-xs">
             {row.intervalDays != null
-              ? `${row.intervalDays} days`
+              ? `${row.intervalDays} Tage`
               : row.intervalHours != null
-                ? `${row.intervalHours} hours`
+                ? `${row.intervalHours} Stunden`
                 : "–"}
           </span>
         ),
       },
       {
         id: "lastPerformed",
-        header: "Last Performed",
+        header: "Zuletzt durchgeführt",
         cell: (row) => (
           <span className="font-mono text-xs text-muted-foreground">
             {formatDate(row.lastPerformedAt)}
@@ -370,7 +370,7 @@ export default function MachineDetailPage() {
       },
       {
         id: "nextDue",
-        header: "Next Due",
+        header: "Nächste Fälligkeit",
         cell: (row) => {
           const days = daysUntil(row.nextDueAt);
           const isOverdue = days !== null && days < 0;
@@ -391,7 +391,7 @@ export default function MachineDetailPage() {
       },
       {
         id: "description",
-        header: "Description",
+        header: "Beschreibung",
         accessorKey: "description",
         cell: (row) => (
           <span className="text-xs text-muted-foreground">
@@ -409,7 +409,7 @@ export default function MachineDetailPage() {
     () => [
       {
         id: "reportedAt",
-        header: "Date",
+        header: "Datum",
         accessorKey: "reportedAt",
         sortable: true,
         cell: (row) => (
@@ -420,13 +420,13 @@ export default function MachineDetailPage() {
       },
       {
         id: "type",
-        header: "Type",
+        header: "Typ",
         accessorKey: "type",
         sortable: true,
       },
       {
         id: "severity",
-        header: "Severity",
+        header: "Schweregrad",
         accessorKey: "severity",
         sortable: true,
         cell: (row) => (
@@ -440,16 +440,16 @@ export default function MachineDetailPage() {
         header: "Status",
         cell: (row) =>
           row.resolvedAt ? (
-            <DomainStatusBadge variant="success">Resolved</DomainStatusBadge>
+            <DomainStatusBadge variant="success">Behoben</DomainStatusBadge>
           ) : (
             <DomainStatusBadge variant="error" pulse>
-              Open
+              Offen
             </DomainStatusBadge>
           ),
       },
       {
         id: "reportedBy",
-        header: "Reported By",
+        header: "Gemeldet von",
         accessorKey: "reportedBy",
         cell: (row) => (
           <span className="text-xs text-muted-foreground">
@@ -459,7 +459,7 @@ export default function MachineDetailPage() {
       },
       {
         id: "resolvedAt",
-        header: "Resolved At",
+        header: "Behoben am",
         accessorKey: "resolvedAt",
         cell: (row) => (
           <span className="font-mono text-xs text-muted-foreground">
@@ -479,7 +479,7 @@ export default function MachineDetailPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={refetch}>
-          Retry
+          Erneut versuchen
         </Button>
       </div>
     );
@@ -511,7 +511,7 @@ export default function MachineDetailPage() {
       {/* Header */}
       <PageHeader
         title={`${machine.machineNumber} – ${machine.name}`}
-        breadcrumb={["Machines", machine.machineNumber]}
+        breadcrumb={["Maschinen", machine.machineNumber]}
         actions={
           <div className="flex items-center gap-2">
             <DomainStatusBadge
@@ -526,7 +526,7 @@ export default function MachineDetailPage() {
               onClick={() => router.push("/machines")}
             >
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-              Back
+              Zurück
             </Button>
           </div>
         }
@@ -537,15 +537,15 @@ export default function MachineDetailPage() {
         <TabsList>
           <TabsTrigger value="overview" className="gap-1.5">
             <Cog className="h-3.5 w-3.5" />
-            Overview
+            Übersicht
           </TabsTrigger>
           <TabsTrigger value="maintenance" className="gap-1.5">
             <Wrench className="h-3.5 w-3.5" />
-            Maintenance
+            Wartung
           </TabsTrigger>
           <TabsTrigger value="incidents" className="gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5" />
-            Incidents
+            Störungen
             {openIncidents.length > 0 && (
               <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
                 {openIncidents.length}
@@ -554,7 +554,7 @@ export default function MachineDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="availability" className="gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
-            Availability
+            Verfügbarkeit
           </TabsTrigger>
         </TabsList>
 
@@ -562,13 +562,13 @@ export default function MachineDetailPage() {
         <TabsContent value="overview" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Machine Details
+              Maschinendetails
             </h3>
             <div className="flex gap-2">
               {!editMode ? (
                 <>
                   <Button variant="outline" size="sm" onClick={startEdit}>
-                    Edit
+                    Bearbeiten
                   </Button>
                   <Button
                     variant="outline"
@@ -579,7 +579,7 @@ export default function MachineDetailPage() {
                     }}
                   >
                     <Settings2 className="mr-1.5 h-3.5 w-3.5" />
-                    Change Status
+                    Status ändern
                   </Button>
                 </>
               ) : (
@@ -589,14 +589,14 @@ export default function MachineDetailPage() {
                     size="sm"
                     onClick={() => setEditMode(false)}
                   >
-                    Cancel
+                    Abbrechen
                   </Button>
                   <Button
                     size="sm"
                     onClick={handleSaveEdit}
                     disabled={mutations.loading}
                   >
-                    {mutations.loading ? "Saving..." : "Save Changes"}
+                    {mutations.loading ? "Wird gespeichert..." : "Änderungen speichern"}
                   </Button>
                 </>
               )}
@@ -608,7 +608,7 @@ export default function MachineDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Factory className="h-3.5 w-3.5" />
-                Type
+                Typ
               </div>
               {editMode ? (
                 <Input
@@ -640,7 +640,7 @@ export default function MachineDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Timer className="h-3.5 w-3.5" />
-                Capacity / Hour
+                Kapazität / Stunde
               </div>
               {editMode ? (
                 <Input
@@ -656,7 +656,7 @@ export default function MachineDetailPage() {
                     : "–"}
                   {machine.capacityPerHour != null && (
                     <span className="ml-1 text-xs font-normal text-muted-foreground">
-                      units/h
+                      Einh./h
                     </span>
                   )}
                 </p>
@@ -667,7 +667,7 @@ export default function MachineDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Shield className="h-3.5 w-3.5" />
-                Manufacturer
+                Hersteller
               </div>
               {editMode ? (
                 <Input
@@ -686,7 +686,7 @@ export default function MachineDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Cog className="h-3.5 w-3.5" />
-                Model
+                Modell
               </div>
               {editMode ? (
                 <Input
@@ -705,7 +705,7 @@ export default function MachineDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Settings2 className="h-3.5 w-3.5" />
-                Serial Number
+                Seriennummer
               </div>
               {editMode ? (
                 <Input
@@ -724,7 +724,7 @@ export default function MachineDetailPage() {
             <Card className="p-4">
               <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
-                Purchase Date
+                Kaufdatum
               </div>
               <p className="mt-1.5 font-mono text-sm font-semibold">
                 {formatDate(machine.purchaseDate)}
@@ -735,7 +735,7 @@ export default function MachineDetailPage() {
             {editMode && (
               <Card className="p-4">
                 <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Machine Name
+                  Maschinenname
                 </div>
                 <Input
                   className="mt-2 text-sm"
@@ -753,7 +753,7 @@ export default function MachineDetailPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Maintenance Intervals
+                Wartungsintervalle
               </h3>
               <Button
                 variant="outline"
@@ -762,7 +762,7 @@ export default function MachineDetailPage() {
                 onClick={() => setIntervalDialogOpen(true)}
               >
                 <Plus className="h-3.5 w-3.5" />
-                New Interval
+                Neues Intervall
               </Button>
             </div>
 
@@ -773,7 +773,7 @@ export default function MachineDetailPage() {
               pageSize={10}
               rowActions={[
                 {
-                  label: "Perform Maintenance",
+                  label: "Wartung durchführen",
                   icon: <Wrench className="h-3.5 w-3.5" />,
                   onClick: (row) => {
                     setPerformIntervalId(row.id);
@@ -783,9 +783,9 @@ export default function MachineDetailPage() {
               ]}
               emptyState={{
                 icon: <Wrench className="h-8 w-8 text-muted-foreground/40" />,
-                title: "No maintenance intervals",
+                title: "Keine Wartungsintervalle",
                 description:
-                  "Define maintenance intervals to track recurring service.",
+                  "Definieren Sie Wartungsintervalle, um wiederkehrende Wartungen zu verfolgen.",
               }}
             />
           </div>
@@ -795,7 +795,7 @@ export default function MachineDetailPage() {
           {/* Maintenance History */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Maintenance History
+              Wartungsverlauf
             </h3>
 
             {recordsLoading ? (
@@ -804,7 +804,7 @@ export default function MachineDetailPage() {
               <Card className="flex flex-col items-center justify-center gap-2 p-8 text-center">
                 <Clock className="h-6 w-6 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">
-                  No maintenance records yet.
+                  Noch keine Wartungseinträge vorhanden.
                 </p>
               </Card>
             ) : (
@@ -823,7 +823,7 @@ export default function MachineDetailPage() {
           {openIncidents.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-destructive">
-                Open Incidents ({openIncidents.length})
+                Offene Störungen ({openIncidents.length})
               </h3>
               <div className="space-y-2">
                 {openIncidents.map((incident) => (
@@ -850,9 +850,9 @@ export default function MachineDetailPage() {
                           </p>
                         )}
                         <p className="font-mono text-[11px] text-muted-foreground">
-                          Reported {formatDateTime(incident.reportedAt)}
+                          Gemeldet {formatDateTime(incident.reportedAt)}
                           {incident.reportedBy
-                            ? ` by ${incident.reportedBy}`
+                            ? ` von ${incident.reportedBy}`
                             : ""}
                         </p>
                       </div>
@@ -866,7 +866,7 @@ export default function MachineDetailPage() {
                         }}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Resolve
+                        Beheben
                       </Button>
                     </div>
                   </Card>
@@ -879,7 +879,7 @@ export default function MachineDetailPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                All Incidents
+                Alle Störungen
               </h3>
               <Button
                 variant="destructive"
@@ -888,7 +888,7 @@ export default function MachineDetailPage() {
                 onClick={() => setIncidentDialogOpen(true)}
               >
                 <AlertTriangle className="h-3.5 w-3.5" />
-                Report Incident
+                Störung melden
               </Button>
             </div>
 
@@ -899,7 +899,7 @@ export default function MachineDetailPage() {
               pageSize={15}
               rowActions={[
                 {
-                  label: "Resolve",
+                  label: "Beheben",
                   icon: <CheckCircle2 className="h-3.5 w-3.5" />,
                   onClick: (row) => {
                     if (!row.resolvedAt) {
@@ -913,8 +913,8 @@ export default function MachineDetailPage() {
                 icon: (
                   <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
                 ),
-                title: "No incidents recorded",
-                description: "This machine has a clean incident record.",
+                title: "Keine Störungen verzeichnet",
+                description: "Diese Maschine hat eine saubere Störungsbilanz.",
               }}
             />
           </div>
@@ -926,10 +926,10 @@ export default function MachineDetailPage() {
             <Calendar className="h-10 w-10 text-muted-foreground/30" />
             <div>
               <p className="text-sm font-semibold text-foreground/70">
-                Availability schedule coming soon
+                Verfügbarkeitsplan demnächst verfügbar
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Track machine availability windows, shift assignments, and planned downtime.
+                Maschinenverfügbarkeit, Schichtzuweisungen und geplante Ausfallzeiten verfolgen.
               </p>
             </div>
           </Card>
@@ -942,14 +942,14 @@ export default function MachineDetailPage() {
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Change Machine Status</DialogTitle>
+            <DialogTitle>Maschinenstatus ändern</DialogTitle>
             <DialogDescription>
-              Update status for {machine.machineNumber} – {machine.name}
+              Status aktualisieren für {machine.machineNumber} – {machine.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Current Status</Label>
+              <Label>Aktueller Status</Label>
               <div>
                 <DomainStatusBadge
                   variant={getMachineStatusVariant(machine.status)}
@@ -959,7 +959,7 @@ export default function MachineDetailPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>New Status</Label>
+              <Label>Neuer Status</Label>
               <Select
                 value={newStatus}
                 onValueChange={(v) => setNewStatus(v as MachineStatus)}
@@ -983,14 +983,14 @@ export default function MachineDetailPage() {
               size="sm"
               onClick={() => setStatusDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleChangeStatus}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Updating..." : "Update Status"}
+              {mutations.loading ? "Wird aktualisiert..." : "Status aktualisieren"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1002,15 +1002,15 @@ export default function MachineDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" />
-              New Maintenance Interval
+              Neues Wartungsintervall
             </DialogTitle>
             <DialogDescription>
-              Define a recurring maintenance schedule for this machine.
+              Definieren Sie einen wiederkehrenden Wartungsplan für diese Maschine.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Interval Type</Label>
+              <Label>Intervalltyp</Label>
               <Select
                 value={intervalType}
                 onValueChange={(v) => setIntervalType(v as MaintenanceType)}
@@ -1019,9 +1019,9 @@ export default function MachineDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TIME_BASED">Time Based (Days)</SelectItem>
+                  <SelectItem value="TIME_BASED">Zeitbasiert (Tage)</SelectItem>
                   <SelectItem value="HOURS_BASED">
-                    Hours Based (Operating Hours)
+                    Stundenbasiert (Betriebsstunden)
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -1029,7 +1029,7 @@ export default function MachineDetailPage() {
 
             {intervalType === "TIME_BASED" ? (
               <div className="space-y-1.5">
-                <Label>Interval (Days)</Label>
+                <Label>Intervall (Tage)</Label>
                 <Input
                   type="number"
                   placeholder="30"
@@ -1040,7 +1040,7 @@ export default function MachineDetailPage() {
               </div>
             ) : (
               <div className="space-y-1.5">
-                <Label>Interval (Operating Hours)</Label>
+                <Label>Intervall (Betriebsstunden)</Label>
                 <Input
                   type="number"
                   placeholder="500"
@@ -1052,16 +1052,16 @@ export default function MachineDetailPage() {
             )}
 
             <div className="space-y-1.5">
-              <Label>Description</Label>
+              <Label>Beschreibung</Label>
               <Input
-                placeholder="Oil change, filter replacement, etc."
+                placeholder="Ölwechsel, Filterwechsel, etc."
                 value={intervalDescription}
                 onChange={(e) => setIntervalDescription(e.target.value)}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label>Next Due Date</Label>
+              <Label>Nächstes Fälligkeitsdatum</Label>
               <Input
                 type="datetime-local"
                 value={intervalNextDue}
@@ -1075,14 +1075,14 @@ export default function MachineDetailPage() {
               size="sm"
               onClick={() => setIntervalDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleCreateInterval}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Creating..." : "Create Interval"}
+              {mutations.loading ? "Wird erstellt..." : "Intervall erstellen"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1094,15 +1094,15 @@ export default function MachineDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" />
-              Perform Maintenance
+              Wartung durchführen
             </DialogTitle>
             <DialogDescription>
-              Record a maintenance activity for this machine.
+              Wartungsaktivität für diese Maschine erfassen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Duration (minutes)</Label>
+              <Label>Dauer (Minuten)</Label>
               <Input
                 type="number"
                 placeholder="60"
@@ -1112,10 +1112,10 @@ export default function MachineDetailPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Notes</Label>
+              <Label>Notizen</Label>
               <textarea
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="What was done during maintenance..."
+                placeholder="Was wurde bei der Wartung durchgeführt..."
                 value={performNotes}
                 onChange={(e) => setPerformNotes(e.target.value)}
               />
@@ -1127,14 +1127,14 @@ export default function MachineDetailPage() {
               size="sm"
               onClick={() => setPerformDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handlePerformMaintenance}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Recording..." : "Record Maintenance"}
+              {mutations.loading ? "Wird erfasst..." : "Wartung erfassen"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1146,33 +1146,33 @@ export default function MachineDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-4 w-4" />
-              Report Incident
+              Störung melden
             </DialogTitle>
             <DialogDescription>
-              Report a new incident for {machine.machineNumber} –{" "}
+              Neue Störung melden für {machine.machineNumber} –{" "}
               {machine.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Incident Type *</Label>
+              <Label>Störungsart *</Label>
               <Input
-                placeholder="Mechanical Failure, Electrical, etc."
+                placeholder="Mechanischer Defekt, Elektrisch, etc."
                 value={incidentType}
                 onChange={(e) => setIncidentType(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Description</Label>
+              <Label>Beschreibung</Label>
               <textarea
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Describe what happened..."
+                placeholder="Beschreiben Sie, was passiert ist..."
                 value={incidentDescription}
                 onChange={(e) => setIncidentDescription(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Severity</Label>
+              <Label>Schweregrad</Label>
               <Select
                 value={incidentSeverity}
                 onValueChange={(v) => setIncidentSeverity(v as SeverityLevel)}
@@ -1196,7 +1196,7 @@ export default function MachineDetailPage() {
               size="sm"
               onClick={() => setIncidentDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               variant="destructive"
@@ -1204,7 +1204,7 @@ export default function MachineDetailPage() {
               onClick={handleReportIncident}
               disabled={mutations.loading || !incidentType.trim()}
             >
-              {mutations.loading ? "Reporting..." : "Report Incident"}
+              {mutations.loading ? "Wird gemeldet..." : "Störung melden"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1216,20 +1216,20 @@ export default function MachineDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              Resolve Incident
+              Störung beheben
             </DialogTitle>
             <DialogDescription>
               {resolveTarget
-                ? `Resolve incident: ${resolveTarget.type}`
+                ? `Störung beheben: ${resolveTarget.type}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Resolution Notes</Label>
+              <Label>Lösungsnotizen</Label>
               <textarea
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="How was the incident resolved..."
+                placeholder="Wie wurde die Störung behoben..."
                 value={resolveNotes}
                 onChange={(e) => setResolveNotes(e.target.value)}
               />
@@ -1241,14 +1241,14 @@ export default function MachineDetailPage() {
               size="sm"
               onClick={() => setResolveDialogOpen(false)}
             >
-              Cancel
+              Abbrechen
             </Button>
             <Button
               size="sm"
               onClick={handleResolveIncident}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Resolving..." : "Resolve Incident"}
+              {mutations.loading ? "Wird behoben..." : "Störung beheben"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1273,7 +1273,7 @@ function MaintenanceRecordCard({
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold">
-              Maintenance Performed
+              Wartung durchgeführt
             </span>
             <DomainStatusBadge
               variant={
@@ -1301,7 +1301,7 @@ function MaintenanceRecordCard({
               </span>
             )}
             {record.performedBy && (
-              <span>by {record.performedBy}</span>
+              <span>von {record.performedBy}</span>
             )}
           </div>
           {record.notes && (

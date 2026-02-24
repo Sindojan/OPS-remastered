@@ -94,7 +94,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
   },
   {
     id: "componentPartId",
-    header: "Component Part",
+    header: "Komponententeil",
     cell: (row) => (
       <span className="font-mono text-xs text-primary">
         {row.componentPartId.slice(0, 8)}...
@@ -103,14 +103,14 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
   },
   {
     id: "quantity",
-    header: "Quantity",
+    header: "Menge",
     cell: (row) => (
       <span className="font-mono text-sm font-semibold">{formatNumber(row.quantity)}</span>
     ),
   },
   {
     id: "unit",
-    header: "Unit",
+    header: "Einheit",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
         {row.unitId ? row.unitId.slice(0, 8) + "..." : "\u2013"}
@@ -120,7 +120,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
   },
   {
     id: "notes",
-    header: "Notes",
+    header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
         {row.notes ?? "\u2013"}
@@ -157,7 +157,7 @@ const processPlanColumns: ColumnDef<ProcessPlanResponse>[] = [
   },
   {
     id: "validFrom",
-    header: "Valid From",
+    header: "Gültig ab",
     cell: (row) => (
       <span className="font-mono text-xs text-muted-foreground">
         {formatDate(row.validFrom)}
@@ -166,7 +166,7 @@ const processPlanColumns: ColumnDef<ProcessPlanResponse>[] = [
   },
   {
     id: "createdAt",
-    header: "Created",
+    header: "Erstellt",
     cell: (row) => (
       <span className="font-mono text-xs text-muted-foreground">
         {formatDate(row.createdAt)}
@@ -180,14 +180,14 @@ const processPlanColumns: ColumnDef<ProcessPlanResponse>[] = [
 const calculationColumns: ColumnDef<CalculationResponse>[] = [
   {
     id: "calculatedAt",
-    header: "Date",
+    header: "Datum",
     cell: (row) => (
       <span className="font-mono text-xs">{formatDate(row.calculatedAt)}</span>
     ),
   },
   {
     id: "quantity",
-    header: "Qty",
+    header: "Menge",
     cell: (row) => (
       <span className="font-mono text-xs">{formatNumber(row.quantity)}</span>
     ),
@@ -201,14 +201,14 @@ const calculationColumns: ColumnDef<CalculationResponse>[] = [
   },
   {
     id: "laborCost",
-    header: "Labor",
+    header: "Arbeit",
     cell: (row) => (
       <span className="font-mono text-xs">{formatCurrency(row.laborCost)}</span>
     ),
   },
   {
     id: "totalCost",
-    header: "Total",
+    header: "Gesamt",
     cell: (row) => (
       <span className="font-mono text-sm font-semibold">{formatCurrency(row.totalCost)}</span>
     ),
@@ -284,19 +284,19 @@ export default function PartDetailPage() {
         type: editType,
       });
       if (result) {
-        toast.success("Part updated successfully");
+        toast.success("Teil erfolgreich aktualisiert");
         setIsEditing(false);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to update part", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Teil konnte nicht aktualisiert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
   // ─── BOM Handlers ─────────────────────
   const handleAddBomItem = async (values: BomItemFormValues) => {
     if (!activeBom) {
-      toast.error("No active BOM version. Create one first.");
+      toast.error("Keine aktive Stücklistenversion. Erstellen Sie zuerst eine.");
       return;
     }
     const req: BomItemRequest = {
@@ -307,22 +307,22 @@ export default function PartDetailPage() {
     };
     try {
       await bomMutations.addItem(activeBom.id, req);
-      toast.success("BOM item added");
+      toast.success("Stücklistenposition hinzugefügt");
       setBomItemDialogOpen(false);
       bomItemForm.reset({ componentPartId: "", quantity: 1, position: 1, notes: "" });
       refetchBomItems();
     } catch (err) {
-      toast.error("Failed to add item", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Position konnte nicht hinzugefügt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
   const handleCreateBomVersion = async () => {
     try {
       await bomMutations.createVersion({ partId });
-      toast.success("New BOM version created");
+      toast.success("Neue Stücklistenversion erstellt");
       refetchBom();
     } catch (err) {
-      toast.error("Failed to create version", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Version konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -330,10 +330,10 @@ export default function PartDetailPage() {
     if (!activeBom) return;
     try {
       await bomMutations.activateVersion(activeBom.id);
-      toast.success("BOM version activated");
+      toast.success("Stücklistenversion aktiviert");
       refetchBom();
     } catch (err) {
-      toast.error("Failed to activate version", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Aktivierung fehlgeschlagen", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -345,12 +345,12 @@ export default function PartDetailPage() {
         name: values.name,
         versionNumber: values.versionNumber,
       });
-      toast.success("Process plan created");
+      toast.success("Arbeitsplan erstellt");
       setProcessPlanDialogOpen(false);
       processPlanForm.reset({ name: "", versionNumber: 1 });
       refetchPlans();
     } catch (err) {
-      toast.error("Failed to create plan", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Arbeitsplan konnte nicht erstellt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -376,14 +376,14 @@ export default function PartDetailPage() {
     return (
       <div className="flex flex-col items-center gap-4 py-16">
         <AlertTriangle className="h-10 w-10 text-destructive/60" />
-        <p className="text-sm text-muted-foreground">{error ?? "Part not found"}</p>
+        <p className="text-sm text-muted-foreground">{error ?? "Teil nicht gefunden"}</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => router.push("/parts-and-processes")}>
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back
+            Zurück
           </Button>
           <Button variant="outline" size="sm" onClick={refetch}>
-            Retry
+            Erneut versuchen
           </Button>
         </div>
       </div>
@@ -394,7 +394,7 @@ export default function PartDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={`${part.partNumber} \u2014 ${part.name}`}
-        breadcrumb={["Parts & Processes", part.partNumber]}
+        breadcrumb={["Teile & Prozesse", part.partNumber]}
         actions={
           <Button
             variant="outline"
@@ -402,7 +402,7 @@ export default function PartDetailPage() {
             onClick={() => router.push("/parts-and-processes")}
           >
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back
+            Zurück
           </Button>
         }
       />
@@ -411,19 +411,19 @@ export default function PartDetailPage() {
         <TabsList>
           <TabsTrigger value="overview" className="gap-1.5">
             <Puzzle className="h-3.5 w-3.5" />
-            Overview
+            Übersicht
           </TabsTrigger>
           <TabsTrigger value="bom" className="gap-1.5">
             <Layers className="h-3.5 w-3.5" />
-            BOM
+            Stückliste
           </TabsTrigger>
           <TabsTrigger value="processes" className="gap-1.5">
             <ListTree className="h-3.5 w-3.5" />
-            Process Plans
+            Arbeitspläne
           </TabsTrigger>
           <TabsTrigger value="usage" className="gap-1.5">
             <Link2 className="h-3.5 w-3.5" />
-            Usage
+            Verwendung
           </TabsTrigger>
         </TabsList>
 
@@ -433,22 +433,22 @@ export default function PartDetailPage() {
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Part Details
+                Teiledetails
               </h2>
               {!isEditing ? (
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
                   <Pencil className="h-3 w-3" />
-                  Edit
+                  Bearbeiten
                 </Button>
               ) : (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsEditing(false)}>
                     <X className="h-3 w-3" />
-                    Cancel
+                    Abbrechen
                   </Button>
                   <Button size="sm" className="gap-1.5" onClick={handleSaveEdit} disabled={partMutations.loading}>
                     <Save className="h-3 w-3" />
-                    {partMutations.loading ? "Saving..." : "Save"}
+                    {partMutations.loading ? "Wird gespeichert..." : "Speichern"}
                   </Button>
                 </div>
               )}
@@ -457,7 +457,7 @@ export default function PartDetailPage() {
             {isEditing ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Part Number</Label>
+                  <Label className="text-xs text-muted-foreground">Teilenummer</Label>
                   <Input value={part.partNumber} disabled className="font-mono" />
                 </div>
                 <div className="space-y-2">
@@ -465,7 +465,7 @@ export default function PartDetailPage() {
                   <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                 </div>
                 <div className="col-span-full space-y-2">
-                  <Label className="text-xs text-muted-foreground">Description</Label>
+                  <Label className="text-xs text-muted-foreground">Beschreibung</Label>
                   <Textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
@@ -473,15 +473,15 @@ export default function PartDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Type</Label>
+                  <Label className="text-xs text-muted-foreground">Typ</Label>
                   <Select value={editType} onValueChange={setEditType}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PRODUCT">Product</SelectItem>
-                      <SelectItem value="COMPONENT">Component</SelectItem>
-                      <SelectItem value="RAW_MATERIAL">Raw Material</SelectItem>
+                      <SelectItem value="PRODUCT">Produkt</SelectItem>
+                      <SelectItem value="COMPONENT">Komponente</SelectItem>
+                      <SelectItem value="RAW_MATERIAL">Rohmaterial</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -491,10 +491,10 @@ export default function PartDetailPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <DetailField label="Part Number" value={part.partNumber} mono />
+                <DetailField label="Teilenummer" value={part.partNumber} mono />
                 <DetailField label="Name" value={part.name} />
                 <DetailField
-                  label="Description"
+                  label="Beschreibung"
                   value={part.description ?? "\u2013"}
                   className="col-span-full"
                 />
@@ -510,8 +510,8 @@ export default function PartDetailPage() {
                     {humanizeStatus(part.status)}
                   </DomainStatusBadge>
                 </div>
-                <DetailField label="Unit" value={part.unitId ? part.unitId.slice(0, 8) + "..." : "\u2013"} />
-                <DetailField label="Created" value={formatDate(part.createdAt)} mono />
+                <DetailField label="Einheit" value={part.unitId ? part.unitId.slice(0, 8) + "..." : "\u2013"} />
+                <DetailField label="Erstellt" value={formatDate(part.createdAt)} mono />
               </div>
             )}
           </Card>
@@ -521,12 +521,12 @@ export default function PartDetailPage() {
             <Card className="relative overflow-hidden p-6">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Calculation History
+                Kalkulationshistorie
               </h2>
               <DataTable<CalculationResponse>
                 data={calculations}
                 columns={calculationColumns}
-                emptyState={{ title: "No calculations yet" }}
+                emptyState={{ title: "Noch keine Kalkulationen" }}
               />
             </Card>
           )}
@@ -540,7 +540,7 @@ export default function PartDetailPage() {
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">BOM Version</span>
+                    <span className="text-sm font-medium">Stücklistenversion</span>
                     <span className="font-mono text-xs text-muted-foreground">v{activeBom.versionNumber}</span>
                     <DomainStatusBadge variant={getVersionStatusVariant(activeBom.status)}>
                       {humanizeStatus(activeBom.status)}
@@ -556,7 +556,7 @@ export default function PartDetailPage() {
                         disabled={bomMutations.loading}
                       >
                         <CheckCircle className="h-3.5 w-3.5" />
-                        Activate
+                        Aktivieren
                       </Button>
                     )}
                     <Button
@@ -567,7 +567,7 @@ export default function PartDetailPage() {
                       disabled={bomMutations.loading}
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      New Version
+                      Neue Version
                     </Button>
                   </div>
                 </div>
@@ -579,7 +579,7 @@ export default function PartDetailPage() {
                 <DataTable<BomItemResponse>
                   data={bomItems ?? []}
                   columns={bomItemColumns}
-                  searchPlaceholder="Search items..."
+                  searchPlaceholder="Positionen suchen..."
                   filterSlots={
                     <Button
                       size="sm"
@@ -587,13 +587,13 @@ export default function PartDetailPage() {
                       onClick={() => setBomItemDialogOpen(true)}
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      Add Item
+                      Position hinzufügen
                     </Button>
                   }
                   emptyState={{
                     icon: <Layers className="h-8 w-8 text-muted-foreground/40" />,
-                    title: "No BOM items",
-                    description: "Add components to this bill of materials.",
+                    title: "Keine Stücklistenpositionen",
+                    description: "Fügen Sie Komponenten zu dieser Stückliste hinzu.",
                     action: (
                       <Button
                         size="sm"
@@ -602,7 +602,7 @@ export default function PartDetailPage() {
                         onClick={() => setBomItemDialogOpen(true)}
                       >
                         <Plus className="mr-1.5 h-3.5 w-3.5" />
-                        Add Item
+                        Position hinzufügen
                       </Button>
                     ),
                   }}
@@ -615,10 +615,10 @@ export default function PartDetailPage() {
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <Layers className="h-10 w-10 text-muted-foreground/30" />
                 <h3 className="text-sm font-medium text-foreground/70">
-                  No BOM Version
+                  Keine Stücklistenversion
                 </h3>
                 <p className="max-w-sm text-xs text-muted-foreground">
-                  Create a BOM version to start defining the bill of materials for this part.
+                  Erstellen Sie eine Stücklistenversion, um die Stückliste für dieses Teil zu definieren.
                 </p>
                 <Button
                   size="sm"
@@ -627,7 +627,7 @@ export default function PartDetailPage() {
                   disabled={bomMutations.loading}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Create BOM Version
+                  Stücklistenversion erstellen
                 </Button>
               </div>
             </Card>
@@ -642,7 +642,7 @@ export default function PartDetailPage() {
             <DataTable<ProcessPlanResponse>
               data={processPlans ?? []}
               columns={processPlanColumns}
-              searchPlaceholder="Search plans..."
+              searchPlaceholder="Arbeitspläne suchen..."
               searchKey="name"
               filterSlots={
                 <Button
@@ -651,14 +651,14 @@ export default function PartDetailPage() {
                   onClick={() => setProcessPlanDialogOpen(true)}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  New Process Plan
+                  Neuer Arbeitsplan
                 </Button>
               }
               onRowClick={(row) => router.push(`/parts-and-processes/processes/${row.id}`)}
               emptyState={{
                 icon: <ListTree className="h-8 w-8 text-muted-foreground/40" />,
-                title: "No process plans",
-                description: "Create a process plan to define manufacturing steps.",
+                title: "Keine Arbeitspläne",
+                description: "Erstellen Sie einen Arbeitsplan, um Fertigungsschritte zu definieren.",
                 action: (
                   <Button
                     size="sm"
@@ -667,7 +667,7 @@ export default function PartDetailPage() {
                     onClick={() => setProcessPlanDialogOpen(true)}
                   >
                     <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    New Process Plan
+                    Neuer Arbeitsplan
                   </Button>
                 ),
               }}
@@ -682,11 +682,11 @@ export default function PartDetailPage() {
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <Link2 className="h-10 w-10 text-muted-foreground/30" />
               <h3 className="text-sm font-medium text-foreground/70">
-                Part Usage Tracking
+                Verwendungsverfolgung
               </h3>
               <p className="max-w-sm text-xs text-muted-foreground">
-                Part usage tracking coming soon. This will show all BOMs and jobs
-                referencing this part.
+                Verwendungsverfolgung folgt in Kürze. Hier werden alle Stücklisten und Aufträge
+                angezeigt, die dieses Teil referenzieren.
               </p>
             </div>
           </Card>
@@ -697,19 +697,19 @@ export default function PartDetailPage() {
       <Dialog open={bomItemDialogOpen} onOpenChange={setBomItemDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add BOM Item</DialogTitle>
+            <DialogTitle>Stücklistenposition hinzufügen</DialogTitle>
             <DialogDescription>
-              Add a component to the bill of materials.
+              Komponente zur Stückliste hinzufügen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={bomItemForm.handleSubmit(handleAddBomItem as any)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="componentPartId">Component Part ID</Label>
+              <Label htmlFor="componentPartId">Komponententeil-ID</Label>
               <Input
                 id="componentPartId"
                 className="font-mono text-xs"
-                placeholder="UUID of the component part"
+                placeholder="UUID des Komponententeils"
                 {...bomItemForm.register("componentPartId")}
               />
               {bomItemForm.formState.errors.componentPartId && (
@@ -720,7 +720,7 @@ export default function PartDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="bomQty">Quantity</Label>
+                <Label htmlFor="bomQty">Menge</Label>
                 <Input
                   id="bomQty"
                   type="number"
@@ -752,7 +752,7 @@ export default function PartDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bomNotes">Notes</Label>
+              <Label htmlFor="bomNotes">Notizen</Label>
               <Textarea
                 id="bomNotes"
                 rows={2}
@@ -769,10 +769,10 @@ export default function PartDetailPage() {
                 size="sm"
                 onClick={() => setBomItemDialogOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={bomMutations.loading}>
-                {bomMutations.loading ? "Adding..." : "Add Item"}
+                {bomMutations.loading ? "Wird hinzugefügt..." : "Position hinzufügen"}
               </Button>
             </DialogFooter>
           </form>
@@ -783,15 +783,15 @@ export default function PartDetailPage() {
       <Dialog open={processPlanDialogOpen} onOpenChange={setProcessPlanDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>New Process Plan</DialogTitle>
+            <DialogTitle>Neuer Arbeitsplan</DialogTitle>
             <DialogDescription>
-              Create a new process plan for {part.partNumber}.
+              Neuen Arbeitsplan für {part.partNumber} erstellen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={processPlanForm.handleSubmit(handleCreateProcessPlan as any)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="planName">Plan Name</Label>
+              <Label htmlFor="planName">Planname</Label>
               <Input id="planName" {...processPlanForm.register("name")} />
               {processPlanForm.formState.errors.name && (
                 <p className="text-xs text-destructive">
@@ -800,7 +800,7 @@ export default function PartDetailPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="planVersion">Version Number</Label>
+              <Label htmlFor="planVersion">Versionsnummer</Label>
               <Input
                 id="planVersion"
                 type="number"
@@ -819,10 +819,10 @@ export default function PartDetailPage() {
                 size="sm"
                 onClick={() => setProcessPlanDialogOpen(false)}
               >
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={planMutations.loading}>
-                {planMutations.loading ? "Creating..." : "Create Plan"}
+                {planMutations.loading ? "Wird erstellt..." : "Plan erstellen"}
               </Button>
             </DialogFooter>
           </form>

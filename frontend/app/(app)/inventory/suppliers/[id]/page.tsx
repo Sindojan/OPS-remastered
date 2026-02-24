@@ -56,7 +56,7 @@ function getSupplierStatusVariant(status: string) {
 const supplierArticleColumns: ColumnDef<SupplierArticleResponse>[] = [
   {
     id: "supplierArticleNumber",
-    header: "Supplier Article #",
+    header: "Lieferanten-Art.-Nr.",
     cell: (row) => (
       <span className="font-mono text-xs font-medium text-primary">
         {row.supplierArticleNumber ?? "\u2013"}
@@ -65,7 +65,7 @@ const supplierArticleColumns: ColumnDef<SupplierArticleResponse>[] = [
   },
   {
     id: "articleId",
-    header: "Article ID",
+    header: "Artikel-ID",
     cell: (row) => (
       <span className="font-mono text-xs text-muted-foreground">
         {row.articleId.slice(0, 8)}...
@@ -74,7 +74,7 @@ const supplierArticleColumns: ColumnDef<SupplierArticleResponse>[] = [
   },
   {
     id: "leadTimeDays",
-    header: "Lead Time",
+    header: "Lieferzeit",
     cell: (row) => (
       <span className="font-mono text-xs">
         {row.leadTimeDays != null ? `${row.leadTimeDays}d` : "\u2013"}
@@ -83,7 +83,7 @@ const supplierArticleColumns: ColumnDef<SupplierArticleResponse>[] = [
   },
   {
     id: "minOrderQuantity",
-    header: "Min Order Qty",
+    header: "Mindestbestellmenge",
     cell: (row) => (
       <span className="font-mono text-xs">
         {formatNumber(row.minOrderQuantity)}
@@ -134,12 +134,12 @@ export default function SupplierDetailPage() {
         taxId: editTaxId || undefined,
       });
       if (result) {
-        toast.success("Supplier updated successfully");
+        toast.success("Lieferant erfolgreich aktualisiert");
         setIsEditing(false);
         refetch();
       }
     } catch (err) {
-      toast.error("Failed to update supplier", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Lieferant konnte nicht aktualisiert werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -166,14 +166,14 @@ export default function SupplierDetailPage() {
     return (
       <div className="flex flex-col items-center gap-4 py-16">
         <AlertTriangle className="h-10 w-10 text-destructive/60" />
-        <p className="text-sm text-muted-foreground">{error ?? "Supplier not found"}</p>
+        <p className="text-sm text-muted-foreground">{error ?? "Lieferant nicht gefunden"}</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => router.push("/inventory")}>
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back to Inventory
+            Zurueck zum Lager
           </Button>
           <Button variant="outline" size="sm" onClick={refetch}>
-            Retry
+            Erneut versuchen
           </Button>
         </div>
       </div>
@@ -184,7 +184,7 @@ export default function SupplierDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={supplier.name}
-        breadcrumb={["Inventory", "Suppliers", supplier.name]}
+        breadcrumb={["Lager", "Lieferanten", supplier.name]}
         actions={
           <Button
             variant="outline"
@@ -192,7 +192,7 @@ export default function SupplierDetailPage() {
             onClick={() => router.push("/inventory")}
           >
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back
+            Zurueck
           </Button>
         }
       />
@@ -202,22 +202,22 @@ export default function SupplierDetailPage() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Supplier Details
+            Lieferantendetails
           </h2>
           {!isEditing ? (
             <Button variant="outline" size="sm" className="gap-1.5" onClick={startEditing}>
               <Pencil className="h-3 w-3" />
-              Edit
+              Bearbeiten
             </Button>
           ) : (
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsEditing(false)}>
                 <X className="h-3 w-3" />
-                Cancel
+                Abbrechen
               </Button>
               <Button size="sm" className="gap-1.5" onClick={handleSaveEdit} disabled={mutations.loading}>
                 <Save className="h-3 w-3" />
-                {mutations.loading ? "Saving..." : "Save"}
+                {mutations.loading ? "Wird gespeichert..." : "Speichern"}
               </Button>
             </div>
           )}
@@ -230,7 +230,7 @@ export default function SupplierDetailPage() {
               <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Tax ID</Label>
+              <Label className="text-xs text-muted-foreground">Steuer-ID</Label>
               <Input
                 value={editTaxId}
                 onChange={(e) => setEditTaxId(e.target.value)}
@@ -238,14 +238,14 @@ export default function SupplierDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Contact Name</Label>
+              <Label className="text-xs text-muted-foreground">Ansprechpartner</Label>
               <Input
                 value={editContactName}
                 onChange={(e) => setEditContactName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Label className="text-xs text-muted-foreground">E-Mail</Label>
               <Input
                 type="email"
                 value={editEmail}
@@ -253,14 +253,14 @@ export default function SupplierDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Phone</Label>
+              <Label className="text-xs text-muted-foreground">Telefon</Label>
               <Input
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
               />
             </div>
             <div className="col-span-full space-y-2">
-              <Label className="text-xs text-muted-foreground">Address</Label>
+              <Label className="text-xs text-muted-foreground">Adresse</Label>
               <Textarea
                 value={editAddress}
                 onChange={(e) => setEditAddress(e.target.value)}
@@ -274,11 +274,11 @@ export default function SupplierDetailPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <DetailField label="Name" value={supplier.name} icon={<Truck className="h-3.5 w-3.5" />} />
-            <DetailField label="Tax ID" value={supplier.taxId ?? "\u2013"} icon={<FileText className="h-3.5 w-3.5" />} mono />
-            <DetailField label="Contact Name" value={supplier.contactName ?? "\u2013"} icon={<User className="h-3.5 w-3.5" />} />
-            <DetailField label="Email" value={supplier.email ?? "\u2013"} icon={<Mail className="h-3.5 w-3.5" />} />
-            <DetailField label="Phone" value={supplier.phone ?? "\u2013"} icon={<Phone className="h-3.5 w-3.5" />} mono />
-            <DetailField label="Address" value={supplier.address ?? "\u2013"} icon={<MapPin className="h-3.5 w-3.5" />} />
+            <DetailField label="Steuer-ID" value={supplier.taxId ?? "\u2013"} icon={<FileText className="h-3.5 w-3.5" />} mono />
+            <DetailField label="Ansprechpartner" value={supplier.contactName ?? "\u2013"} icon={<User className="h-3.5 w-3.5" />} />
+            <DetailField label="E-Mail" value={supplier.email ?? "\u2013"} icon={<Mail className="h-3.5 w-3.5" />} />
+            <DetailField label="Telefon" value={supplier.phone ?? "\u2013"} icon={<Phone className="h-3.5 w-3.5" />} mono />
+            <DetailField label="Adresse" value={supplier.address ?? "\u2013"} icon={<MapPin className="h-3.5 w-3.5" />} />
             <div className="space-y-1">
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Status
@@ -294,7 +294,7 @@ export default function SupplierDetailPage() {
       {/* ─── Supplier Articles ─── */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Supplier Articles
+          Lieferantenartikel
         </h2>
         {articlesLoading ? (
           <SkeletonTable rows={3} columns={4} />
@@ -302,11 +302,11 @@ export default function SupplierDetailPage() {
           <DataTable<SupplierArticleResponse>
             data={supplierArticles ?? []}
             columns={supplierArticleColumns}
-            searchPlaceholder="Search articles..."
+            searchPlaceholder="Artikel suchen..."
             emptyState={{
               icon: <Truck className="h-8 w-8 text-muted-foreground/40" />,
-              title: "No articles linked",
-              description: "This supplier has no articles linked yet.",
+              title: "Keine Artikel verknuepft",
+              description: "Dieser Lieferant hat noch keine verknuepften Artikel.",
             }}
           />
         )}

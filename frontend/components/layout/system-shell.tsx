@@ -32,11 +32,11 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
 
 const systemNavItems = [
-  { label: "Companies", href: "/system/companies", icon: Building2 },
+  { label: "Unternehmen", href: "/system/companies", icon: Building2 },
 ];
 
 const routeNames: Record<string, string> = {
-  "/system/companies": "Companies",
+  "/system/companies": "Unternehmen",
 };
 
 export function SystemShell({ children }: { children: React.ReactNode }) {
@@ -47,7 +47,7 @@ export function SystemShell({ children }: { children: React.ReactNode }) {
 
   const pageName =
     routeNames[pathname] ??
-    (pathname.startsWith("/system/companies/") ? "Company Detail" : "System");
+    (pathname.startsWith("/system/companies/") ? "Unternehmensdetails" : "System");
 
   const initials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
@@ -89,7 +89,7 @@ export function SystemShell({ children }: { children: React.ReactNode }) {
           <nav className="flex-1 overflow-y-auto px-2 py-3">
             {!collapsed && (
               <span className="mb-1.5 block px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                Management
+                Verwaltung
               </span>
             )}
             <div className="space-y-0.5">
@@ -157,7 +157,7 @@ export function SystemShell({ children }: { children: React.ReactNode }) {
               ) : (
                 <>
                   <ChevronsLeft className="h-4 w-4" />
-                  <span className="text-xs">Collapse</span>
+                  <span className="text-xs">Einklappen</span>
                 </>
               )}
             </Button>
@@ -195,7 +195,7 @@ export function SystemShell({ children }: { children: React.ReactNode }) {
                       <span className="text-sm font-medium">
                         {user
                           ? `${user.firstName} ${user.lastName}`
-                          : "Unknown"}
+                          : "Unbekannt"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {user?.email ?? ""}

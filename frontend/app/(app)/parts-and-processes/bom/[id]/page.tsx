@@ -66,7 +66,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
   },
   {
     id: "componentPartId",
-    header: "Component Part",
+    header: "Komponententeil",
     cell: (row) => (
       <span className="font-mono text-xs text-primary">
         {row.componentPartId.slice(0, 8)}...
@@ -75,14 +75,14 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
   },
   {
     id: "quantity",
-    header: "Quantity",
+    header: "Menge",
     cell: (row) => (
       <span className="font-mono text-sm font-semibold">{formatNumber(row.quantity)}</span>
     ),
   },
   {
     id: "unit",
-    header: "Unit",
+    header: "Einheit",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
         {row.unitId ? row.unitId.slice(0, 8) + "..." : "\u2013"}
@@ -92,7 +92,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
   },
   {
     id: "notes",
-    header: "Notes",
+    header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
         {row.notes ?? "\u2013"}
@@ -138,22 +138,22 @@ export default function BomVersionDetailPage() {
     };
     try {
       await bomMutations.addItem(versionId, req);
-      toast.success("Item added");
+      toast.success("Position hinzugefügt");
       setItemDialogOpen(false);
       itemForm.reset({ componentPartId: "", quantity: 1, position: 1, notes: "" });
       refetchItems();
     } catch (err) {
-      toast.error("Failed to add item", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Position konnte nicht hinzugefügt werden", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
   const handleActivate = async () => {
     try {
       await bomMutations.activateVersion(versionId);
-      toast.success("BOM version activated");
+      toast.success("Stücklistenversion aktiviert");
       refetchVersion();
     } catch (err) {
-      toast.error("Failed to activate", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Aktivierung fehlgeschlagen", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -168,10 +168,10 @@ export default function BomVersionDetailPage() {
       });
       if (result) {
         setLastCalcResult({ materialCost: result.materialCost, totalCost: result.totalCost });
-        toast.success("Calculation complete");
+        toast.success("Kalkulation abgeschlossen");
       }
     } catch (err) {
-      toast.error("Failed to calculate", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Kalkulation fehlgeschlagen", { description: err instanceof Error ? err.message : "Unbekannter Fehler" });
     }
   };
 
@@ -188,7 +188,7 @@ export default function BomVersionDetailPage() {
     return (
       <div className="flex flex-col items-center gap-4 py-16">
         <AlertTriangle className="h-10 w-10 text-destructive/60" />
-        <p className="text-sm text-muted-foreground">{versionError ?? "BOM version not found"}</p>
+        <p className="text-sm text-muted-foreground">{versionError ?? "Stücklistenversion nicht gefunden"}</p>
         <Button variant="outline" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
           Back
@@ -201,11 +201,11 @@ export default function BomVersionDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={`BOM Version v${version.versionNumber}`}
-        breadcrumb={["Parts & Processes", "BOM", `v${version.versionNumber}`]}
+        breadcrumb={["Teile & Prozesse", "Stückliste", `v${version.versionNumber}`]}
         actions={
           <Button variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Back
+            Zurück
           </Button>
         }
       />
@@ -234,7 +234,7 @@ export default function BomVersionDetailPage() {
                 disabled={bomMutations.loading}
               >
                 <CheckCircle className="h-3.5 w-3.5" />
-                Activate
+                Aktivieren
               </Button>
             )}
           </div>
@@ -255,13 +255,13 @@ export default function BomVersionDetailPage() {
               onClick={() => setItemDialogOpen(true)}
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Item
+              Position hinzufügen
             </Button>
           }
           emptyState={{
             icon: <Layers className="h-8 w-8 text-muted-foreground/40" />,
-            title: "No items in this BOM version",
-            description: "Add component items to build the bill of materials.",
+            title: "Keine Positionen in dieser Stücklistenversion",
+            description: "Fügen Sie Komponenten hinzu, um die Stückliste aufzubauen.",
             action: (
               <Button
                 size="sm"
@@ -270,7 +270,7 @@ export default function BomVersionDetailPage() {
                 onClick={() => setItemDialogOpen(true)}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add Item
+                Position hinzufügen
               </Button>
             ),
           }}
@@ -283,16 +283,16 @@ export default function BomVersionDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Cost Calculation
+              Kostenkalkulation
             </h2>
             {lastCalcResult && (
               <div className="mt-2 flex gap-6">
                 <div className="space-y-0.5">
-                  <p className="text-[11px] text-muted-foreground">Material Cost</p>
+                  <p className="text-[11px] text-muted-foreground">Materialkosten</p>
                   <p className="font-mono text-sm font-semibold">{formatCurrency(lastCalcResult.materialCost)}</p>
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-[11px] text-muted-foreground">Total Cost</p>
+                  <p className="text-[11px] text-muted-foreground">Gesamtkosten</p>
                   <p className="font-mono text-sm font-semibold">{formatCurrency(lastCalcResult.totalCost)}</p>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export default function BomVersionDetailPage() {
             disabled={calcMutations.loading}
           >
             <Calculator className="h-3.5 w-3.5" />
-            {calcMutations.loading ? "Calculating..." : "Calculate"}
+            {calcMutations.loading ? "Wird berechnet..." : "Kalkulieren"}
           </Button>
         </div>
       </Card>
@@ -315,19 +315,19 @@ export default function BomVersionDetailPage() {
       <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add BOM Item</DialogTitle>
+            <DialogTitle>Stücklistenposition hinzufügen</DialogTitle>
             <DialogDescription>
-              Add a component to BOM version v{version.versionNumber}.
+              Komponente zu Stücklistenversion v{version.versionNumber} hinzufügen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={itemForm.handleSubmit(handleAddItem as any)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="compPartId">Component Part ID</Label>
+              <Label htmlFor="compPartId">Komponententeil-ID</Label>
               <Input
                 id="compPartId"
                 className="font-mono text-xs"
-                placeholder="UUID of the component part"
+                placeholder="UUID des Komponententeils"
                 {...itemForm.register("componentPartId")}
               />
               {itemForm.formState.errors.componentPartId && (
@@ -338,7 +338,7 @@ export default function BomVersionDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="itemQty">Quantity</Label>
+                <Label htmlFor="itemQty">Menge</Label>
                 <Input
                   id="itemQty"
                   type="number"
@@ -360,7 +360,7 @@ export default function BomVersionDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="itemNotes">Notes</Label>
+              <Label htmlFor="itemNotes">Notizen</Label>
               <Textarea id="itemNotes" rows={2} {...itemForm.register("notes")} />
             </div>
             {bomMutations.error && (
@@ -368,10 +368,10 @@ export default function BomVersionDetailPage() {
             )}
             <DialogFooter>
               <Button type="button" variant="outline" size="sm" onClick={() => setItemDialogOpen(false)}>
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" size="sm" disabled={bomMutations.loading}>
-                {bomMutations.loading ? "Adding..." : "Add Item"}
+                {bomMutations.loading ? "Wird hinzugefügt..." : "Position hinzufügen"}
               </Button>
             </DialogFooter>
           </form>
