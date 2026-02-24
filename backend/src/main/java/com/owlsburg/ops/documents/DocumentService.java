@@ -105,8 +105,33 @@ public class DocumentService {
         return documentLinkRepository.save(link);
     }
 
+    @Transactional
+    public DocumentEntity updateMetadata(UUID id, String title, String description, UUID categoryId, String excerpt) {
+        DocumentEntity doc = findById(id);
+        if (title != null) {
+            doc.setTitle(title);
+        }
+        if (description != null) {
+            doc.setDescription(description);
+        }
+        doc.setCategoryId(categoryId);
+        if (excerpt != null) {
+            doc.setExcerpt(excerpt);
+        }
+        log.info("Updating document metadata: {}", id);
+        return documentRepository.save(doc);
+    }
+
     public String getPresignedUrl(UUID id, int expiryMinutes) {
         DocumentEntity doc = findById(id);
         return storageService.getPresignedUrl(doc.getFileKey(), expiryMinutes);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DocumentEntity> findAll(Pageable pageable, String category, String status, String search) {
+        if (search != null && !search.isBlank()) {
+            return documentRepository.searchByTitle(search, pageable);
+        }
+        return findAll(pageable, category, status);
     }
 }

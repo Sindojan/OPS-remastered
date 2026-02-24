@@ -200,6 +200,20 @@ sindojan_ops_remastered/
 | TASK-FE-019 | System Admin UI (`(system)` Route Group, SystemShell, Company CRUD, Detail mit Tabs) | `42b87e3` |
 | Employee Roles | Funktionale Rolle → System-Rolle Mapping, Auto-User-Erstellung bei Mitarbeiter-Anlage | `42b87e3` |
 
+### Block 11: Kunden-Verwaltung & Parts/Processes ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-014 | V8 Migration (customer_number, short_name), CustomerEntity/DTO-Erweiterung, Calculation History Endpoint | `41cd131` |
+| TASK-FE-020 | Kunden-Views (Liste mit KPIs, Detail mit 5 Tabs: Übersicht, Ansprechpartner, Adressen, Preisgruppen, Historie) | `41cd131` |
+| TASK-FE-021 | Parts & Processes Views (Teile, BOM Baumstruktur, Arbeitsplan, Kalkulations-Panel) | `41cd131` |
+
+### FIX-BLOCK-D: UI Konsistenz & Deutsch-Lokalisierung ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| FIX-1 | "Neuer Kunde" Button in Tabellen-Toolbar, Breadcrumb-Fix (fehlende Routen) | `a847882` |
+| FIX-2 | Komplette deutsche Lokalisierung (31 Dateien, zentrale i18n.ts, 150+ Begriffe) | `a847882` |
+| FIX-3 | Mitarbeiter-Rollenauswahl auf System-Rollen vereinfacht (WORKER, TEAM_LEAD, MANAGER, ADMIN) | `a847882` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -276,6 +290,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V5__primary_agent.sql | `role_agent_defaults` Tabelle + RLS + `users.primary_agent_instance_id` |
 | V6__seed_role_defaults.sql | Rollen-Defaults: ADMIN/MANAGER→CEO, TEAM_LEAD→Production Lead, WORKER→People Lead |
 | V7__system_admin.sql | Tenant-Extension (slug, plan, status, suspended_at, suspend_reason), SYSTEM_ADMIN User Seed |
+| V8__customer_fields.sql | `customer_number VARCHAR(50)`, `short_name VARCHAR(100)` auf customers, Unique Index |
 
 ## Default Admin
 
@@ -295,13 +310,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 
 `SYSTEM_ADMIN`, `ADMIN`, `MANAGER`, `TEAM_LEAD`, `WORKER`, `AGENT_SYSTEM`
 
-### Employee Funktionale Rollen → System-Rollen Mapping
-| Funktionale Rolle | System-Rolle |
-|------------------|-------------|
-| Operator, Technician, Quality Inspector, Maintenance Tech, Warehouse Worker, Logistics | WORKER |
-| Shift Lead, Team Lead | TEAM_LEAD |
-| Production Manager | MANAGER |
-| Office/Admin | ADMIN |
+Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEAD, MANAGER, ADMIN). Kein funktionales Rollen-Mapping mehr.
 
 ## Multi-Tenancy (RLS)
 
@@ -315,6 +324,6 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-02-23
-**Session:** Block 10 komplett (System Admin, Company Management, Employee Role Mapping)
-**Status:** Backend ~450 Java-Dateien. System Admin mit SYSTEM_ADMIN Rolle (bypassed RLS), Company CRUD mit suspend/activate/delete. Frontend hat `(system)` Route Group mit eigenem SystemShell. Employee-Erstellung erstellt automatisch User-Account mit gemappter System-Rolle. Alles kompiliert und deployed.
-**Nächster Block:** Agent Console (Chat-Interface, Agent Hierarchy, Live-Runs) oder End-to-End-Testing mit echtem Backend
+**Session:** Block 11 + FIX-BLOCK-D komplett
+**Status:** Backend ~450 Java-Dateien, V8 Migration. Kunden-Views mit Detail-Tabs, Parts & Processes mit BOM/Arbeitspläne/Kalkulation. Gesamtes Frontend auf Deutsch lokalisiert (zentrale `lib/i18n.ts`). Mitarbeiter-Rollenauswahl auf System-Rollen vereinfacht. Alles kompiliert.
+**Nächste Blöcke laut Masterplan:** Block 10 (Knowledge & Dokumente), Block 11 (Settings vervollständigen), Block 12 (Docker/Deployment), Block 13 (Agent Console)

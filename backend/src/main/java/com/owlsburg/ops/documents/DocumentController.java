@@ -3,6 +3,7 @@ package com.owlsburg.ops.documents;
 import com.owlsburg.ops.common.ApiResponse;
 import com.owlsburg.ops.documents.dto.DocumentLinkRequest;
 import com.owlsburg.ops.documents.dto.DocumentLinkResponse;
+import com.owlsburg.ops.documents.dto.DocumentMetadataUpdateRequest;
 import com.owlsburg.ops.documents.dto.DocumentResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -43,9 +45,10 @@ public class DocumentController {
     public ResponseEntity<ApiResponse<Page<DocumentResponse>>> list(
             Pageable pageable,
             @RequestParam(value = "category", required = false) String category,
-            @RequestParam(value = "status", required = false) String status) {
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "search", required = false) String search) {
 
-        Page<DocumentResponse> page = documentService.findAll(pageable, category, status)
+        Page<DocumentResponse> page = documentService.findAll(pageable, category, status, search)
                 .map(DocumentResponse::from);
         return ResponseEntity.ok(ApiResponse.ok(page));
     }
@@ -54,6 +57,22 @@ public class DocumentController {
     public ResponseEntity<ApiResponse<DocumentResponse>> getById(@PathVariable UUID id) {
         DocumentEntity doc = documentService.findById(id);
         return ResponseEntity.ok(ApiResponse.ok(DocumentResponse.from(doc)));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<DocumentResponse>> updateMetadata(
+            @PathVariable UUID id,
+            @RequestBody DocumentMetadataUpdateRequest request) {
+
+        DocumentEntity doc = documentService.updateMetadata(
+                id, request.title(), request.description(), request.categoryId(), request.excerpt());
+        return ResponseEntity.ok(ApiResponse.ok(DocumentResponse.from(doc)));
+    }
+
+    @GetMapping("/{id}/preview")
+    public ResponseEntity<ApiResponse<Map<String, String>>> preview(@PathVariable UUID id) {
+        String presignedUrl = documentService.getPresignedUrl(id, 15);
+        return ResponseEntity.ok(ApiResponse.ok(java.util.Map.of("url", presignedUrl)));
     }
 
     @GetMapping("/{id}/download")

@@ -18,6 +18,8 @@ public record DocumentResponse(
         int version,
         DocumentStatus status,
         UUID uploadedBy,
+        UUID categoryId,
+        String excerpt,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -34,6 +36,8 @@ public record DocumentResponse(
                 entity.getVersion(),
                 entity.getStatus(),
                 entity.getUploadedBy(),
+                entity.getCategoryId(),
+                entity.getExcerpt(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

@@ -34,6 +34,8 @@ const routeNames: Record<string, string> = {
   "/reports": "Berichte",
   "/employees": "Mitarbeiter",
   "/knowledge": "Wissensdatenbank",
+  "/knowledge/documents": "Dokumente",
+  "/knowledge/articles": "Artikel",
   "/settings": "Einstellungen",
   "/system/companies": "Unternehmen",
 };

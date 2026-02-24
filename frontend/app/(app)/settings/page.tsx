@@ -29,6 +29,12 @@ import {
   Zap,
   Loader2,
   Shield,
+  BookOpen,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Tag,
 } from "lucide-react";
 import type {
   ApiResponse,
@@ -37,8 +43,17 @@ import type {
   AgentTemplate,
   RoleAgentDefaultResponse,
   RoleAgentDefaultUpdateRequest,
+  KnowledgeCategoryResponse,
+  KnowledgeTagResponse,
 } from "@/types/api";
 import { toast } from "sonner";
+import {
+  useKnowledgeCategories,
+  useKnowledgeCategoryMutations,
+  useKnowledgeTags,
+  useKnowledgeTagMutations,
+} from "@/hooks/api/use-knowledge";
+import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
 
 // ============ Types for internal use ============
 
@@ -484,7 +499,7 @@ function AgentInstancesTab() {
       cell: (row) => (
         <div className="flex items-center gap-2">
           <Select
-            value={row.model || ""}
+            value={row.model || undefined}
             onValueChange={(value) => handleModelChange(row.id, value)}
             disabled={updatingId === row.id}
           >
@@ -665,7 +680,7 @@ function RoleAgentTab() {
                   </div>
                 </div>
                 <Select
-                  value={assignments[role] || ""}
+                  value={assignments[role] || undefined}
                   onValueChange={(value) =>
                     setAssignments((prev) => ({ ...prev, [role]: value }))
                   }
@@ -722,6 +737,311 @@ function RoleAgentTab() {
   );
 }
 
+// ============ Knowledge Settings Tab ============
+
+function KnowledgeSettingsTab() {
+  const { data: categories, loading: catsLoading, refetch: refetchCats } = useKnowledgeCategories();
+  const catMutations = useKnowledgeCategoryMutations();
+  const { data: allTags, loading: tagsLoading, refetch: refetchTags } = useKnowledgeTags();
+  const tagMutations = useKnowledgeTagMutations();
+
+  // Category form state
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [catName, setCatName] = useState("");
+  const [catColor, setCatColor] = useState("#3b82f6");
+
+  // Tag form state
+  const [showTagForm, setShowTagForm] = useState(false);
+  const [tagName, setTagName] = useState("");
+
+  // Delete confirmation
+  const [deleteCatId, setDeleteCatId] = useState<string | null>(null);
+  const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
+
+  // Category handlers
+  const openCatForm = useCallback((cat?: KnowledgeCategoryResponse) => {
+    if (cat) {
+      setEditingCatId(cat.id);
+      setCatName(cat.name);
+      setCatColor(cat.color || "#3b82f6");
+    } else {
+      setEditingCatId(null);
+      setCatName("");
+      setCatColor("#3b82f6");
+    }
+    setShowCatForm(true);
+  }, []);
+
+  const handleSaveCat = useCallback(async () => {
+    if (!catName.trim()) return;
+    try {
+      if (editingCatId) {
+        await catMutations.updateCategory(editingCatId, { name: catName, color: catColor });
+        toast.success("Kategorie aktualisiert");
+      } else {
+        await catMutations.createCategory({ name: catName, color: catColor });
+        toast.success("Kategorie erstellt");
+      }
+      setShowCatForm(false);
+      setCatName("");
+      setCatColor("#3b82f6");
+      setEditingCatId(null);
+      refetchCats();
+    } catch (err) {
+      toast.error("Fehler beim Speichern der Kategorie", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+      });
+    }
+  }, [catName, catColor, editingCatId, catMutations, refetchCats]);
+
+  const handleDeleteCat = useCallback(async () => {
+    if (!deleteCatId) return;
+    try {
+      await catMutations.deleteCategory(deleteCatId);
+      toast.success("Kategorie gelöscht");
+      setDeleteCatId(null);
+      refetchCats();
+    } catch (err) {
+      toast.error("Fehler beim Löschen der Kategorie", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+      });
+    }
+  }, [deleteCatId, catMutations, refetchCats]);
+
+  // Tag handlers
+  const handleSaveTag = useCallback(async () => {
+    if (!tagName.trim()) return;
+    try {
+      await tagMutations.createTag(tagName.trim());
+      toast.success("Tag erstellt");
+      setShowTagForm(false);
+      setTagName("");
+      refetchTags();
+    } catch (err) {
+      toast.error("Fehler beim Erstellen des Tags", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+      });
+    }
+  }, [tagName, tagMutations, refetchTags]);
+
+  const handleDeleteTag = useCallback(async () => {
+    if (!deleteTagId) return;
+    try {
+      await tagMutations.deleteTag(deleteTagId);
+      toast.success("Tag gelöscht");
+      setDeleteTagId(null);
+      refetchTags();
+    } catch (err) {
+      toast.error("Fehler beim Löschen des Tags", {
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+      });
+    }
+  }, [deleteTagId, tagMutations, refetchTags]);
+
+  if (catsLoading || tagsLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Categories */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Kategorien-Verwaltung</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => openCatForm()}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Neue Kategorie
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Inline form */}
+          {showCatForm && (
+            <div className="flex items-end gap-3 rounded-md border border-border/50 bg-muted/30 p-3">
+              <div className="flex-1 space-y-1.5">
+                <Label className="text-xs">Name</Label>
+                <Input
+                  value={catName}
+                  onChange={(e) => setCatName(e.target.value)}
+                  placeholder="Kategoriename..."
+                  className="text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveCat();
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Farbe</Label>
+                <Input
+                  type="color"
+                  value={catColor}
+                  onChange={(e) => setCatColor(e.target.value)}
+                  className="h-9 w-16 cursor-pointer p-1"
+                />
+              </div>
+              <Button size="sm" onClick={handleSaveCat} disabled={!catName.trim() || catMutations.loading}>
+                {catMutations.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowCatForm(false);
+                  setEditingCatId(null);
+                }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {/* Category list */}
+          {(categories || []).length === 0 && !showCatForm ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Noch keine Kategorien vorhanden.
+            </p>
+          ) : (
+            <div className="divide-y divide-border/50 rounded-md border border-border/50">
+              {(categories || []).map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="inline-block h-3 w-3 rounded-full"
+                      style={{ backgroundColor: cat.color || "#6b7280" }}
+                    />
+                    <span className="text-sm font-medium">{cat.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => openCatForm(cat)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteCatId(cat.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tags */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Tags-Verwaltung</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowTagForm(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Neuer Tag
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Inline form */}
+          {showTagForm && (
+            <div className="flex items-end gap-3 rounded-md border border-border/50 bg-muted/30 p-3">
+              <div className="flex-1 space-y-1.5">
+                <Label className="text-xs">Name</Label>
+                <Input
+                  value={tagName}
+                  onChange={(e) => setTagName(e.target.value)}
+                  placeholder="Tagname..."
+                  className="text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveTag();
+                  }}
+                />
+              </div>
+              <Button size="sm" onClick={handleSaveTag} disabled={!tagName.trim() || tagMutations.loading}>
+                {tagMutations.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowTagForm(false)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {/* Tag list */}
+          {(allTags || []).length === 0 && !showTagForm ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Noch keine Tags vorhanden.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {(allTags || []).map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="secondary"
+                  className="gap-1.5 text-sm py-1 px-2.5"
+                >
+                  <Tag className="h-3 w-3" />
+                  {tag.name}
+                  <button
+                    onClick={() => setDeleteTagId(tag.id)}
+                    className="ml-1 hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmations */}
+      <ConfirmationDialog
+        open={!!deleteCatId}
+        title="Kategorie löschen?"
+        description="Die Kategorie wird unwiderruflich gelöscht. Artikel mit dieser Kategorie behalten ihren Inhalt."
+        onConfirm={handleDeleteCat}
+        onCancel={() => setDeleteCatId(null)}
+        variant="destructive"
+        confirmLabel="Kategorie löschen"
+      />
+      <ConfirmationDialog
+        open={!!deleteTagId}
+        title="Tag löschen?"
+        description="Der Tag wird von allen Artikeln entfernt und unwiderruflich gelöscht."
+        onConfirm={handleDeleteTag}
+        onCancel={() => setDeleteTagId(null)}
+        variant="destructive"
+        confirmLabel="Tag löschen"
+      />
+    </div>
+  );
+}
+
 // ============ Main Settings Page ============
 
 export default function SettingsPage() {
@@ -755,6 +1075,10 @@ export default function SettingsPage() {
               <Shield className="h-3.5 w-3.5" />
               Rollen & Agents
             </TabsTrigger>
+            <TabsTrigger value="knowledge" className="gap-1.5">
+              <BookOpen className="h-3.5 w-3.5" />
+              Wissen
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="llm">
@@ -767,6 +1091,10 @@ export default function SettingsPage() {
 
           <TabsContent value="roles">
             <RoleAgentTab />
+          </TabsContent>
+
+          <TabsContent value="knowledge">
+            <KnowledgeSettingsTab />
           </TabsContent>
         </Tabs>
       </div>

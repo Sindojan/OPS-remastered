@@ -5,3 +5,4 @@ export * from "./use-inventory";
 export * from "./use-people";
 export * from "./use-inbox";
 export * from "./use-customers";
+export * from "./use-knowledge";

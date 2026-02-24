@@ -45,4 +45,10 @@ public class DocumentEntity extends BaseEntity {
 
     @Column(name = "uploaded_by")
     private UUID uploadedBy;
+
+    @Column(name = "category_id")
+    private UUID categoryId;
+
+    @Column(length = 500)
+    private String excerpt;
 }

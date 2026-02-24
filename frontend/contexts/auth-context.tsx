@@ -33,13 +33,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && storedUser) {
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
-        if (payload.exp * 1000 > Date.now()) {
-          setUser(JSON.parse(storedUser));
-        } else {
+        if (payload.exp * 1000 <= Date.now()) {
+          // Token expired
           localStorage.removeItem("owlsburg_token");
           localStorage.removeItem("owlsburg_user");
           localStorage.removeItem("owlsburg_refresh_token");
+          setIsLoading(false);
+          return;
         }
+        // Token not expired – verify user still exists via /me
+        setUser(JSON.parse(storedUser));
+        apiClient.get("/api/users/me").then(() => {
+          setIsLoading(false);
+        }).catch(() => {
+          // User no longer exists in DB (e.g. after DB reset)
+          localStorage.removeItem("owlsburg_token");
+          localStorage.removeItem("owlsburg_user");
+          localStorage.removeItem("owlsburg_refresh_token");
+          setUser(null);
+          setIsLoading(false);
+        });
+        return;
       } catch {
         localStorage.removeItem("owlsburg_token");
         localStorage.removeItem("owlsburg_user");

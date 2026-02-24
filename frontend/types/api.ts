@@ -627,6 +627,8 @@ export interface DocumentResponse {
   title: string;
   description: string | null;
   category: string | null;
+  categoryId: string | null;
+  excerpt: string | null;
   fileKey: string;
   fileName: string;
   mimeType: string | null;
@@ -636,6 +638,73 @@ export interface DocumentResponse {
   uploadedBy: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── Knowledge ──────────────────────────────────────────
+
+export type ArticleStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+export interface KnowledgeCategoryResponse {
+  id: string;
+  name: string;
+  color: string | null;
+  createdAt: string;
+}
+
+export interface KnowledgeTagResponse {
+  id: string;
+  name: string;
+}
+
+export interface KnowledgeArticleResponse {
+  id: string;
+  title: string;
+  slug: string;
+  content: string | null;
+  excerpt: string | null;
+  status: ArticleStatus;
+  categoryId: string | null;
+  categoryName: string | null;
+  categoryColor: string | null;
+  authorId: string | null;
+  authorName: string | null;
+  tags: KnowledgeTagResponse[];
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KnowledgeArticleSummaryResponse {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  status: ArticleStatus;
+  categoryId: string | null;
+  categoryName: string | null;
+  categoryColor: string | null;
+  authorName: string | null;
+  tags: KnowledgeTagResponse[];
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KnowledgeSearchResultResponse {
+  type: 'article' | 'document';
+  id: string;
+  title: string;
+  excerpt: string | null;
+  category: string | null;
+  updatedAt: string;
+}
+
+export interface DocumentLinkResponse {
+  id: string;
+  documentId: string;
+  linkedType: string;
+  linkedId: string;
+  createdAt: string;
 }
 
 // ─── BOM ────────────────────────────────────────────────

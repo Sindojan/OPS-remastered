@@ -542,7 +542,7 @@ export default function EmployeesPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="role">Rolle</Label>
                 <Select
-                  value={form.watch("role") || ""}
+                  value={form.watch("role") || undefined}
                   onValueChange={(v) => form.setValue("role", v)}
                 >
                   <SelectTrigger id="role">
