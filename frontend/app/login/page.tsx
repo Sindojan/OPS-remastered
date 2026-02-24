@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, Eye, EyeOff, Zap, Loader2 } from "lucide-react";
 
 function getDefaultRoute(role: string): string {
+  if (role === "SYSTEM_ADMIN") return "/system/companies";
   if (role === "WORKER") return "/my-day";
   return "/production";
 }

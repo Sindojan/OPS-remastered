@@ -193,6 +193,13 @@ sindojan_ops_remastered/
 | TASK-FE-017 | My-Day Dashboard (rollenbasiert, Clock-In/Out, Jobs, KPIs, Info-Cards) | `8d99a8a` |
 | TASK-FE-018 | Settings: Rollen-Agent-Zuweisung Tab | `8d99a8a` |
 
+### Block 10: System Admin & Employee Roles ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-013 | System Admin API (`/api/system/companies`), SYSTEM_ADMIN Rolle, V7 Migration, Tenant-Extension (slug/plan/status) | `42b87e3` |
+| TASK-FE-019 | System Admin UI (`(system)` Route Group, SystemShell, Company CRUD, Detail mit Tabs) | `42b87e3` |
+| Employee Roles | Funktionale Rolle → System-Rolle Mapping, Auto-User-Erstellung bei Mitarbeiter-Anlage | `42b87e3` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -226,6 +233,7 @@ Zuordnung:
 | Auth | `/api/auth/**` | public |
 | Users | `/api/users` | ADMIN/MANAGER |
 | Tenants | `/api/admin/tenants` | ADMIN |
+| System Companies | `/api/system/companies` | SYSTEM_ADMIN |
 | Customers | `/api/customers` | authenticated |
 | Jobs | `/api/jobs` | authenticated |
 | Stations | `/api/stations` | authenticated |
@@ -267,6 +275,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V4__seed_agents.sql | Agent Templates, Instances, Event Subscriptions, Scheduled Triggers (mit tenant_id) |
 | V5__primary_agent.sql | `role_agent_defaults` Tabelle + RLS + `users.primary_agent_instance_id` |
 | V6__seed_role_defaults.sql | Rollen-Defaults: ADMIN/MANAGER→CEO, TEAM_LEAD→Production Lead, WORKER→People Lead |
+| V7__system_admin.sql | Tenant-Extension (slug, plan, status, suspended_at, suspend_reason), SYSTEM_ADMIN User Seed |
 
 ## Default Admin
 
@@ -275,9 +284,24 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 - **Rolle:** ADMIN
 - Wird in V1 Migration angelegt (Default Tenant + Admin User)
 
+## System Admin
+
+- **Email:** philipp.ebert@strate-software
+- **Passwort:** N0n3Xx.Blender
+- **Rolle:** SYSTEM_ADMIN
+- Wird in V7 Migration angelegt (kein Tenant, bypassed RLS)
+
 ## Rollen
 
-`ADMIN`, `MANAGER`, `TEAM_LEAD`, `WORKER`, `AGENT_SYSTEM`
+`SYSTEM_ADMIN`, `ADMIN`, `MANAGER`, `TEAM_LEAD`, `WORKER`, `AGENT_SYSTEM`
+
+### Employee Funktionale Rollen → System-Rollen Mapping
+| Funktionale Rolle | System-Rolle |
+|------------------|-------------|
+| Operator, Technician, Quality Inspector, Maintenance Tech, Warehouse Worker, Logistics | WORKER |
+| Shift Lead, Team Lead | TEAM_LEAD |
+| Production Manager | MANAGER |
+| Office/Admin | ADMIN |
 
 ## Multi-Tenancy (RLS)
 
@@ -291,6 +315,6 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-02-23
-**Session:** Block 9 komplett (Login, Auth-Flow, Agent-Button, My-Day Dashboard, Rollen-Settings)
-**Status:** Backend ~440 Java-Dateien. Login-Flow mit JWT funktioniert. Frontend hat Login-Seite, Auth-Guard via (app) Route Group, dynamischen Agent-Button, rollenbasiertes My-Day Dashboard, Rollen-Agent-Zuweisung in Settings. Alles kompiliert und getestet.
+**Session:** Block 10 komplett (System Admin, Company Management, Employee Role Mapping)
+**Status:** Backend ~450 Java-Dateien. System Admin mit SYSTEM_ADMIN Rolle (bypassed RLS), Company CRUD mit suspend/activate/delete. Frontend hat `(system)` Route Group mit eigenem SystemShell. Employee-Erstellung erstellt automatisch User-Account mit gemappter System-Rolle. Alles kompiliert und deployed.
 **Nächster Block:** Agent Console (Chat-Interface, Agent Hierarchy, Live-Runs) oder End-to-End-Testing mit echtem Backend

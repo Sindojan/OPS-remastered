@@ -26,16 +26,29 @@ import {
   Shield,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { Sun } from "lucide-react";
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
-const navSections = [
+interface NavItem {
+  label: string;
+  href: string;
+  icon: typeof Bot;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const ALL_NAV_SECTIONS: NavSection[] = [
   {
     label: "Operations",
     items: [
+      { label: "My Day", href: "/my-day", icon: Sun },
       { label: "Console", href: "/agents", icon: Bot },
       { label: "Production", href: "/production", icon: Factory },
       { label: "Machines", href: "/machines", icon: Cog },
@@ -60,10 +73,34 @@ const navSections = [
   },
 ];
 
+// Paths hidden per role (everything else is visible)
+const ROLE_HIDDEN_PATHS: Record<string, string[]> = {
+  WORKER: ["/settings"],
+  TEAM_LEAD: ["/settings"],
+  // MANAGER and ADMIN see everything
+};
+
+function getNavSectionsForRole(role: string): NavSection[] {
+  const hiddenPaths = ROLE_HIDDEN_PATHS[role];
+  if (!hiddenPaths) return ALL_NAV_SECTIONS;
+
+  const sections: NavSection[] = [];
+  for (const section of ALL_NAV_SECTIONS) {
+    const filteredItems = section.items.filter(
+      (item) => !hiddenPaths.includes(item.href)
+    );
+    if (filteredItems.length > 0) {
+      sections.push({ ...section, items: filteredItems });
+    }
+  }
+  return sections;
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
+  const navSections = getNavSectionsForRole(user?.role || "WORKER");
 
   return (
     <aside
