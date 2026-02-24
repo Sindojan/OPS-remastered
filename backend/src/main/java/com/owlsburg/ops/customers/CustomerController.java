@@ -36,7 +36,8 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<CustomerResponse>> create(@Valid @RequestBody CustomerCreateRequest request) {
-        CustomerEntity customer = customerService.create(request.companyName(), request.taxId());
+        CustomerEntity customer = customerService.create(
+                request.companyName(), request.taxId(), request.customerNumber(), request.shortName());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(CustomerResponse.from(customer), "Customer created"));
     }
@@ -44,7 +45,8 @@ public class CustomerController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CustomerResponse>> update(@PathVariable UUID id,
                                                                 @Valid @RequestBody CustomerUpdateRequest request) {
-        CustomerEntity customer = customerService.update(id, request.companyName(), request.taxId());
+        CustomerEntity customer = customerService.update(
+                id, request.companyName(), request.taxId(), request.customerNumber(), request.shortName());
         return ResponseEntity.ok(ApiResponse.ok(CustomerResponse.from(customer)));
     }
 

@@ -148,3 +148,29 @@ export function getAbsenceStatusVariant(status: string): StatusVariant {
     default: return "neutral";
   }
 }
+
+export function getCustomerStatusVariant(status: string): StatusVariant {
+  switch (status) {
+    case "ACTIVE": return "success";
+    case "INACTIVE": return "neutral";
+    default: return "neutral";
+  }
+}
+
+export function getVersionStatusVariant(status: string): StatusVariant {
+  switch (status) {
+    case "DRAFT": return "neutral";
+    case "ACTIVE": return "success";
+    case "ARCHIVED": return "warning";
+    default: return "neutral";
+  }
+}
+
+export function getPartTypeVariant(type: string): StatusVariant {
+  switch (type) {
+    case "PRODUCT": return "primary";
+    case "COMPONENT": return "info";
+    case "RAW_MATERIAL": return "warning";
+    default: return "neutral";
+  }
+}

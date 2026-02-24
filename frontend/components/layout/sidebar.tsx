@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   Bot,
+  Building2,
   Factory,
   Package,
   Puzzle,
@@ -53,7 +54,7 @@ const ALL_NAV_SECTIONS: NavSection[] = [
       { label: "Production", href: "/production", icon: Factory },
       { label: "Machines", href: "/machines", icon: Cog },
       { label: "Inventory", href: "/inventory", icon: Package },
-      { label: "Parts & Processes", href: "/parts", icon: Puzzle },
+      { label: "Parts & Processes", href: "/parts-and-processes", icon: Puzzle },
     ],
   },
   {
@@ -66,6 +67,7 @@ const ALL_NAV_SECTIONS: NavSection[] = [
   {
     label: "Organization",
     items: [
+      { label: "Customers", href: "/customers", icon: Building2 },
       { label: "People", href: "/employees", icon: Users },
       { label: "Knowledge", href: "/knowledge", icon: BookOpen },
       { label: "Settings", href: "/settings", icon: Settings },

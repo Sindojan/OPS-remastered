@@ -1,0 +1,419 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Puzzle,
+  Layers,
+  ListTree,
+  Plus,
+  Eye,
+  AlertTriangle,
+} from "lucide-react";
+
+import { PageHeader } from "@/components/shared/page-header";
+import { KpiCard } from "@/components/shared/kpi-card";
+import { DataTable, type ColumnDef, type RowAction } from "@/components/shared/data-table";
+import { DomainStatusBadge, getPartTypeVariant, getVersionStatusVariant } from "@/components/shared/domain-status-badge";
+import { SkeletonCard } from "@/components/shared/skeleton-variants";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+
+import { useParts, usePartMutations } from "@/hooks/api/use-bom";
+import type { PartResponse, CreatePartRequest } from "@/types/api";
+import { formatDate, formatNumber, humanizeStatus } from "@/lib/format";
+import { toast } from "sonner";
+
+// ─── Schemas ────────────────────────────────────────────
+
+const partSchema = z.object({
+  partNumber: z.string().min(1, "Part number is required"),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  type: z.string().min(1, "Type is required"),
+});
+type PartFormValues = z.infer<typeof partSchema>;
+
+// ─── Part Columns ──────────────────────────────────────
+
+const partColumns: ColumnDef<PartResponse>[] = [
+  {
+    id: "partNumber",
+    header: "Part #",
+    accessorKey: "partNumber",
+    cell: (row) => (
+      <span className="font-mono text-xs font-medium text-primary">
+        {row.partNumber}
+      </span>
+    ),
+  },
+  {
+    id: "name",
+    header: "Name",
+    accessorKey: "name",
+    cell: (row) => <span className="font-medium">{row.name}</span>,
+  },
+  {
+    id: "type",
+    header: "Type",
+    cell: (row) => (
+      <DomainStatusBadge variant={getPartTypeVariant(row.type)}>
+        {humanizeStatus(row.type)}
+      </DomainStatusBadge>
+    ),
+  },
+  {
+    id: "status",
+    header: "Status",
+    cell: (row) => (
+      <DomainStatusBadge variant={getVersionStatusVariant(row.status)}>
+        {humanizeStatus(row.status)}
+      </DomainStatusBadge>
+    ),
+  },
+  {
+    id: "createdAt",
+    header: "Created",
+    cell: (row) => (
+      <span className="font-mono text-xs text-muted-foreground">
+        {formatDate(row.createdAt)}
+      </span>
+    ),
+  },
+];
+
+// ─── Component ──────────────────────────────────────────
+
+export default function PartsAndProcessesPage() {
+  const router = useRouter();
+  const { data: parts, loading: partsLoading, error: partsError, refetch: refetchParts } = useParts();
+  const mutations = usePartMutations();
+
+  const [partDialogOpen, setPartDialogOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  const partForm = useForm<PartFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(partSchema) as any,
+    defaultValues: {
+      partNumber: `PRT-${Date.now().toString(36).toUpperCase()}`,
+      name: "",
+      description: "",
+      type: "PRODUCT",
+    },
+  });
+
+  // ─── KPI Data ──────────────────────────
+  const totalParts = parts?.length ?? 0;
+  const productCount = parts?.filter((p) => p.type === "PRODUCT").length ?? 0;
+  const componentCount = parts?.filter((p) => p.type === "COMPONENT").length ?? 0;
+  const rawMaterialCount = parts?.filter((p) => p.type === "RAW_MATERIAL").length ?? 0;
+
+  // ─── Filtered Parts ────────────────────
+  const filteredParts = useMemo(() => {
+    if (!parts) return [];
+    if (typeFilter === "all") return parts;
+    return parts.filter((p) => p.type === typeFilter);
+  }, [parts, typeFilter]);
+
+  // ─── Handlers ──────────────────────────
+  const handleCreatePart = async (values: PartFormValues) => {
+    const req: CreatePartRequest = {
+      partNumber: values.partNumber,
+      name: values.name,
+      description: values.description || undefined,
+      type: values.type,
+    };
+    try {
+      const result = await mutations.createPart(req);
+      if (result) {
+        toast.success("Part created successfully");
+        setPartDialogOpen(false);
+        partForm.reset({
+          partNumber: `PRT-${Date.now().toString(36).toUpperCase()}`,
+          name: "",
+          description: "",
+          type: "PRODUCT",
+        });
+        refetchParts();
+      }
+    } catch (err) {
+      toast.error("Failed to create part", { description: err instanceof Error ? err.message : "Unknown error" });
+    }
+  };
+
+  const partRowActions: RowAction<PartResponse>[] = [
+    {
+      label: "View Detail",
+      icon: <Eye className="h-3.5 w-3.5" />,
+      onClick: (row) => router.push(`/parts-and-processes/parts/${row.id}`),
+    },
+  ];
+
+  const typeFilterSlot = (
+    <Select value={typeFilter} onValueChange={setTypeFilter}>
+      <SelectTrigger size="sm" className="w-40">
+        <SelectValue placeholder="All Types" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All Types</SelectItem>
+        <SelectItem value="PRODUCT">Product</SelectItem>
+        <SelectItem value="COMPONENT">Component</SelectItem>
+        <SelectItem value="RAW_MATERIAL">Raw Material</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Parts & Processes"
+        description="Manage parts, bills of materials, and process plans"
+      />
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {partsLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <KpiCard
+              label="Total Parts"
+              value={formatNumber(totalParts)}
+              trend={totalParts > 0 ? { direction: "neutral", value: `${totalParts} tracked` } : undefined}
+            />
+            <KpiCard
+              label="Products"
+              value={formatNumber(productCount)}
+              trend={{ direction: "neutral", value: "Finished goods" }}
+            />
+            <KpiCard
+              label="Components"
+              value={formatNumber(componentCount)}
+              trend={{ direction: "neutral", value: "Assemblies" }}
+            />
+            <KpiCard
+              label="Raw Materials"
+              value={formatNumber(rawMaterialCount)}
+              trend={{ direction: "neutral", value: "Base materials" }}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="parts">
+        <TabsList>
+          <TabsTrigger value="parts" className="gap-1.5">
+            <Puzzle className="h-3.5 w-3.5" />
+            Parts
+          </TabsTrigger>
+          <TabsTrigger value="bom" className="gap-1.5">
+            <Layers className="h-3.5 w-3.5" />
+            Bill of Materials
+          </TabsTrigger>
+          <TabsTrigger value="processes" className="gap-1.5">
+            <ListTree className="h-3.5 w-3.5" />
+            Process Plans
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ─── Parts Tab ─── */}
+        <TabsContent value="parts" className="mt-4">
+          {partsError ? (
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <AlertTriangle className="h-8 w-8 text-destructive/60" />
+              <p className="text-sm text-muted-foreground">{partsError}</p>
+              <Button variant="outline" size="sm" onClick={refetchParts}>
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <DataTable<PartResponse>
+              data={filteredParts}
+              columns={partColumns}
+              searchPlaceholder="Search parts..."
+              searchKey="name"
+              filterSlots={
+                <>
+                  {typeFilterSlot}
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setPartDialogOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    New Part
+                  </Button>
+                </>
+              }
+              rowActions={partRowActions}
+              onRowClick={(row) => router.push(`/parts-and-processes/parts/${row.id}`)}
+              loading={partsLoading}
+              emptyState={{
+                icon: <Puzzle className="h-8 w-8 text-muted-foreground/40" />,
+                title: "No parts yet",
+                description: "Create your first part to start building BOMs and process plans.",
+                action: (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                    onClick={() => setPartDialogOpen(true)}
+                  >
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    New Part
+                  </Button>
+                ),
+              }}
+            />
+          )}
+        </TabsContent>
+
+        {/* ─── BOM Tab ─── */}
+        <TabsContent value="bom" className="mt-4">
+          <Card className="relative overflow-hidden p-6">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <Layers className="h-10 w-10 text-muted-foreground/30" />
+              <h3 className="text-sm font-medium text-foreground/70">
+                Bill of Materials
+              </h3>
+              <p className="max-w-sm text-xs text-muted-foreground">
+                Select a part from the Parts tab to view and manage its Bill of Materials.
+                Each part can have multiple BOM versions with different component configurations.
+              </p>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ─── Process Plans Tab ─── */}
+        <TabsContent value="processes" className="mt-4">
+          <Card className="relative overflow-hidden p-6">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <ListTree className="h-10 w-10 text-muted-foreground/30" />
+              <h3 className="text-sm font-medium text-foreground/70">
+                Process Plans
+              </h3>
+              <p className="max-w-sm text-xs text-muted-foreground">
+                Select a part from the Parts tab to view and manage its Process Plans.
+                Process plans define the manufacturing steps, stations, and time estimates.
+              </p>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* ─── New Part Dialog ─── */}
+      <Dialog open={partDialogOpen} onOpenChange={setPartDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Part</DialogTitle>
+            <DialogDescription>
+              Create a new part for BOM and process plan management.
+            </DialogDescription>
+          </DialogHeader>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <form onSubmit={partForm.handleSubmit(handleCreatePart as any)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="partNumber">Part Number</Label>
+              <Input
+                id="partNumber"
+                className="font-mono"
+                {...partForm.register("partNumber")}
+              />
+              {partForm.formState.errors.partNumber && (
+                <p className="text-xs text-destructive">
+                  {partForm.formState.errors.partNumber.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="partName">Name</Label>
+              <Input id="partName" {...partForm.register("name")} />
+              {partForm.formState.errors.name && (
+                <p className="text-xs text-destructive">
+                  {partForm.formState.errors.name.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="partDesc">Description</Label>
+              <Textarea
+                id="partDesc"
+                rows={2}
+                {...partForm.register("description")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={partForm.watch("type")}
+                onValueChange={(v) => partForm.setValue("type", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PRODUCT">Product</SelectItem>
+                  <SelectItem value="COMPONENT">Component</SelectItem>
+                  <SelectItem value="RAW_MATERIAL">Raw Material</SelectItem>
+                </SelectContent>
+              </Select>
+              {partForm.formState.errors.type && (
+                <p className="text-xs text-destructive">
+                  {partForm.formState.errors.type.message}
+                </p>
+              )}
+            </div>
+            {mutations.error && (
+              <p className="text-xs text-destructive">{mutations.error}</p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPartDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={mutations.loading}>
+                {mutations.loading ? "Creating..." : "Create Part"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -9,6 +9,8 @@ import java.util.UUID;
 public record CustomerResponse(
         UUID id,
         String companyName,
+        String customerNumber,
+        String shortName,
         String taxId,
         String status,
         List<ContactResponse> contacts,
@@ -33,6 +35,8 @@ public record CustomerResponse(
         return new CustomerResponse(
                 entity.getId(),
                 entity.getCompanyName(),
+                entity.getCustomerNumber(),
+                entity.getShortName(),
                 entity.getTaxId(),
                 entity.getStatus(),
                 contacts,
@@ -47,6 +51,8 @@ public record CustomerResponse(
         return new CustomerResponse(
                 entity.getId(),
                 entity.getCompanyName(),
+                entity.getCustomerNumber(),
+                entity.getShortName(),
                 entity.getTaxId(),
                 entity.getStatus(),
                 List.of(),

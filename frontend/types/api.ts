@@ -572,6 +572,8 @@ export interface CustomerResponse {
   id: string;
   companyName: string;
   taxId: string | null;
+  customerNumber: string | null;
+  shortName: string | null;
   status: string;
   contacts: ContactResponse[];
   addresses: AddressResponse[];
@@ -677,6 +679,120 @@ export interface JobCalculationResponse {
   actualTotalCost: number | null;
   variancePercent: number | null;
   finalizedAt: string | null;
+}
+
+// ─── BOM Request Types ─────────────────────────────────
+
+export interface CreatePartRequest {
+  partNumber: string;
+  name: string;
+  description?: string;
+  type: string;
+  unitId?: string;
+  status?: string;
+}
+
+export interface UpdatePartRequest {
+  name?: string;
+  description?: string;
+  type?: string;
+  unitId?: string;
+  status?: string;
+}
+
+export interface BomVersionResponse {
+  id: string;
+  partId: string;
+  versionNumber: number;
+  status: VersionStatus;
+  validFrom: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface CreateBomVersionRequest {
+  partId: string;
+  versionNumber?: number;
+  validFrom?: string;
+  createdBy?: string;
+}
+
+export interface BomItemResponse {
+  id: string;
+  bomVersionId: string;
+  componentPartId: string;
+  quantity: number;
+  unitId: string | null;
+  position: number;
+  notes: string | null;
+}
+
+export interface BomItemRequest {
+  componentPartId: string;
+  quantity: number;
+  unitId?: string;
+  position: number;
+  notes?: string;
+}
+
+export interface ProcessPlanResponse {
+  id: string;
+  partId: string;
+  versionNumber: number;
+  name: string;
+  status: VersionStatus;
+  validFrom: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface CreateProcessPlanRequest {
+  partId: string;
+  versionNumber?: number;
+  name: string;
+  validFrom?: string;
+  createdBy?: string;
+}
+
+export interface ProcessStepResponse {
+  id: string;
+  processPlanId: string;
+  stepNumber: number;
+  name: string;
+  description: string | null;
+  stationId: string | null;
+  machineId: string | null;
+  setupTimeMinutes: number;
+  processingTimeMinutes: number;
+  notes: string | null;
+}
+
+export interface ProcessStepRequest {
+  stepNumber: number;
+  name: string;
+  description?: string;
+  stationId?: string;
+  machineId?: string;
+  setupTimeMinutes: number;
+  processingTimeMinutes: number;
+  notes?: string;
+}
+
+export interface CalculateRequest {
+  partId: string;
+  bomVersionId: string;
+  processPlanId: string;
+  quantity: number;
+  calculatedBy?: string;
+}
+
+export interface CostRateResponse {
+  id: string;
+  rateType: string;
+  entityId: string;
+  ratePerHour: number;
+  validFrom: string;
+  validUntil: string | null;
 }
 
 // ─── Role Agent Defaults ────────────────────────────────

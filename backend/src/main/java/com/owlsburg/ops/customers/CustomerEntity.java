@@ -22,6 +22,12 @@ public class CustomerEntity extends BaseEntity {
     @Column(name = "tax_id", length = 50)
     private String taxId;
 
+    @Column(name = "customer_number", length = 50)
+    private String customerNumber;
+
+    @Column(name = "short_name", length = 100)
+    private String shortName;
+
     @Column(nullable = false, length = 20)
     private String status = "ACTIVE";
 

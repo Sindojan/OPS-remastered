@@ -10,4 +10,8 @@ import java.util.UUID;
 public interface CalculationRepository extends JpaRepository<CalculationEntity, UUID> {
 
     List<CalculationEntity> findByPartId(UUID partId);
+
+    List<CalculationEntity> findByPartIdOrderByCalculatedAtDesc(UUID partId);
+
+    List<CalculationEntity> findByBomVersionIdOrderByCalculatedAtDesc(UUID bomVersionId);
 }

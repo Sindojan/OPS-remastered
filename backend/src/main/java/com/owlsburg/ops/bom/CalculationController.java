@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -46,6 +47,27 @@ public class CalculationController {
                 request.jobId(), request.calculationId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(JobCalculationResponse.from(entity)));
+    }
+
+    @GetMapping("/history/{entityType}/{entityId}")
+    public ResponseEntity<ApiResponse<List<CalculationResponse>>> getHistory(
+            @PathVariable String entityType,
+            @PathVariable UUID entityId) {
+        List<CalculationEntity> entities;
+        switch (entityType.toLowerCase()) {
+            case "part":
+                entities = calculationService.getHistoryByPart(entityId);
+                break;
+            case "bom-version":
+                entities = calculationService.getHistoryByBomVersion(entityId);
+                break;
+            default:
+                return ResponseEntity.badRequest().body(ApiResponse.error("Invalid entity type: " + entityType));
+        }
+        List<CalculationResponse> responses = entities.stream()
+                .map(CalculationResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.ok(responses));
     }
 
     @PatchMapping("/job-calculations/{id}/finalize")

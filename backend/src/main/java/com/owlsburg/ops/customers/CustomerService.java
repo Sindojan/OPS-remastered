@@ -44,10 +44,12 @@ public class CustomerService {
     }
 
     @Transactional
-    public CustomerEntity create(String companyName, String taxId) {
+    public CustomerEntity create(String companyName, String taxId, String customerNumber, String shortName) {
         CustomerEntity customer = new CustomerEntity();
         customer.setCompanyName(companyName);
         customer.setTaxId(taxId);
+        customer.setCustomerNumber(customerNumber);
+        customer.setShortName(shortName);
         customer.setStatus("ACTIVE");
 
         log.info("Creating customer: {}", companyName);
@@ -55,14 +57,12 @@ public class CustomerService {
     }
 
     @Transactional
-    public CustomerEntity update(UUID id, String companyName, String taxId) {
+    public CustomerEntity update(UUID id, String companyName, String taxId, String customerNumber, String shortName) {
         CustomerEntity customer = findById(id);
-        if (companyName != null) {
-            customer.setCompanyName(companyName);
-        }
-        if (taxId != null) {
-            customer.setTaxId(taxId);
-        }
+        if (companyName != null) customer.setCompanyName(companyName);
+        if (taxId != null) customer.setTaxId(taxId);
+        if (customerNumber != null) customer.setCustomerNumber(customerNumber);
+        if (shortName != null) customer.setShortName(shortName);
         return customerRepository.save(customer);
     }
 

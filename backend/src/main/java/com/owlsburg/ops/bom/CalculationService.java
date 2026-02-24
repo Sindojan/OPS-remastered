@@ -99,6 +99,16 @@ public class CalculationService {
                 .orElseThrow(() -> new EntityNotFoundException("Calculation not found: " + id));
     }
 
+    @Transactional(readOnly = true)
+    public List<CalculationEntity> getHistoryByPart(UUID partId) {
+        return calculationRepository.findByPartIdOrderByCalculatedAtDesc(partId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CalculationEntity> getHistoryByBomVersion(UUID bomVersionId) {
+        return calculationRepository.findByBomVersionIdOrderByCalculatedAtDesc(bomVersionId);
+    }
+
     private BigDecimal calculateMaterialCost(UUID bomVersionId, int quantity) {
         List<BomItemEntity> items = bomItemRepository.findByBomVersionIdOrderByPositionAsc(bomVersionId);
         BigDecimal totalMaterialCost = BigDecimal.ZERO;
