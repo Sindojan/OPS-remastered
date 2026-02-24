@@ -84,6 +84,7 @@ export interface JobResponse {
   startedAt: string | null;
   completedAt: string | null;
   statusHistory: JobStatusHistoryResponse[];
+  overdue: boolean;
   createdAt: string;
   updatedAt: string;
 }

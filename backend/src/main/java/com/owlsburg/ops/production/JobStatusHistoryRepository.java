@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface JobStatusHistoryRepository extends JpaRepository<JobStatusHistoryEntity, UUID> {
 
     List<JobStatusHistoryEntity> findByJobIdOrderByChangedAtAsc(UUID jobId);
+
+    List<JobStatusHistoryEntity> findByJobIdInOrderByChangedAtAsc(List<UUID> jobIds);
 }

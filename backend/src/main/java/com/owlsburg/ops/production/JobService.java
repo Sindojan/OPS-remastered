@@ -5,12 +5,14 @@ import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class JobService {
@@ -67,7 +69,8 @@ public class JobService {
 
     @Transactional(readOnly = true)
     public Page<JobResponse> getAll(Pageable pageable) {
-        return jobRepository.findAll(pageable).map(this::toResponse);
+        Page<JobEntity> page = jobRepository.findAll(pageable);
+        return toBatchResponse(page);
     }
 
     @Transactional
@@ -153,12 +156,14 @@ public class JobService {
 
     @Transactional(readOnly = true)
     public Page<JobResponse> findByStatus(JobStatus status, Pageable pageable) {
-        return jobRepository.findByStatus(status, pageable).map(this::toResponse);
+        Page<JobEntity> page = jobRepository.findByStatus(status, pageable);
+        return toBatchResponse(page);
     }
 
     @Transactional(readOnly = true)
     public Page<JobResponse> findByCustomer(UUID customerId, Pageable pageable) {
-        return jobRepository.findByCustomerId(customerId, pageable).map(this::toResponse);
+        Page<JobEntity> page = jobRepository.findByCustomerId(customerId, pageable);
+        return toBatchResponse(page);
     }
 
     private void recordStatusChange(UUID jobId, JobStatus from, JobStatus to, UUID changedBy, String reason) {
@@ -177,14 +182,39 @@ public class JobService {
                 .orElseThrow(() -> new EntityNotFoundException("Job not found: " + id));
     }
 
+    private Page<JobResponse> toBatchResponse(Page<JobEntity> page) {
+        List<JobEntity> jobs = page.getContent();
+        if (jobs.isEmpty()) {
+            return page.map(this::toResponse);
+        }
+        List<UUID> jobIds = jobs.stream().map(JobEntity::getId).toList();
+        Map<UUID, List<JobStatusHistoryEntity>> historyByJobId =
+                statusHistoryRepository.findByJobIdInOrderByChangedAtAsc(jobIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(JobStatusHistoryEntity::getJobId));
+        List<JobResponse> responses = jobs.stream()
+                .map(job -> toResponse(job, historyByJobId.getOrDefault(job.getId(), List.of())))
+                .toList();
+        return new PageImpl<>(responses, page.getPageable(), page.getTotalElements());
+    }
+
     private JobResponse toResponse(JobEntity entity) {
-        List<JobStatusHistoryResponse> history = statusHistoryRepository
-                .findByJobIdOrderByChangedAtAsc(entity.getId())
-                .stream()
+        List<JobStatusHistoryEntity> history = statusHistoryRepository
+                .findByJobIdOrderByChangedAtAsc(entity.getId());
+        return toResponse(entity, history);
+    }
+
+    private JobResponse toResponse(JobEntity entity, List<JobStatusHistoryEntity> historyEntities) {
+        List<JobStatusHistoryResponse> history = historyEntities.stream()
                 .map(h -> new JobStatusHistoryResponse(
                         h.getId(), h.getFromStatus(), h.getToStatus(),
                         h.getChangedBy(), h.getChangedAt(), h.getReason()))
                 .toList();
+
+        boolean overdue = entity.getDeadline() != null
+                && entity.getDeadline().isBefore(Instant.now())
+                && entity.getStatus() != JobStatus.COMPLETED
+                && entity.getStatus() != JobStatus.CANCELLED;
 
         return new JobResponse(
                 entity.getId(),
@@ -202,6 +232,7 @@ public class JobService {
                 entity.getStartedAt(),
                 entity.getCompletedAt(),
                 history,
+                overdue,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

@@ -12,7 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class StockService {
@@ -60,9 +63,15 @@ public class StockService {
     @Transactional(readOnly = true)
     public List<CriticalArticleResponse> getCriticalArticles() {
         List<StockEntity> criticalStocks = stockRepository.findCriticalStock();
+        if (criticalStocks.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> articleIds = criticalStocks.stream().map(StockEntity::getArticleId).distinct().toList();
+        Map<UUID, ArticleEntity> articlesById = articleRepository.findAllById(articleIds)
+                .stream().collect(Collectors.toMap(ArticleEntity::getId, Function.identity()));
         return criticalStocks.stream()
                 .map(s -> {
-                    ArticleEntity article = articleRepository.findById(s.getArticleId()).orElse(null);
+                    ArticleEntity article = articlesById.get(s.getArticleId());
                     BigDecimal minStock = article != null ? article.getMinStock() : BigDecimal.ZERO;
                     return new CriticalArticleResponse(
                             s.getArticleId(),

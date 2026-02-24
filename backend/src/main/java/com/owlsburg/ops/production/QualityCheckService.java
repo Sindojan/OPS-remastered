@@ -66,9 +66,6 @@ public class QualityCheckService {
         defect.setSeverity(request.severity());
         qualityDefectRepository.save(defect);
 
-        check.setDefectCount(check.getDefectCount() + 1);
-        qualityCheckRepository.save(check);
-
         log.info("Added defect to quality check: {}", qualityCheckId);
         return toResponse(qualityCheckRepository.findById(qualityCheckId).orElseThrow());
     }
@@ -81,13 +78,15 @@ public class QualityCheckService {
                     .toList()
                 : List.of();
 
+        int computedDefectCount = defects.size();
+
         return new QualityCheckResponse(
                 entity.getId(),
                 entity.getJobId(),
                 entity.getCheckedBy(),
                 entity.getCheckType(),
                 entity.getResult(),
-                entity.getDefectCount(),
+                computedDefectCount,
                 entity.getNotes(),
                 entity.getCheckedAt(),
                 defects

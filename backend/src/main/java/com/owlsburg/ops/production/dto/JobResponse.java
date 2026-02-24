@@ -22,6 +22,7 @@ public record JobResponse(
         Instant startedAt,
         Instant completedAt,
         List<JobStatusHistoryResponse> statusHistory,
+        boolean overdue,
         Instant createdAt,
         Instant updatedAt
 ) {}

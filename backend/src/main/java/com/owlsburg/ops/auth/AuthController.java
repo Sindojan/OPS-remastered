@@ -27,17 +27,17 @@ public class AuthController {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final TenantService tenantService;
-    private final RefreshTokenBlacklistRepository blacklistRepository;
+    private final AuthService authService;
     private final LoginRateLimiter loginRateLimiter;
 
     public AuthController(UserService userService, JwtService jwtService, PasswordEncoder passwordEncoder,
-                          TenantService tenantService, RefreshTokenBlacklistRepository blacklistRepository,
+                          TenantService tenantService, AuthService authService,
                           LoginRateLimiter loginRateLimiter) {
         this.userService = userService;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.tenantService = tenantService;
-        this.blacklistRepository = blacklistRepository;
+        this.authService = authService;
         this.loginRateLimiter = loginRateLimiter;
     }
 
@@ -101,7 +101,7 @@ public class AuthController {
 
         String tokenHash = JwtService.hashToken(refreshToken);
 
-        if (blacklistRepository.existsByTokenHash(tokenHash)) {
+        if (authService.isTokenBlacklisted(tokenHash)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Token has been revoked"));
         }
@@ -115,10 +115,7 @@ public class AuthController {
         }
 
         // Blacklist old refresh token
-        RefreshTokenBlacklistEntity blacklistEntry = new RefreshTokenBlacklistEntity();
-        blacklistEntry.setTokenHash(tokenHash);
-        blacklistEntry.setExpiredAt(jwtService.getExpiration(refreshToken).toInstant());
-        blacklistRepository.save(blacklistEntry);
+        authService.blacklistToken(tokenHash, jwtService.getExpiration(refreshToken).toInstant());
 
         // Generate new tokens
         String tenantId = jwtService.getTenantId(refreshToken);
@@ -134,12 +131,7 @@ public class AuthController {
 
         if (jwtService.isTokenValid(refreshToken)) {
             String tokenHash = JwtService.hashToken(refreshToken);
-            if (!blacklistRepository.existsByTokenHash(tokenHash)) {
-                RefreshTokenBlacklistEntity blacklistEntry = new RefreshTokenBlacklistEntity();
-                blacklistEntry.setTokenHash(tokenHash);
-                blacklistEntry.setExpiredAt(jwtService.getExpiration(refreshToken).toInstant());
-                blacklistRepository.save(blacklistEntry);
-            }
+            authService.blacklistToken(tokenHash, jwtService.getExpiration(refreshToken).toInstant());
         }
 
         return ResponseEntity.ok(ApiResponse.ok(null, "Logged out successfully"));
