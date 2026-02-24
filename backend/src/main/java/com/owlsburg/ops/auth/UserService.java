@@ -103,6 +103,11 @@ public class UserService {
     }
 
     @Transactional
+    public UserEntity save(UserEntity user) {
+        return userRepository.save(user);
+    }
+
+    @Transactional
     public void resetPassword(UUID id, String newPassword) {
         UserEntity user = findById(id);
         user.setPasswordHash(passwordEncoder.encode(newPassword));

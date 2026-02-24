@@ -17,11 +17,37 @@ export interface PageResponse<T> {
 
 // ─── Auth ───────────────────────────────────────────────
 
+export interface UserResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  active: boolean;
+  tenantId: string;
+  createdAt: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
-  email: string;
+  user: UserResponse;
+}
+
+export interface PrimaryAgentInfo {
+  id: string;
+  name: string;
   role: string;
+}
+
+export interface MeResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  tenantId: string;
+  primaryAgentInstance: PrimaryAgentInfo | null;
 }
 
 // ─── LLM Config ─────────────────────────────────────────
@@ -651,6 +677,20 @@ export interface JobCalculationResponse {
   actualTotalCost: number | null;
   variancePercent: number | null;
   finalizedAt: string | null;
+}
+
+// ─── Role Agent Defaults ────────────────────────────────
+
+export interface RoleAgentDefaultResponse {
+  id: string;
+  role: string;
+  agentInstanceId: string;
+  agentInstanceName: string;
+}
+
+export interface RoleAgentDefaultUpdateRequest {
+  role: string;
+  agentInstanceId: string;
 }
 
 // ─── Events ─────────────────────────────────────────────

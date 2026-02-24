@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PageHeader } from "@/components/shared/page-header";
-import { LoginGate } from "@/components/shared/login-gate";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { apiClient } from "@/lib/api-client";
@@ -29,12 +28,15 @@ import {
   XCircle,
   Zap,
   Loader2,
+  Shield,
 } from "lucide-react";
 import type {
   ApiResponse,
   LlmConfig,
   AgentInstance,
   AgentTemplate,
+  RoleAgentDefaultResponse,
+  RoleAgentDefaultUpdateRequest,
 } from "@/types/api";
 import { toast } from "sonner";
 
@@ -530,12 +532,201 @@ function AgentInstancesTab() {
   );
 }
 
+// ============ Role Agent Defaults Tab ============
+
+const ROLES = ["ADMIN", "MANAGER", "TEAM_LEAD", "WORKER"] as const;
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  MANAGER: "Manager",
+  TEAM_LEAD: "Team Lead",
+  WORKER: "Worker",
+};
+
+function RoleAgentTab() {
+  const [defaults, setDefaults] = useState<RoleAgentDefaultResponse[]>([]);
+  const [instances, setInstances] = useState<AgentInstance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [defaultsRes, instancesRes] = await Promise.all([
+        apiClient
+          .get<ApiResponse<RoleAgentDefaultResponse[]>>(
+            "/api/settings/role-agent-defaults"
+          )
+          .catch(() => ({ data: [] as RoleAgentDefaultResponse[] })),
+        apiClient.get<ApiResponse<AgentInstance[]>>("/api/agent-instances"),
+      ]);
+
+      setDefaults(defaultsRes.data);
+      setInstances(instancesRes.data);
+
+      const map: Record<string, string> = {};
+      defaultsRes.data.forEach((d) => {
+        map[d.role] = d.agentInstanceId;
+      });
+      setAssignments(map);
+    } catch {
+      // API not available
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const activeInstances = instances.filter((i) => i.status === "ACTIVE");
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updates: RoleAgentDefaultUpdateRequest[] = Object.entries(
+        assignments
+      )
+        .filter(([, id]) => id)
+        .map(([role, agentInstanceId]) => ({ role, agentInstanceId }));
+
+      await apiClient.put<ApiResponse<RoleAgentDefaultResponse[]>>(
+        "/api/settings/role-agent-defaults",
+        updates
+      );
+      toast.success("Rollen-Zuweisungen gespeichert");
+      await fetchData();
+    } catch (err) {
+      toast.error("Fehler beim Speichern", {
+        description:
+          err instanceof Error ? err.message : "Unbekannter Fehler",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getInstanceName = (instanceId: string) => {
+    const inst = instances.find((i) => i.id === instanceId);
+    return inst?.name || null;
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        {ROLES.map((role) => (
+          <Skeleton key={role} className="h-16 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="border-border/50">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base">
+          Rollen-Default-Zuweisungen
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Jede Rolle hat einen Standard-Agent zugewiesen. Benutzer sehen diesen
+          Agent im Agent Panel.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Role rows */}
+        <div className="rounded-md border border-border/50">
+          <div className="grid grid-cols-[1fr_2fr] gap-4 border-b border-border/50 px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span>Rolle</span>
+            <span>Zugewiesener Agent</span>
+          </div>
+          {ROLES.map((role) => {
+            const currentName = assignments[role]
+              ? getInstanceName(assignments[role])
+              : null;
+            return (
+              <div
+                key={role}
+                className="grid grid-cols-[1fr_2fr] items-center gap-4 border-b border-border/50 px-4 py-3 last:border-b-0"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                    <Shield className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium">
+                      {ROLE_LABELS[role]}
+                    </span>
+                    <span className="ml-2 font-mono text-xs text-muted-foreground">
+                      {role}
+                    </span>
+                  </div>
+                </div>
+                <Select
+                  value={assignments[role] || ""}
+                  onValueChange={(value) =>
+                    setAssignments((prev) => ({ ...prev, [role]: value }))
+                  }
+                >
+                  <SelectTrigger className="w-full max-w-sm">
+                    <SelectValue placeholder="Agent auswählen...">
+                      {currentName ? (
+                        <span className="flex items-center gap-1.5">
+                          <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+                          {currentName}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Agent auswählen...
+                        </span>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeInstances.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        <span className="flex items-center gap-1.5">
+                          <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+                          {inst.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Save button */}
+        <div className="flex items-center gap-3 pt-2">
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {saving ? "Speichern..." : "Speichern"}
+          </Button>
+          {defaults.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {defaults.length} Zuweisung{defaults.length !== 1 ? "en" : ""}{" "}
+              konfiguriert
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ============ Main Settings Page ============
 
 export default function SettingsPage() {
   return (
-    <LoginGate>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <PageHeader
           title="Settings"
           description="System configuration and LLM provider management"
@@ -560,6 +751,10 @@ export default function SettingsPage() {
               <Bot className="h-3.5 w-3.5" />
               Agent Instances
             </TabsTrigger>
+            <TabsTrigger value="roles" className="gap-1.5">
+              <Shield className="h-3.5 w-3.5" />
+              Rollen & Agents
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="llm">
@@ -569,8 +764,11 @@ export default function SettingsPage() {
           <TabsContent value="instances">
             <AgentInstancesTab />
           </TabsContent>
+
+          <TabsContent value="roles">
+            <RoleAgentTab />
+          </TabsContent>
         </Tabs>
       </div>
-    </LoginGate>
   );
 }

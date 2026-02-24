@@ -13,6 +13,7 @@ public record UserResponse(
         String lastName,
         Role role,
         boolean active,
+        UUID tenantId,
         Instant createdAt
 ) {
     public static UserResponse from(UserEntity entity) {
@@ -23,6 +24,7 @@ public record UserResponse(
                 entity.getLastName(),
                 entity.getRole(),
                 entity.isActive(),
+                entity.getTenantId(),
                 entity.getCreatedAt()
         );
     }

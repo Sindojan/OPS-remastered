@@ -44,6 +44,9 @@ public class UserEntity {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "primary_agent_instance_id")
+    private UUID primaryAgentInstanceId;
+
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private Instant createdAt;

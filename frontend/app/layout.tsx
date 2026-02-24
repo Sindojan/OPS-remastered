@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/sonner";
 
 const dmSans = DM_Sans({
@@ -33,8 +33,10 @@ export default function RootLayout({
         className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <AppShell>{children}</AppShell>
-          <Toaster richColors position="bottom-right" />
+          <AuthProvider>
+            {children}
+            <Toaster richColors position="bottom-right" />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

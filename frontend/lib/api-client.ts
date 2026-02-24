@@ -3,7 +3,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 class ApiClient {
   private getToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('accessToken');
+    return localStorage.getItem('owlsburg_token');
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -22,9 +22,12 @@ class ApiClient {
     });
 
     if (response.status === 401) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      window.location.reload();
+      localStorage.removeItem('owlsburg_token');
+      localStorage.removeItem('owlsburg_user');
+      localStorage.removeItem('owlsburg_refresh_token');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
       throw new Error('Unauthorized');
     }
 

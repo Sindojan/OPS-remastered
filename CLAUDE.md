@@ -12,8 +12,9 @@
 |-------|-------------|
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS v4, TypeScript |
 | Backend | Spring Boot 3.5.0, Java 21, Maven |
-| Datenbank | PostgreSQL (Multi-Schema per Tenant) |
-| Migrations | Flyway (programmatisch, pro Schema) |
+| Datenbank | PostgreSQL (Single-Schema mit Row Level Security) |
+| Migrations | Flyway (programmatisch, flache Struktur) |
+| Rate Limiting | Bucket4j (Login: 10 req/min pro IP) |
 | Auth | JWT (JJWT 0.12.6, stateless), Spring Security |
 | Dateispeicher | MinIO (Dokumente, Binärdateien) |
 | Typografie | DM Sans (body) + JetBrains Mono (mono/data) |
@@ -24,7 +25,7 @@
 
 1. **Deterministisch** – Alle Geschäftslogik ist deterministisch. Kein LLM in Domänenlogik.
 2. **Modularer Monolith** – Package-by-Domain, kein Microservice-Split.
-3. **Multi-Schema ab Tag 1** – Jeder Tenant hat ein eigenes PostgreSQL-Schema. Nicht verhandelbar.
+3. **RLS ab Tag 1** – Single-Schema mit PostgreSQL Row Level Security. Alle Tabellen haben `tenant_id`, RLS-Policies filtern automatisch. Nicht verhandelbar.
 4. **Kein LLM in Domänenlogik** – LLM-Agenten greifen nur über Tool Registry auf Services zu.
 5. **Tool Registry für Agents** – Einzige Schnittstelle zwischen Agent-Runtime und Domain-Services.
 6. **Cost Control** – Token-Verbrauch und Kosten werden von Anfang an in AgentRun erfasst.
@@ -34,7 +35,7 @@
 - Kein Agent schreibt außerhalb seines definierten Layers
 - Kein direkter DB-Zugriff durch Agent-Layer
 - Alle Statusübergänge sind deterministisch
-- Multi-Schema-Isolation ist nicht verhandelbar
+- RLS-Isolation ist nicht verhandelbar (jede Tabelle hat tenant_id + RLS Policy)
 - Frontend: shadcn/ui + Tailwind only, keine eigenen CSS-Klassen
 - Backend: Controller → Service → Repository (nie überspringen)
 
@@ -76,11 +77,11 @@ sindojan_ops_remastered/
 └── backend/                         # Spring Boot Backend
     ├── pom.xml
     └── src/main/java/com/owlsburg/ops/
-        ├── common/                  # BaseEntity, TenantContext, Exceptions
-        ├── config/                  # Security, JPA, Flyway, CORS, MinIO, PasswordEncoder
-        ├── auth/                    # JWT, Login, User-CRUD, Rollen
+        ├── common/                  # BaseEntity, TenantAwareBaseEntity, TenantContext, Exceptions
+        ├── config/                  # Security, JPA, Flyway, CORS, MinIO, RlsTenantInterceptor, LoginRateLimiter
+        ├── auth/                    # JWT, Login, AuthService, User-CRUD, Rollen
         │   └── dto/                 # Auth DTOs (LoginRequest, UserResponse, etc.)
-        ├── tenant/                  # Tenant-Management, Schema-Provisionierung
+        ├── tenant/                  # Tenant-Management
         │   └── dto/                 # Tenant DTOs
         ├── customers/               # Kunden, Kontakte, Adressen, Preisgruppen
         │   └── dto/
@@ -131,7 +132,7 @@ sindojan_ops_remastered/
 |------|-------------|--------|
 | TASK-SETUP-001 | Claude Agent Struktur & Skill-Files | ✅ |
 | TASK-BE-001 | Spring Boot Projektstruktur | ✅ |
-| TASK-BE-002 | PostgreSQL Multi-Schema & Flyway | ✅ |
+| TASK-BE-002 | PostgreSQL & Flyway | ✅ |
 
 ### Block 4+5: Auth, Tenant & vollständige Domänenarchitektur ✅
 | Task | Beschreibung | Status |
@@ -170,6 +171,14 @@ sindojan_ops_remastered/
 | TASK-FE-012 | People Views (Mitarbeiter, Zeiterfassung, My Day) | `c5df042` |
 | TASK-FE-013 | Inbox (Split-Layout, Chat, Konversationen) | `5672775` |
 | TASK-FE-014 | Reports (KPI Dashboard, Charts, CSV Export) | `5672775` |
+
+### Block 8: RLS Migration & Rebranding ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| FIX-BLOCK-A | Multi-Schema → Single-Schema RLS, Rebranding Sindoflow → Owlsburg | `c783058` |
+| REVIEW-001 | System-Review (DB, Auth, Domain, Code Quality, Frontend) | – |
+| FIX-BLOCK-B | CORS Fix, AuthService Extract, N+1 Fixes, Overdue Flag | `25a5fa1` |
+| CORS-FIX | CORS @Value comma-separated string Fix | `edca221` |
 
 ## Arbeitsweise mit Agents
 
@@ -233,31 +242,38 @@ Zuordnung:
 
 ## Flyway Migrationen
 
-| Schema | Migration | Inhalt |
-|--------|----------|--------|
-| public | V1__init_public.sql | Tenants-Tabelle |
-| tenant | V1__init_tenant_schema.sql | Platzhalter |
-| tenant | V2__users_and_auth.sql | Users, Refresh Token Blacklist, Default Admin |
-| tenant | V3__full_schema.sql | Alle Domänen-Tabellen, 25 Enums, ~80 Indizes |
-| tenant | V4__llm_config.sql | tenant_llm_config (Provider, API Key encrypted, Model) |
-| tenant | V5__seed_agent_templates.sql | 8 Agent Templates (CEO + 7 Leads) |
-| tenant | V6__seed_agent_instances.sql | 8 Agent Instances (PERSISTENT, ACTIVE) |
-| tenant | V7__event_subscriptions_and_triggers.sql | Event Subscriptions + Scheduled Triggers |
+Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
+
+| Migration | Inhalt |
+|----------|--------|
+| V1__init_public.sql | Tenants, Users (mit tenant_id FK), Refresh Token Blacklist, Default Tenant + Admin |
+| V2__full_schema.sql | Alle Domänen-Tabellen – jede mit `tenant_id UUID NOT NULL REFERENCES tenants(id)` + Index |
+| V3__rls_policies.sql | `current_tenant_id()` Funktion + RLS Policies für alle tenant_id-Tabellen |
+| V4__seed_agents.sql | Agent Templates, Instances, Event Subscriptions, Scheduled Triggers (mit tenant_id) |
 
 ## Default Admin
 
 - **Email:** software@sindojan.de
 - **Passwort:** root1234
 - **Rolle:** ADMIN
-- Wird automatisch bei jeder neuen Tenant-Schema-Erstellung angelegt (via V2 Migration)
+- Wird in V1 Migration angelegt (Default Tenant + Admin User)
 
 ## Rollen
 
 `ADMIN`, `MANAGER`, `TEAM_LEAD`, `WORKER`, `AGENT_SYSTEM`
 
+## Multi-Tenancy (RLS)
+
+- **Architektur:** Single-Schema, alle Tabellen in `public` Schema mit `tenant_id` Spalte
+- **RLS Enforcement:** `TenantAwareDataSource` (DelegatingDataSource) setzt `set_config('app.current_tenant', ?, false)` auf jeder JDBC Connection
+- **BaseEntity:** Hat `tenant_id` Feld, `@PrePersist` setzt aus `TenantContext`
+- **TenantAwareBaseEntity:** MappedSuperclass für Entities die nicht BaseEntity erweitern (z.B. Join-Tables, History)
+- **Ausnahmen (kein RLS):** TenantEntity, UserEntity (eigene tenant_id Logik), RefreshTokenBlacklistEntity (global)
+- **Login:** Nur email + password, tenantId wird aus User-Record gelesen
+
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-02-23
-**Session:** Block 7 komplett (Alle Frontend OPS-Views implementiert)
-**Status:** Backend ~400 Java-Dateien, alle APIs getestet. Frontend hat alle Domain-Views: Production (Jobs, Planner, Stations), Machines (Detail, Wartung, Störungen), Inventory (Artikel, Lieferanten, Bewegungen), People (Mitarbeiter, Zeiterfassung, Abwesenheiten, My Day), Inbox (Split-Layout Chat), Reports (KPI Dashboard, Charts, CSV Export). Alles TypeScript-fehlerfrei.
+**Session:** Block 8 komplett (RLS Migration, Rebranding, System-Review, Bugfixes)
+**Status:** Backend ~430 Java-Dateien. Single-Schema RLS statt Multi-Schema. Login getestet, Anwendung läuft. Frontend alle Domain-Views implementiert. TypeScript-fehlerfrei.
 **Nächster Block:** Agent Console (Chat-Interface, Agent Hierarchy, Live-Runs) oder End-to-End-Testing mit echtem Backend

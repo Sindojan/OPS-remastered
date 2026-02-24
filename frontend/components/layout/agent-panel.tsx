@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Bot, X, Sparkles } from "lucide-react";
+import { usePrimaryAgent } from "@/hooks/use-primary-agent";
 
 interface AgentPanelProps {
   open: boolean;
@@ -9,6 +10,8 @@ interface AgentPanelProps {
 }
 
 export function AgentPanel({ open, onClose }: AgentPanelProps) {
+  const { agent } = usePrimaryAgent();
+
   if (!open) return null;
 
   return (
@@ -20,7 +23,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
             <Bot className="h-3.5 w-3.5 text-primary" />
           </div>
-          <span className="text-[13px] font-semibold">CEO Agent</span>
+          <span className="text-[13px] font-semibold">{agent?.name ?? "Agent"}</span>
         </div>
         <Button
           variant="ghost"

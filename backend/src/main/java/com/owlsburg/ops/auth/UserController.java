@@ -1,5 +1,12 @@
 package com.owlsburg.ops.auth;
 
+import com.owlsburg.ops.agentinfra.AgentInstanceEntity;
+import com.owlsburg.ops.agentinfra.AgentTemplateEntity;
+import com.owlsburg.ops.agentinfra.AgentTemplateRepository;
+import com.owlsburg.ops.agentinfra.PrimaryAgentService;
+import com.owlsburg.ops.agentinfra.dto.MeResponse;
+import com.owlsburg.ops.agentinfra.dto.PrimaryAgentResponse;
+import com.owlsburg.ops.agentinfra.dto.PrimaryAgentUpdateRequest;
 import com.owlsburg.ops.auth.dto.*;
 import com.owlsburg.ops.common.ApiResponse;
 import com.owlsburg.ops.common.TenantContext;
@@ -9,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -18,9 +26,15 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final PrimaryAgentService primaryAgentService;
+    private final AgentTemplateRepository agentTemplateRepository;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService,
+                          PrimaryAgentService primaryAgentService,
+                          AgentTemplateRepository agentTemplateRepository) {
         this.userService = userService;
+        this.primaryAgentService = primaryAgentService;
+        this.agentTemplateRepository = agentTemplateRepository;
     }
 
     @GetMapping
@@ -82,5 +96,41 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> resetPassword(@PathVariable UUID id, @Valid @RequestBody PasswordResetRequest request) {
         userService.resetPassword(id, request.newPassword());
         return ResponseEntity.ok(ApiResponse.ok(null, "Password reset successfully"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<MeResponse>> me(Authentication authentication) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        UserEntity user = userService.findById(userId);
+
+        AgentInstanceEntity agentInstance = primaryAgentService.resolveForUser(user);
+        PrimaryAgentResponse agentResponse = null;
+        if (agentInstance != null) {
+            AgentTemplateEntity template = agentTemplateRepository.findById(agentInstance.getTemplateId())
+                    .orElse(null);
+            agentResponse = PrimaryAgentResponse.from(agentInstance, template);
+        }
+
+        MeResponse response = new MeResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getRole().name(),
+                user.getTenantId(),
+                agentResponse
+        );
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PatchMapping("/{id}/primary-agent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> updatePrimaryAgent(
+            @PathVariable UUID id,
+            @RequestBody PrimaryAgentUpdateRequest request) {
+        UserEntity user = userService.findById(id);
+        user.setPrimaryAgentInstanceId(request.agentInstanceId());
+        UserEntity saved = userService.save(user);
+        return ResponseEntity.ok(ApiResponse.ok(UserResponse.from(saved)));
     }
 }
