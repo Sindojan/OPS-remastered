@@ -41,9 +41,7 @@ encryption:
   key: ${ENCRYPTION_KEY:default-dev-key-change-in-prod-32ch}
 
 cors:
-  allowed-origins:
-    - http://localhost:3000
-    - http://localhost:4201
+  allowed-origins: http://localhost:3000,http://localhost:4201
 
 server:
   port: 8080
