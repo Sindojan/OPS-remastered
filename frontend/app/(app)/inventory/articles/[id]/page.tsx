@@ -139,7 +139,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
     header: "Von",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
-        {row.fromLocationId ? row.fromLocationId.slice(0, 8) + "..." : "\u2013"}
+        {row.fromLocationId ? row.fromLocationId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -149,7 +149,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
     header: "Nach",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
-        {row.toLocationId ? row.toLocationId.slice(0, 8) + "..." : "\u2013"}
+        {row.toLocationId ? row.toLocationId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -159,7 +159,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
     header: "Referenz",
     cell: (row) => (
       <span className="font-mono text-xs text-muted-foreground">
-        {row.referenceType ? `${row.referenceType}` : "\u2013"}
+        {row.referenceType ? `${row.referenceType}` : "–"}
       </span>
     ),
     sortable: false,
@@ -169,7 +169,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
     header: "Durchgefuehrt von",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
-        {row.performedBy ?? "\u2013"}
+        {row.performedBy ?? "–"}
       </span>
     ),
     sortable: false,
@@ -179,7 +179,7 @@ const movementColumns: ColumnDef<MovementResponse>[] = [
     header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
-        {row.notes ?? "\u2013"}
+        {row.notes ?? "–"}
       </span>
     ),
     sortable: false,
@@ -322,7 +322,7 @@ export default function ArticleDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${article.articleNumber} \u2014 ${article.name}`}
+        title={`${article.articleNumber} — ${article.name}`}
         breadcrumb={["Lager", article.articleNumber]}
         actions={
           <Button
@@ -432,16 +432,16 @@ export default function ArticleDetailPage() {
                 <DetailField label="Name" value={article.name} />
                 <DetailField
                   label="Beschreibung"
-                  value={article.description ?? "\u2013"}
+                  value={article.description ?? "–"}
                   className="col-span-full"
                 />
                 <DetailField
                   label="Kategorie"
-                  value={article.categoryId ? article.categoryId.slice(0, 8) + "..." : "\u2013"}
+                  value={article.categoryId ? article.categoryId.slice(0, 8) + "..." : "–"}
                 />
                 <DetailField
                   label="Einheit"
-                  value={article.unitId ? article.unitId.slice(0, 8) + "..." : "\u2013"}
+                  value={article.unitId ? article.unitId.slice(0, 8) + "..." : "–"}
                 />
                 <DetailField label="Mindestbestand" value={formatNumber(article.minStock)} mono />
                 <DetailField label="Nachbestellgrenze" value={formatNumber(article.reorderPoint)} mono />

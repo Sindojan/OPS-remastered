@@ -119,7 +119,7 @@ const articleColumns: ColumnDef<ArticleResponse>[] = [
     header: "Kategorie",
     cell: (row) => (
       <span className="text-muted-foreground text-xs">
-        {row.categoryId ? row.categoryId.slice(0, 8) + "..." : "\u2013"}
+        {row.categoryId ? row.categoryId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -129,7 +129,7 @@ const articleColumns: ColumnDef<ArticleResponse>[] = [
     header: "Einheit",
     cell: (row) => (
       <span className="text-muted-foreground text-xs">
-        {row.unitId ? row.unitId.slice(0, 8) + "..." : "\u2013"}
+        {row.unitId ? row.unitId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -179,7 +179,7 @@ const supplierColumns: ColumnDef<SupplierResponse>[] = [
             {row.contactName}
           </>
         ) : (
-          <span className="text-muted-foreground">{"\u2013"}</span>
+          <span className="text-muted-foreground">{"–"}</span>
         )}
       </span>
     ),
@@ -195,7 +195,7 @@ const supplierColumns: ColumnDef<SupplierResponse>[] = [
             {row.email}
           </>
         ) : (
-          "\u2013"
+          "–"
         )}
       </span>
     ),
@@ -211,7 +211,7 @@ const supplierColumns: ColumnDef<SupplierResponse>[] = [
             {row.phone}
           </>
         ) : (
-          "\u2013"
+          "–"
         )}
       </span>
     ),
@@ -419,12 +419,12 @@ export default function InventoryPage() {
             />
             <KpiCard
               label="Bewegungen heute"
-              value={"\u2013"}
+              value={"–"}
               trend={{ direction: "neutral", value: "Erfassung ausstehend" }}
             />
             <KpiCard
               label="Gesamtwert"
-              value={"\u2013"}
+              value={"–"}
               trend={{ direction: "neutral", value: "Bewertung ausstehend" }}
             />
           </>

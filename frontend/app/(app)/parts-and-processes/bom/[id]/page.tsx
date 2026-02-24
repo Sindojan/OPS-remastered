@@ -85,7 +85,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
     header: "Einheit",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
-        {row.unitId ? row.unitId.slice(0, 8) + "..." : "\u2013"}
+        {row.unitId ? row.unitId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -95,7 +95,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
     header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
-        {row.notes ?? "\u2013"}
+        {row.notes ?? "–"}
       </span>
     ),
     sortable: false,

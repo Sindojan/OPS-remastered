@@ -113,7 +113,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
     header: "Einheit",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
-        {row.unitId ? row.unitId.slice(0, 8) + "..." : "\u2013"}
+        {row.unitId ? row.unitId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -123,7 +123,7 @@ const bomItemColumns: ColumnDef<BomItemResponse>[] = [
     header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
-        {row.notes ?? "\u2013"}
+        {row.notes ?? "–"}
       </span>
     ),
     sortable: false,
@@ -393,7 +393,7 @@ export default function PartDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${part.partNumber} \u2014 ${part.name}`}
+        title={`${part.partNumber} — ${part.name}`}
         breadcrumb={["Teile & Prozesse", part.partNumber]}
         actions={
           <Button
@@ -495,7 +495,7 @@ export default function PartDetailPage() {
                 <DetailField label="Name" value={part.name} />
                 <DetailField
                   label="Beschreibung"
-                  value={part.description ?? "\u2013"}
+                  value={part.description ?? "–"}
                   className="col-span-full"
                 />
                 <div className="space-y-1">
@@ -510,7 +510,7 @@ export default function PartDetailPage() {
                     {humanizeStatus(part.status)}
                   </DomainStatusBadge>
                 </div>
-                <DetailField label="Einheit" value={part.unitId ? part.unitId.slice(0, 8) + "..." : "\u2013"} />
+                <DetailField label="Einheit" value={part.unitId ? part.unitId.slice(0, 8) + "..." : "–"} />
                 <DetailField label="Erstellt" value={formatDate(part.createdAt)} mono />
               </div>
             )}

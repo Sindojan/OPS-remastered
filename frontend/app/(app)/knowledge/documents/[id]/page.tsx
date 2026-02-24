@@ -47,7 +47,7 @@ function getFileIcon(mimeType: string | null) {
 }
 
 function formatFileSize(bytes: number | null) {
-  if (!bytes) return "\u2013";
+  if (!bytes) return "–";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -66,7 +66,7 @@ function getDocStatusLabel(status: string) {
   switch (status) {
     case "ACTIVE": return "Aktiv";
     case "ARCHIVED": return "Archiviert";
-    case "DELETED": return "Gel\u00f6scht";
+    case "DELETED": return "Gelöscht";
     default: return status;
   }
 }
@@ -117,7 +117,7 @@ export default function DocumentDetailPage() {
         title: editTitle,
         description: editDesc || undefined,
       });
-      toast.success("\u00c4nderungen gespeichert");
+      toast.success("Änderungen gespeichert");
       refetch();
     } catch (err) {
       toast.error("Speichern fehlgeschlagen", {
@@ -141,10 +141,10 @@ export default function DocumentDetailPage() {
     if (!document) return;
     try {
       await documentMutations.deleteDocument(document.id);
-      toast.success("Dokument gel\u00f6scht");
+      toast.success("Dokument gelöscht");
       router.push("/knowledge/documents");
     } catch (err) {
-      toast.error("L\u00f6schen fehlgeschlagen", {
+      toast.error("Löschen fehlgeschlagen", {
         description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
@@ -179,7 +179,7 @@ export default function DocumentDetailPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-sm text-muted-foreground">{error ?? "Dokument nicht gefunden"}</p>
         <Button variant="outline" size="sm" onClick={() => router.push("/knowledge/documents")}>
-          Zur\u00fcck zu Dokumenten
+          Zurück zu Dokumenten
         </Button>
       </div>
     );
@@ -203,7 +203,7 @@ export default function DocumentDetailPage() {
               onClick={() => router.push("/knowledge/documents")}
             >
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-              Zur\u00fcck
+              Zurück
             </Button>
             <Button
               variant="outline"
@@ -221,7 +221,7 @@ export default function DocumentDetailPage() {
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              L\u00f6schen
+              Löschen
             </Button>
           </div>
         }
@@ -247,7 +247,7 @@ export default function DocumentDetailPage() {
               <div className="flex flex-col items-center justify-center gap-4 p-12">
                 <IconComp className="h-16 w-16 text-muted-foreground/30" />
                 <p className="text-sm text-muted-foreground">
-                  Keine Vorschau verf\u00fcgbar
+                  Keine Vorschau verfügbar
                 </p>
                 <Button
                   variant="outline"
@@ -300,7 +300,7 @@ export default function DocumentDetailPage() {
                   onClick={handleSave}
                 >
                   <Save className="h-3.5 w-3.5" />
-                  {saving ? "Wird gespeichert..." : "\u00c4nderungen speichern"}
+                  {saving ? "Wird gespeichert..." : "Änderungen speichern"}
                 </Button>
               )}
             </div>
@@ -309,9 +309,9 @@ export default function DocumentDetailPage() {
 
             <div className="space-y-2.5">
               <DetailRow label="Dateiname" value={document.fileName} mono />
-              <DetailRow label="Typ" value={document.mimeType ?? "\u2013"} />
-              <DetailRow label="Gr\u00f6\u00dfe" value={formatFileSize(document.fileSizeBytes)} mono />
-              <DetailRow label="Kategorie" value={document.category ?? "\u2013"} />
+              <DetailRow label="Typ" value={document.mimeType ?? "–"} />
+              <DetailRow label="Größe" value={formatFileSize(document.fileSizeBytes)} mono />
+              <DetailRow label="Kategorie" value={document.category ?? "–"} />
               <DetailRow label="Version" value={String(document.version)} mono />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Status</span>
@@ -325,7 +325,7 @@ export default function DocumentDetailPage() {
                 mono
               />
               <DetailRow
-                label="Zuletzt ge\u00e4ndert"
+                label="Zuletzt geändert"
                 value={formatDate(document.updatedAt)}
                 mono
               />
@@ -337,10 +337,10 @@ export default function DocumentDetailPage() {
       {/* Delete Confirmation */}
       <ConfirmationDialog
         open={deleteOpen}
-        title="Dokument l\u00f6schen"
-        description={`M\u00f6chten Sie "${document.fileName}" wirklich l\u00f6schen? Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.`}
+        title="Dokument löschen"
+        description={`Möchten Sie "${document.fileName}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
         variant="destructive"
-        confirmLabel="L\u00f6schen"
+        confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         onConfirm={handleDelete}
         onCancel={() => setDeleteOpen(false)}

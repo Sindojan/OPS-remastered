@@ -71,7 +71,7 @@ function getFileIcon(mimeType: string | null) {
 }
 
 function formatFileSize(bytes: number | null) {
-  if (!bytes) return "\u2013";
+  if (!bytes) return "–";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -89,7 +89,7 @@ function getArticleStatusVariant(status: string) {
 function getArticleStatusLabel(status: string) {
   switch (status) {
     case "DRAFT": return "Entwurf";
-    case "PUBLISHED": return "Ver\u00f6ffentlicht";
+    case "PUBLISHED": return "Veröffentlicht";
     case "ARCHIVED": return "Archiviert";
     default: return status;
   }
@@ -254,7 +254,7 @@ export default function KnowledgePage() {
               value={String(kpis.totalArticles)}
             />
             <KpiCard
-              label="Ver\u00f6ffentlicht"
+              label="Veröffentlicht"
               value={String(kpis.publishedArticles)}
               trend={
                 kpis.totalArticles > 0
@@ -520,7 +520,7 @@ export default function KnowledgePage() {
               Dokument hochladen
             </DialogTitle>
             <DialogDescription>
-              Datei per Drag & Drop oder \u00fcber den Button ausw\u00e4hlen.
+              Datei per Drag & Drop oder über den Button auswählen.
             </DialogDescription>
           </DialogHeader>
 
@@ -716,7 +716,7 @@ function ArticleCard({
 
       <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
         {article.authorName && <span>{article.authorName}</span>}
-        {article.authorName && <span>\u00b7</span>}
+        {article.authorName && <span>·</span>}
         <span className="font-mono">{formatDate(article.publishedAt ?? article.createdAt)}</span>
       </div>
     </Card>
@@ -744,7 +744,7 @@ function DocumentRow({
         <p className="truncate text-sm font-medium">{document.fileName}</p>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="font-mono">{formatFileSize(document.fileSizeBytes)}</span>
-          <span>\u00b7</span>
+          <span>·</span>
           <span className="font-mono">{formatDate(document.createdAt)}</span>
         </div>
       </div>

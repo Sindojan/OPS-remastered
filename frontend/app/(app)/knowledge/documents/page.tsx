@@ -61,7 +61,7 @@ function getFileIcon(mimeType: string | null) {
 }
 
 function formatFileSize(bytes: number | null) {
-  if (!bytes) return "\u2013";
+  if (!bytes) return "–";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -80,7 +80,7 @@ function getDocStatusLabel(status: string) {
   switch (status) {
     case "ACTIVE": return "Aktiv";
     case "ARCHIVED": return "Archiviert";
-    case "DELETED": return "Gel\u00f6scht";
+    case "DELETED": return "Gelöscht";
     default: return status;
   }
 }
@@ -168,12 +168,12 @@ export default function DocumentsPage() {
         id: "category",
         header: "Kategorie",
         cell: (row) => (
-          <span className="text-xs text-muted-foreground">{row.category ?? "\u2013"}</span>
+          <span className="text-xs text-muted-foreground">{row.category ?? "–"}</span>
         ),
       },
       {
         id: "size",
-        header: "Gr\u00f6\u00dfe",
+        header: "Größe",
         cell: (row) => (
           <span className="font-mono text-xs text-muted-foreground">
             {formatFileSize(row.fileSizeBytes)}
@@ -257,11 +257,11 @@ export default function DocumentsPage() {
     if (!deleteTarget) return;
     try {
       await documentMutations.deleteDocument(deleteTarget.id);
-      toast.success("Dokument gel\u00f6scht");
+      toast.success("Dokument gelöscht");
       setDeleteTarget(null);
       refetch();
     } catch (err) {
-      toast.error("L\u00f6schen fehlgeschlagen", {
+      toast.error("Löschen fehlgeschlagen", {
         description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
@@ -381,7 +381,7 @@ export default function DocumentsPage() {
             onClick: (row) => router.push(`/knowledge/documents/${row.id}`),
           },
           {
-            label: "L\u00f6schen",
+            label: "Löschen",
             icon: <Trash2 className="h-3.5 w-3.5" />,
             onClick: (row) => setDeleteTarget(row),
             variant: "destructive",
@@ -414,7 +414,7 @@ export default function DocumentsPage() {
               Dokument hochladen
             </DialogTitle>
             <DialogDescription>
-              Datei per Drag & Drop oder \u00fcber den Button ausw\u00e4hlen.
+              Datei per Drag & Drop oder über den Button auswählen.
             </DialogDescription>
           </DialogHeader>
 
@@ -500,10 +500,10 @@ export default function DocumentsPage() {
       {/* ═══ Delete Confirmation ═══ */}
       <ConfirmationDialog
         open={!!deleteTarget}
-        title="Dokument l\u00f6schen"
-        description={`M\u00f6chten Sie "${deleteTarget?.fileName}" wirklich l\u00f6schen? Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.`}
+        title="Dokument löschen"
+        description={`Möchten Sie "${deleteTarget?.fileName}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
         variant="destructive"
-        confirmLabel="L\u00f6schen"
+        confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

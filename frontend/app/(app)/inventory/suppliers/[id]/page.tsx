@@ -59,7 +59,7 @@ const supplierArticleColumns: ColumnDef<SupplierArticleResponse>[] = [
     header: "Lieferanten-Art.-Nr.",
     cell: (row) => (
       <span className="font-mono text-xs font-medium text-primary">
-        {row.supplierArticleNumber ?? "\u2013"}
+        {row.supplierArticleNumber ?? "–"}
       </span>
     ),
   },
@@ -77,7 +77,7 @@ const supplierArticleColumns: ColumnDef<SupplierArticleResponse>[] = [
     header: "Lieferzeit",
     cell: (row) => (
       <span className="font-mono text-xs">
-        {row.leadTimeDays != null ? `${row.leadTimeDays}d` : "\u2013"}
+        {row.leadTimeDays != null ? `${row.leadTimeDays}d` : "–"}
       </span>
     ),
   },
@@ -274,11 +274,11 @@ export default function SupplierDetailPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <DetailField label="Name" value={supplier.name} icon={<Truck className="h-3.5 w-3.5" />} />
-            <DetailField label="Steuer-ID" value={supplier.taxId ?? "\u2013"} icon={<FileText className="h-3.5 w-3.5" />} mono />
-            <DetailField label="Ansprechpartner" value={supplier.contactName ?? "\u2013"} icon={<User className="h-3.5 w-3.5" />} />
-            <DetailField label="E-Mail" value={supplier.email ?? "\u2013"} icon={<Mail className="h-3.5 w-3.5" />} />
-            <DetailField label="Telefon" value={supplier.phone ?? "\u2013"} icon={<Phone className="h-3.5 w-3.5" />} mono />
-            <DetailField label="Adresse" value={supplier.address ?? "\u2013"} icon={<MapPin className="h-3.5 w-3.5" />} />
+            <DetailField label="Steuer-ID" value={supplier.taxId ?? "–"} icon={<FileText className="h-3.5 w-3.5" />} mono />
+            <DetailField label="Ansprechpartner" value={supplier.contactName ?? "–"} icon={<User className="h-3.5 w-3.5" />} />
+            <DetailField label="E-Mail" value={supplier.email ?? "–"} icon={<Mail className="h-3.5 w-3.5" />} />
+            <DetailField label="Telefon" value={supplier.phone ?? "–"} icon={<Phone className="h-3.5 w-3.5" />} mono />
+            <DetailField label="Adresse" value={supplier.address ?? "–"} icon={<MapPin className="h-3.5 w-3.5" />} />
             <div className="space-y-1">
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Status

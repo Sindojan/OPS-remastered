@@ -78,7 +78,7 @@ const stepColumns: ColumnDef<ProcessStepResponse>[] = [
     header: "Station",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
-        {row.stationId ? row.stationId.slice(0, 8) + "..." : "\u2013"}
+        {row.stationId ? row.stationId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -88,7 +88,7 @@ const stepColumns: ColumnDef<ProcessStepResponse>[] = [
     header: "Maschine",
     cell: (row) => (
       <span className="text-xs text-muted-foreground">
-        {row.machineId ? row.machineId.slice(0, 8) + "..." : "\u2013"}
+        {row.machineId ? row.machineId.slice(0, 8) + "..." : "–"}
       </span>
     ),
     sortable: false,
@@ -112,7 +112,7 @@ const stepColumns: ColumnDef<ProcessStepResponse>[] = [
     header: "Notizen",
     cell: (row) => (
       <span className="max-w-[200px] truncate text-xs text-muted-foreground">
-        {row.notes ?? "\u2013"}
+        {row.notes ?? "–"}
       </span>
     ),
     sortable: false,
