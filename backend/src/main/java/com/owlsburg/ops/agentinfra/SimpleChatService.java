@@ -10,6 +10,7 @@ import com.owlsburg.ops.agentinfra.llm.LlmConfigService;
 import com.owlsburg.ops.agentinfra.llm.LlmProviderException;
 import com.owlsburg.ops.common.TenantContext;
 import com.owlsburg.ops.tenant.TenantRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -66,9 +67,10 @@ public class SimpleChatService {
                 sessionId = session.getId();
             }
 
-            // 2. Load agent instance (needed for greeting + template)
-            AgentInstanceEntity instance = agentInstanceRepository.findById(request.agentInstanceId())
-                    .orElseThrow(() -> new IllegalArgumentException("Agent nicht gefunden"));
+            // 2. Load agent instance with tenant check (defense-in-depth)
+            UUID tenantUuid = UUID.fromString(TenantContext.getCurrentTenant());
+            AgentInstanceEntity instance = agentInstanceRepository.findByIdAndTenantId(request.agentInstanceId(), tenantUuid)
+                    .orElseThrow(() -> new AccessDeniedException("Zugriff verweigert"));
 
             // 3. Save greeting on new session
             if (request.sessionId() == null) {
@@ -82,9 +84,9 @@ public class SimpleChatService {
             // 5. Send sessionId as first SSE event
             emitter.send(SseEmitter.event().data("{\"sessionId\":\"" + sessionId + "\"}"));
 
-            // 6. Load agent template
-            AgentTemplateEntity template = agentTemplateRepository.findById(instance.getTemplateId())
-                    .orElseThrow(() -> new IllegalArgumentException("Agent-Template nicht gefunden"));
+            // 6. Load agent template with tenant check
+            AgentTemplateEntity template = agentTemplateRepository.findByIdAndTenantId(instance.getTemplateId(), tenantUuid)
+                    .orElseThrow(() -> new AccessDeniedException("Zugriff verweigert"));
 
             // 7. Build system prompt – instance override takes precedence over template
             String basePrompt = (instance.getCustomSystemPrompt() != null && !instance.getCustomSystemPrompt().isBlank())

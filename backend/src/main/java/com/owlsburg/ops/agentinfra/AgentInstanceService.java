@@ -1,8 +1,10 @@
 package com.owlsburg.ops.agentinfra;
 
+import com.owlsburg.ops.common.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,20 @@ public class AgentInstanceService {
     public AgentInstanceEntity findById(UUID id) {
         return instanceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("AgentInstance not found: " + id));
+    }
+
+    /**
+     * Tenant-safe findById – returns 403 instead of 404 to prevent information leakage.
+     * Use this for all user-facing endpoints (Controllers).
+     */
+    @Transactional(readOnly = true)
+    public AgentInstanceEntity findByIdSecure(UUID id) {
+        String tid = TenantContext.getCurrentTenant();
+        if (tid == null) {
+            throw new AccessDeniedException("Zugriff verweigert");
+        }
+        return instanceRepository.findByIdAndTenantId(id, UUID.fromString(tid))
+                .orElseThrow(() -> new AccessDeniedException("Zugriff verweigert"));
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +116,7 @@ public class AgentInstanceService {
 
     @Transactional
     public AgentInstanceEntity updateConfig(UUID id, String config) {
-        AgentInstanceEntity instance = findById(id);
+        AgentInstanceEntity instance = findByIdSecure(id);
         instance.setConfig(config);
         log.info("Updated config for agent instance: {}", id);
         return instanceRepository.save(instance);
@@ -108,7 +124,7 @@ public class AgentInstanceService {
 
     @Transactional
     public AgentInstanceEntity updateSystemPrompt(UUID id, String systemPrompt) {
-        AgentInstanceEntity instance = findById(id);
+        AgentInstanceEntity instance = findByIdSecure(id);
         instance.setCustomSystemPrompt(systemPrompt);
         log.info("Updated system prompt for agent instance: {}", id);
         return instanceRepository.save(instance);

@@ -46,7 +46,7 @@ public class AgentInstanceController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> getById(@PathVariable UUID id) {
-        AgentInstanceEntity instance = instanceService.findById(id);
+        AgentInstanceEntity instance = instanceService.findByIdSecure(id);
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(instance)));
     }
 
@@ -113,7 +113,7 @@ public class AgentInstanceController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("model field is required"));
         }
-        AgentInstanceEntity instance = instanceService.findById(id);
+        AgentInstanceEntity instance = instanceService.findByIdSecure(id);
         // Merge model into existing config JSON
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();

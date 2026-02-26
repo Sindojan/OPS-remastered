@@ -67,6 +67,22 @@ public class AgentTemplateService {
     }
 
     @Transactional
+    public AgentTemplateEntity patch(UUID id, AgentTemplateEntity patched) {
+        AgentTemplateEntity existing = findById(id);
+        if (patched.getBasePrompt() != null) {
+            existing.setBasePrompt(patched.getBasePrompt());
+        }
+        if (patched.getAllowedTools() != null) {
+            existing.setAllowedTools(patched.getAllowedTools());
+        }
+        if (patched.getMaxTokensPerRun() > 0) {
+            existing.setMaxTokensPerRun(patched.getMaxTokensPerRun());
+        }
+        log.info("Patched agent template: {}", id);
+        return templateRepository.save(existing);
+    }
+
+    @Transactional
     public void delete(UUID id) {
         AgentTemplateEntity existing = findById(id);
         templateRepository.delete(existing);

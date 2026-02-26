@@ -2,8 +2,10 @@ package com.owlsburg.ops.agentinfra;
 
 import com.owlsburg.ops.agentinfra.dto.ChatMessageResponse;
 import com.owlsburg.ops.agentinfra.dto.ChatSessionResponse;
+import com.owlsburg.ops.common.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,10 +42,11 @@ public class ChatSessionService {
 
     @Transactional
     public void deleteSession(UUID sessionId, UUID userId) {
-        ChatSessionEntity session = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session nicht gefunden"));
+        UUID tenantId = currentTenantUuid();
+        ChatSessionEntity session = chatSessionRepository.findByIdAndTenantId(sessionId, tenantId)
+                .orElseThrow(() -> new AccessDeniedException("Zugriff verweigert"));
         if (!session.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Zugriff verweigert");
+            throw new AccessDeniedException("Zugriff verweigert");
         }
         chatMessageRepository.deleteBySessionId(sessionId);
         chatSessionRepository.delete(session);
@@ -51,7 +54,11 @@ public class ChatSessionService {
 
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getMessages(UUID sessionId) {
-        return chatMessageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId)
+        UUID tenantId = currentTenantUuid();
+        // Verify session belongs to tenant
+        chatSessionRepository.findByIdAndTenantId(sessionId, tenantId)
+                .orElseThrow(() -> new AccessDeniedException("Zugriff verweigert"));
+        return chatMessageRepository.findBySessionIdAndTenantIdOrderByCreatedAtAsc(sessionId, tenantId)
                 .stream().map(ChatMessageResponse::from).toList();
     }
 
@@ -66,9 +73,18 @@ public class ChatSessionService {
 
     @Transactional
     public void updateSessionTitle(UUID sessionId, String title) {
-        chatSessionRepository.findById(sessionId).ifPresent(s -> {
+        UUID tenantId = currentTenantUuid();
+        chatSessionRepository.findByIdAndTenantId(sessionId, tenantId).ifPresent(s -> {
             s.setTitle(title);
             chatSessionRepository.save(s);
         });
+    }
+
+    private UUID currentTenantUuid() {
+        String tid = TenantContext.getCurrentTenant();
+        if (tid == null) {
+            throw new AccessDeniedException("Zugriff verweigert");
+        }
+        return UUID.fromString(tid);
     }
 }

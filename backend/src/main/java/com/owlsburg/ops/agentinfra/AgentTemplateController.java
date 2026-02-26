@@ -95,6 +95,27 @@ public class AgentTemplateController {
         return ResponseEntity.ok(ApiResponse.ok(AgentTemplateResponse.from(updated), "Agent template updated"));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<AgentTemplateResponse>> patch(
+            @PathVariable UUID id,
+            @RequestBody java.util.Map<String, Object> body) {
+
+        AgentTemplateEntity existing = templateService.findById(id);
+
+        if (body.containsKey("basePrompt")) {
+            existing.setBasePrompt((String) body.get("basePrompt"));
+        }
+        if (body.containsKey("allowedTools")) {
+            existing.setAllowedTools((String) body.get("allowedTools"));
+        }
+        if (body.containsKey("maxTokensPerRun")) {
+            existing.setMaxTokensPerRun(((Number) body.get("maxTokensPerRun")).intValue());
+        }
+
+        AgentTemplateEntity saved = templateService.patch(id, existing);
+        return ResponseEntity.ok(ApiResponse.ok(AgentTemplateResponse.from(saved), "Agent template updated"));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         templateService.delete(id);
