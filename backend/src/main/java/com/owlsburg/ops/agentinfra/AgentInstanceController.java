@@ -91,6 +91,19 @@ public class AgentInstanceController {
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(terminated), "Agent instance terminated"));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<AgentInstanceResponse>> updateInstance(
+            @PathVariable UUID id,
+            @RequestBody java.util.Map<String, String> body) {
+        String systemPrompt = body.get("systemPrompt");
+        if (systemPrompt == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("systemPrompt field is required"));
+        }
+        AgentInstanceEntity updated = instanceService.updateSystemPrompt(id, systemPrompt);
+        return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(updated), "System-Prompt aktualisiert"));
+    }
+
     @PatchMapping("/{id}/model")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> updateModel(
             @PathVariable UUID id,

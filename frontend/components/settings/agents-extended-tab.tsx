@@ -47,6 +47,7 @@ interface InstanceRow {
   status: string;
   model: string;
   templateId: string;
+  customSystemPrompt: string | null;
 }
 
 interface ModelInfo {
@@ -110,6 +111,7 @@ export function AgentsExtendedTab() {
           status: inst.status,
           model,
           templateId: inst.templateId,
+          customSystemPrompt: inst.customSystemPrompt ?? null,
         };
       });
       setInstances(rows);
@@ -262,22 +264,24 @@ function AgentDetailSheet({ instance, open, onOpenChange, models, onSaved }: Age
   const [saving, setSaving] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
 
-  // Init form from template data
+  // Init form: system prompt from instance (or fall back to template), rest from template
   useEffect(() => {
     if (template) {
-      setSystemPrompt(template.basePrompt || "");
+      setSystemPrompt(instance.customSystemPrompt || template.basePrompt || "");
       setMaxTokens(template.maxTokensPerRun || 4096);
       const tools = template.allowedTools ? template.allowedTools.split(",").map((t) => t.trim()).filter(Boolean) : [];
       setEnabledTools(new Set(tools));
     }
-  }, [template]);
+  }, [template, instance.customSystemPrompt]);
 
   const handleSave = useCallback(async () => {
     if (!template) return;
     setSaving(true);
     try {
+      // Save system prompt to instance
+      await apiClient.patch(`/api/agent-instances/${instance.id}`, { systemPrompt });
+      // Save tools + tokens to template
       await mutations.patch(template.id, {
-        basePrompt: systemPrompt,
         allowedTools: Array.from(enabledTools).join(","),
         maxTokensPerRun: maxTokens,
       });
@@ -291,11 +295,10 @@ function AgentDetailSheet({ instance, open, onOpenChange, models, onSaved }: Age
     } finally {
       setSaving(false);
     }
-  }, [template, systemPrompt, enabledTools, maxTokens, mutations, refetchTemplate, onSaved]);
+  }, [template, instance.id, systemPrompt, enabledTools, maxTokens, mutations, refetchTemplate, onSaved]);
 
   const handleReset = useCallback(async () => {
     if (!template) return;
-    // Reset to original values from template
     setSystemPrompt(template.basePrompt || "");
     setMaxTokens(template.maxTokensPerRun || 4096);
     const tools = template.allowedTools ? template.allowedTools.split(",").map((t) => t.trim()).filter(Boolean) : [];
@@ -370,15 +373,20 @@ function AgentDetailSheet({ instance, open, onOpenChange, models, onSaved }: Age
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Textarea
-                    value={systemPrompt}
-                    onChange={(e) => setSystemPrompt(e.target.value)}
-                    rows={10}
-                    className="font-mono text-xs resize-y"
-                  />
-                  <div className="flex items-start gap-1.5 text-xs text-warning">
+                  <div className="relative">
+                    <Textarea
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      rows={14}
+                      className="font-mono text-xs resize-y min-h-[300px]"
+                    />
+                    <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/60 font-mono pointer-events-none">
+                      {systemPrompt.length.toLocaleString("de-DE")} Zeichen
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
                     <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
-                    <span>Ändert den Basis-System-Prompt. Vorsicht – beeinflusst das Verhalten des Agents direkt.</span>
+                    <span>Wirkt sofort auf neue Konversationen. Überschreibt den Template-Prompt für diese Instanz.</span>
                   </div>
                 </CardContent>
               </Card>

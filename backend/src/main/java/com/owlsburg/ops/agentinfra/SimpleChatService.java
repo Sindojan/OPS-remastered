@@ -86,9 +86,12 @@ public class SimpleChatService {
             AgentTemplateEntity template = agentTemplateRepository.findById(instance.getTemplateId())
                     .orElseThrow(() -> new IllegalArgumentException("Agent-Template nicht gefunden"));
 
-            // 7. Build system prompt with tenant name resolution
+            // 7. Build system prompt – instance override takes precedence over template
+            String basePrompt = (instance.getCustomSystemPrompt() != null && !instance.getCustomSystemPrompt().isBlank())
+                    ? instance.getCustomSystemPrompt()
+                    : template.getBasePrompt();
             String tenantName = resolveTenantName();
-            String systemPrompt = buildSystemPrompt(template.getBasePrompt(), tenantName);
+            String systemPrompt = buildSystemPrompt(basePrompt, tenantName);
 
             // 8. Get API key and model
             String apiKey = llmConfigService.getDecryptedApiKey();

@@ -85,6 +85,7 @@ export interface AgentInstance {
   type: string;
   status: string;
   config: string;
+  customSystemPrompt: string | null;
   createdAt: string;
 }
 

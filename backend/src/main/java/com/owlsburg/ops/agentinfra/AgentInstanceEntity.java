@@ -36,6 +36,9 @@ public class AgentInstanceEntity extends BaseEntity {
     @Column(columnDefinition = "jsonb")
     private String config = "{}";
 
+    @Column(name = "custom_system_prompt", columnDefinition = "TEXT")
+    private String customSystemPrompt;
+
     @Column(name = "terminated_at")
     private Instant terminatedAt;
 }

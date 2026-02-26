@@ -16,6 +16,7 @@ public record AgentInstanceResponse(
         AgentInstanceStatus status,
         UUID tenantId,
         String config,
+        String customSystemPrompt,
         Instant terminatedAt,
         Instant createdAt,
         Instant updatedAt
@@ -30,6 +31,7 @@ public record AgentInstanceResponse(
                 entity.getStatus(),
                 entity.getTenantId(),
                 entity.getConfig(),
+                entity.getCustomSystemPrompt(),
                 entity.getTerminatedAt(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

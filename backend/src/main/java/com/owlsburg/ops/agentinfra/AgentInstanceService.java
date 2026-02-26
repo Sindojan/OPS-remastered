@@ -107,6 +107,14 @@ public class AgentInstanceService {
     }
 
     @Transactional
+    public AgentInstanceEntity updateSystemPrompt(UUID id, String systemPrompt) {
+        AgentInstanceEntity instance = findById(id);
+        instance.setCustomSystemPrompt(systemPrompt);
+        log.info("Updated system prompt for agent instance: {}", id);
+        return instanceRepository.save(instance);
+    }
+
+    @Transactional
     public void delete(UUID id) {
         AgentInstanceEntity existing = findById(id);
         instanceRepository.delete(existing);
