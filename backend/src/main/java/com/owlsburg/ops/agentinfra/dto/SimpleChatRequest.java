@@ -9,6 +9,7 @@ import java.util.UUID;
 public record SimpleChatRequest(
         @NotBlank String message,
         @NotNull UUID agentInstanceId,
+        UUID sessionId,
         List<ChatHistoryMessage> history
 ) {
     public record ChatHistoryMessage(String role, String content) {}

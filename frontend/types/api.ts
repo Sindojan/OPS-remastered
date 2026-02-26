@@ -1046,6 +1046,23 @@ export interface AvailableToolResponse {
   permissionLevel: string;
 }
 
+// ─── Chat ──────────────────────────────────────────────
+
+export interface ChatSessionResponse {
+  id: string;
+  title: string | null;
+  agentInstanceId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessageResponse {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
 // ─── Agent Template Detail ─────────────────────────────
 
 export interface AgentTemplateDetailResponse {

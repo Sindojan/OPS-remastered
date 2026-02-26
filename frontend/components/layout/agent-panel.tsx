@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Bot, X, Send, Loader2 } from "lucide-react";
+import { Bot, X, Send, Loader2, Plus, List, Trash2 } from "lucide-react";
 import { usePrimaryAgent } from "@/hooks/use-primary-agent";
 import { MarkdownMessage } from "@/components/chat/markdown-message";
+import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
+import type { ChatSessionResponse } from "@/types/api";
 
 interface AgentPanelProps {
   open: boolean;
@@ -16,36 +18,121 @@ interface ChatMessage {
   content: string;
 }
 
-const GREETING: ChatMessage = {
-  role: "assistant",
-  content: "Guten Tag! Ich bin Ihr CEO Agent. Wie kann ich Ihnen helfen?",
-};
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export function AgentPanel({ open, onClose }: AgentPanelProps) {
   const { agent } = usePrimaryAgent();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showSessionList, setShowSessionList] = useState(false);
+  const [sessions, setSessions] = useState<ChatSessionResponse[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ChatSessionResponse | null>(
+    null
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Reset chat when panel opens
-  useEffect(() => {
-    if (open) {
-      setMessages([
-        {
-          role: "assistant",
-          content: agent?.name
-            ? `Guten Tag! Ich bin Ihr ${agent.name}. Wie kann ich Ihnen helfen?`
-            : GREETING.content,
-        },
-      ]);
-      setInput("");
-      setIsStreaming(false);
+  const greetingMessage = useCallback((): ChatMessage => {
+    return {
+      role: "assistant",
+      content: agent?.name
+        ? `Guten Tag! Ich bin Ihr ${agent.name}. Wie kann ich Ihnen helfen?`
+        : "Guten Tag! Ich bin Ihr CEO Agent. Wie kann ich Ihnen helfen?",
+    };
+  }, [agent?.name]);
+
+  const fetchSessions = useCallback(async () => {
+    const token = localStorage.getItem("owlsburg_token");
+    if (!token) return;
+    setSessionsLoading(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/chat/sessions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSessions(json.data);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSessionsLoading(false);
     }
-  }, [open, agent?.name]);
+  }, []);
+
+  const loadSession = useCallback(
+    async (sessionId: string) => {
+      const token = localStorage.getItem("owlsburg_token");
+      if (!token) return;
+      try {
+        const res = await fetch(
+          `http://localhost:8080/api/chat/sessions/${sessionId}/messages`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const json = await res.json();
+        if (json.success) {
+          const loaded: ChatMessage[] = json.data.map(
+            (m: { role: "user" | "assistant"; content: string }) => ({
+              role: m.role,
+              content: m.content,
+            })
+          );
+          setMessages(loaded.length > 0 ? loaded : [greetingMessage()]);
+          setCurrentSessionId(sessionId);
+          setShowSessionList(false);
+        }
+      } catch {
+        // silently fail
+      }
+    },
+    [greetingMessage]
+  );
+
+  // Load sessions and auto-load most recent on panel open
+  useEffect(() => {
+    if (open && agent?.id) {
+      fetchSessions().then(() => {
+        // We fetch sessions above, but we need to auto-load in a then-chain
+        // because setSessions is async. Use a separate effect instead.
+      });
+    }
+    if (!open) {
+      setShowSessionList(false);
+    }
+  }, [open, agent?.id, fetchSessions]);
+
+  // Auto-load most recent session once sessions are fetched, but only on panel open
+  const hasAutoLoaded = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      hasAutoLoaded.current = false;
+      return;
+    }
+    if (hasAutoLoaded.current) return;
+    if (sessionsLoading) return;
+
+    hasAutoLoaded.current = true;
+    if (sessions.length > 0) {
+      loadSession(sessions[0].id);
+    } else {
+      setMessages([greetingMessage()]);
+      setCurrentSessionId(null);
+    }
+  }, [open, sessions, sessionsLoading, loadSession, greetingMessage]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -63,11 +150,41 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     }
   };
 
+  const handleNewSession = () => {
+    setCurrentSessionId(null);
+    setMessages([greetingMessage()]);
+    setShowSessionList(false);
+    setInput("");
+  };
+
+  const handleDeleteSession = async () => {
+    if (!deleteTarget) return;
+    const token = localStorage.getItem("owlsburg_token");
+    if (!token) return;
+    try {
+      await fetch(
+        `http://localhost:8080/api/chat/sessions/${deleteTarget.id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      // If we deleted the active session, start fresh
+      if (currentSessionId === deleteTarget.id) {
+        handleNewSession();
+      }
+      await fetchSessions();
+    } catch {
+      // silently fail
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
 
     const userMsg = input.trim();
-    const currentHistory = [...messages];
 
     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
     setInput("");
@@ -92,10 +209,15 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
         body: JSON.stringify({
           message: userMsg,
           agentInstanceId: agent?.id,
-          history: currentHistory.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
+          sessionId: currentSessionId,
+          history: currentSessionId
+            ? []
+            : messages
+                .filter((m) => m.role !== "assistant" || m.content !== greetingMessage().content)
+                .map((m) => ({
+                  role: m.role,
+                  content: m.content,
+                })),
         }),
       });
 
@@ -123,6 +245,10 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
           try {
             const data = JSON.parse(jsonStr);
 
+            if (data.sessionId) {
+              setCurrentSessionId(data.sessionId);
+            }
+
             if (data.token) {
               setMessages((prev) => {
                 const updated = [...prev];
@@ -142,6 +268,11 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
                 };
                 return updated;
               });
+            }
+
+            if (data.done) {
+              // Refresh session list to update titles
+              fetchSessions();
             }
           } catch {
             // Ignore parse errors for incomplete JSON
@@ -190,10 +321,79 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             {agent?.name ?? "Agent"}
           </span>
         </div>
-        <Button variant="ghost" size="icon-sm" onClick={onClose}>
-          <X className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleNewSession}
+            title="Neue Konversation"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setShowSessionList((v) => !v)}
+            title="Konversationen"
+            className={showSessionList ? "bg-muted" : ""}
+          >
+            <List className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={onClose}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
+
+      {/* Session list dropdown */}
+      {showSessionList && (
+        <div className="max-h-[240px] overflow-y-auto border-b border-border">
+          <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
+            Letzte Konversationen
+          </div>
+          {sessionsLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+              Keine bisherigen Konversationen
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                className={`group flex cursor-pointer items-start gap-2 border-b border-border p-3 last:border-0 hover:bg-muted/50 ${
+                  currentSessionId === session.id
+                    ? "border-l-2 border-l-primary bg-primary/5"
+                    : ""
+                }`}
+                onClick={() => loadSession(session.id)}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">
+                    {session.title || "Neue Konversation"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(session.updatedAt)}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 opacity-0 hover:text-destructive group-hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(session);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -207,15 +407,13 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             }
           >
             {msg.role === "assistant" ? (
-              <>
-                <MarkdownMessage
-                  content={
-                    isStreaming && i === messages.length - 1
-                      ? msg.content + " \u258B"
-                      : msg.content
-                  }
-                />
-              </>
+              <MarkdownMessage
+                content={
+                  isStreaming && i === messages.length - 1
+                    ? msg.content + " \u258B"
+                    : msg.content
+                }
+              />
             ) : (
               <span className="whitespace-pre-wrap">{msg.content}</span>
             )}
@@ -252,6 +450,18 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
           )}
         </Button>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <ConfirmationDialog
+        open={!!deleteTarget}
+        title="Konversation loeschen"
+        description={`Moechten Sie die Konversation "${deleteTarget?.title || "Neue Konversation"}" wirklich loeschen? Diese Aktion kann nicht rueckgaengig gemacht werden.`}
+        variant="destructive"
+        confirmLabel="Loeschen"
+        cancelLabel="Abbrechen"
+        onConfirm={handleDeleteSession}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </aside>
   );
 }

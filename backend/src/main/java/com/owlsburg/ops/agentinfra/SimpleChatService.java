@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.owlsburg.ops.agentinfra.dto.ChatMessageResponse;
 import com.owlsburg.ops.agentinfra.dto.SimpleChatRequest;
 import com.owlsburg.ops.agentinfra.llm.LlmConfigService;
 import com.owlsburg.ops.agentinfra.llm.LlmProviderException;
+import com.owlsburg.ops.common.TenantContext;
+import com.owlsburg.ops.tenant.TenantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class SimpleChatService {
@@ -32,38 +37,60 @@ public class SimpleChatService {
     private final LlmConfigService llmConfigService;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
+    private final ChatSessionService chatSessionService;
+    private final TenantRepository tenantRepository;
 
     public SimpleChatService(AgentInstanceRepository agentInstanceRepository,
                              AgentTemplateRepository agentTemplateRepository,
                              LlmConfigService llmConfigService,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper,
+                             ChatSessionService chatSessionService,
+                             TenantRepository tenantRepository) {
         this.agentInstanceRepository = agentInstanceRepository;
         this.agentTemplateRepository = agentTemplateRepository;
         this.llmConfigService = llmConfigService;
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newHttpClient();
+        this.chatSessionService = chatSessionService;
+        this.tenantRepository = tenantRepository;
     }
 
-    public void streamChat(SimpleChatRequest request, SseEmitter emitter) {
+    public UUID streamChat(SimpleChatRequest request, UUID userId, SseEmitter emitter) {
+        UUID sessionId = null;
         try {
-            // 1. Load agent instance
+            // 1. Resolve or create session
+            if (request.sessionId() != null) {
+                sessionId = request.sessionId();
+            } else {
+                ChatSessionEntity session = chatSessionService.createSession(userId, request.agentInstanceId());
+                sessionId = session.getId();
+            }
+
+            // 2. Save user message to DB
+            chatSessionService.saveMessage(sessionId, "user", request.message());
+
+            // 3. Send sessionId as first SSE event
+            emitter.send(SseEmitter.event().data("{\"sessionId\":\"" + sessionId + "\"}"));
+
+            // 4. Load agent instance
             AgentInstanceEntity instance = agentInstanceRepository.findById(request.agentInstanceId())
                     .orElseThrow(() -> new IllegalArgumentException("Agent nicht gefunden"));
 
-            // 2. Load agent template
+            // 5. Load agent template
             AgentTemplateEntity template = agentTemplateRepository.findById(instance.getTemplateId())
                     .orElseThrow(() -> new IllegalArgumentException("Agent-Template nicht gefunden"));
 
-            // 3. Build system prompt
-            String systemPrompt = buildSystemPrompt(template.getBasePrompt());
+            // 6. Build system prompt with tenant name resolution
+            String tenantName = resolveTenantName();
+            String systemPrompt = buildSystemPrompt(template.getBasePrompt(), tenantName);
 
-            // 4. Get API key and model
+            // 7. Get API key and model
             String apiKey = llmConfigService.getDecryptedApiKey();
             String model = llmConfigService.getConfig()
                     .map(c -> c.getDefaultModel())
                     .orElse("claude-sonnet-4-20250514");
 
-            // 5. Build request body
+            // 8. Build request body
             ObjectNode body = objectMapper.createObjectNode();
             body.put("model", model);
             body.put("max_tokens", 2048);
@@ -72,21 +99,31 @@ public class SimpleChatService {
 
             ArrayNode messagesArray = body.putArray("messages");
 
-            // Add history if present
-            if (request.history() != null) {
-                for (SimpleChatRequest.ChatHistoryMessage msg : request.history()) {
+            // Load history from DB if session already existed, otherwise from request
+            if (request.sessionId() != null) {
+                List<ChatMessageResponse> dbHistory = chatSessionService.getMessages(request.sessionId());
+                for (ChatMessageResponse msg : dbHistory) {
+                    // Skip the current user message we just saved (it's the last one)
                     ObjectNode msgNode = messagesArray.addObject();
                     msgNode.put("role", msg.role());
                     msgNode.put("content", msg.content());
                 }
+            } else {
+                // New session: add any provided history
+                if (request.history() != null) {
+                    for (SimpleChatRequest.ChatHistoryMessage msg : request.history()) {
+                        ObjectNode msgNode = messagesArray.addObject();
+                        msgNode.put("role", msg.role());
+                        msgNode.put("content", msg.content());
+                    }
+                }
+                // Add current message
+                ObjectNode currentMsg = messagesArray.addObject();
+                currentMsg.put("role", "user");
+                currentMsg.put("content", request.message());
             }
 
-            // Add current message
-            ObjectNode currentMsg = messagesArray.addObject();
-            currentMsg.put("role", "user");
-            currentMsg.put("content", request.message());
-
-            // 6. Call Anthropic API with streaming
+            // 9. Call Anthropic API with streaming
             HttpRequest httpRequest = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.anthropic.com/v1/messages"))
                     .header("x-api-key", apiKey)
@@ -104,7 +141,8 @@ public class SimpleChatService {
                 throw new LlmProviderException("Anthropic API Fehler: HTTP " + response.statusCode());
             }
 
-            // 7. Parse SSE stream and forward tokens
+            // 10. Parse SSE stream and forward tokens
+            StringBuilder fullResponse = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -119,6 +157,7 @@ public class SimpleChatService {
                         JsonNode delta = event.get("delta");
                         if (delta != null && "text_delta".equals(delta.get("type").asText())) {
                             String token = delta.get("text").asText();
+                            fullResponse.append(token);
                             emitter.send(SseEmitter.event().data(
                                     "{\"token\":" + objectMapper.writeValueAsString(token) + "}"));
                         }
@@ -126,30 +165,55 @@ public class SimpleChatService {
                 }
             }
 
-            // 8. Send done event
+            // 11. Save assistant message to DB
+            chatSessionService.saveMessage(sessionId, "assistant", fullResponse.toString());
+
+            // 12. Auto-generate title on first message (new session)
+            if (request.sessionId() == null) {
+                String title = request.message().length() > 50
+                        ? request.message().substring(0, 50) + "..."
+                        : request.message();
+                chatSessionService.updateSessionTitle(sessionId, title);
+            }
+
+            // 13. Send done event
             emitter.send(SseEmitter.event().data("{\"done\":true}"));
             emitter.complete();
 
+            return sessionId;
+
         } catch (LlmProviderException e) {
             sendErrorAndComplete(emitter, e.getMessage());
+            return sessionId;
         } catch (IllegalArgumentException e) {
             sendErrorAndComplete(emitter, e.getMessage());
+            return sessionId;
         } catch (Exception e) {
             log.error("Chat streaming error", e);
             sendErrorAndComplete(emitter, "Interner Fehler");
+            return sessionId;
         }
     }
 
-    private String buildSystemPrompt(String basePrompt) {
+    private String buildSystemPrompt(String basePrompt, String tenantName) {
         String base = (basePrompt != null && !basePrompt.isBlank()) ? basePrompt : "Du bist ein hilfreicher Assistent.";
-        return base + "\n\n## Kontext\n" +
-                "- Datum: " + LocalDate.now() + "\n" +
-                "- Du antwortest in einem Chat-Fenster. Halte deine Antworten knapp und hilfreich.\n" +
-                "- Du hast aktuell KEINE Tools zur Verfügung. Wenn der Nutzer nach konkreten Daten fragt, " +
-                "weise darauf hin dass du im Chat-Modus keine Datenbank-Abfragen machen kannst.\n\n" +
-                "## Regeln\n" +
-                "- Antworte immer auf Deutsch.\n" +
-                "- Halte deine Antworten präzise und handlungsorientiert.\n";
+        String resolved = base.replace("{{TENANT_NAME}}", tenantName);
+        return resolved + "\n\n## Kontext\n- Datum: " + LocalDate.now() + "\n";
+    }
+
+    private String resolveTenantName() {
+        String tenantId = TenantContext.getCurrentTenant();
+        if (tenantId != null) {
+            try {
+                return tenantRepository.findById(UUID.fromString(tenantId))
+                        .map(t -> t.getName())
+                        .orElse("Owlsburg OPS");
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid tenant ID format: {}", tenantId);
+                return "Owlsburg OPS";
+            }
+        }
+        return "Owlsburg OPS";
     }
 
     private void sendErrorAndComplete(SseEmitter emitter, String message) {
