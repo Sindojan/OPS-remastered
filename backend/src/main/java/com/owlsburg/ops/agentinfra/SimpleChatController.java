@@ -8,6 +8,7 @@ import com.owlsburg.ops.common.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
+import com.owlsburg.ops.common.TenantContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -58,10 +59,12 @@ public class SimpleChatController {
     @PostMapping(value = "/message", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamMessage(@RequestBody SimpleChatRequest request) {
         UUID userId = getCurrentUserId();
+        String tenantId = TenantContext.getCurrentTenant();
         SseEmitter emitter = new SseEmitter(120_000L);
 
         Thread.startVirtualThread(() -> {
             try {
+                TenantContext.setCurrentTenant(tenantId);
                 simpleChatService.streamChat(request, userId, emitter);
             } catch (Exception e) {
                 log.error("Unexpected error in chat stream thread", e);
@@ -71,6 +74,8 @@ public class SimpleChatController {
                 } catch (Exception ex) {
                     emitter.completeWithError(ex);
                 }
+            } finally {
+                TenantContext.clear();
             }
         });
 

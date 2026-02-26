@@ -66,31 +66,37 @@ public class SimpleChatService {
                 sessionId = session.getId();
             }
 
-            // 2. Save user message to DB
-            chatSessionService.saveMessage(sessionId, "user", request.message());
-
-            // 3. Send sessionId as first SSE event
-            emitter.send(SseEmitter.event().data("{\"sessionId\":\"" + sessionId + "\"}"));
-
-            // 4. Load agent instance
+            // 2. Load agent instance (needed for greeting + template)
             AgentInstanceEntity instance = agentInstanceRepository.findById(request.agentInstanceId())
                     .orElseThrow(() -> new IllegalArgumentException("Agent nicht gefunden"));
 
-            // 5. Load agent template
+            // 3. Save greeting on new session
+            if (request.sessionId() == null) {
+                String greeting = "Guten Tag! Ich bin Ihr " + instance.getName() + ". Wie kann ich Ihnen helfen?";
+                chatSessionService.saveMessage(sessionId, "assistant", greeting);
+            }
+
+            // 4. Save user message to DB
+            chatSessionService.saveMessage(sessionId, "user", request.message());
+
+            // 5. Send sessionId as first SSE event
+            emitter.send(SseEmitter.event().data("{\"sessionId\":\"" + sessionId + "\"}"));
+
+            // 6. Load agent template
             AgentTemplateEntity template = agentTemplateRepository.findById(instance.getTemplateId())
                     .orElseThrow(() -> new IllegalArgumentException("Agent-Template nicht gefunden"));
 
-            // 6. Build system prompt with tenant name resolution
+            // 7. Build system prompt with tenant name resolution
             String tenantName = resolveTenantName();
             String systemPrompt = buildSystemPrompt(template.getBasePrompt(), tenantName);
 
-            // 7. Get API key and model
+            // 8. Get API key and model
             String apiKey = llmConfigService.getDecryptedApiKey();
             String model = llmConfigService.getConfig()
                     .map(c -> c.getDefaultModel())
                     .orElse("claude-sonnet-4-20250514");
 
-            // 8. Build request body
+            // 9. Build request body
             ObjectNode body = objectMapper.createObjectNode();
             body.put("model", model);
             body.put("max_tokens", 2048);
@@ -99,31 +105,15 @@ public class SimpleChatService {
 
             ArrayNode messagesArray = body.putArray("messages");
 
-            // Load history from DB if session already existed, otherwise from request
-            if (request.sessionId() != null) {
-                List<ChatMessageResponse> dbHistory = chatSessionService.getMessages(request.sessionId());
-                for (ChatMessageResponse msg : dbHistory) {
-                    // Skip the current user message we just saved (it's the last one)
-                    ObjectNode msgNode = messagesArray.addObject();
-                    msgNode.put("role", msg.role());
-                    msgNode.put("content", msg.content());
-                }
-            } else {
-                // New session: add any provided history
-                if (request.history() != null) {
-                    for (SimpleChatRequest.ChatHistoryMessage msg : request.history()) {
-                        ObjectNode msgNode = messagesArray.addObject();
-                        msgNode.put("role", msg.role());
-                        msgNode.put("content", msg.content());
-                    }
-                }
-                // Add current message
-                ObjectNode currentMsg = messagesArray.addObject();
-                currentMsg.put("role", "user");
-                currentMsg.put("content", request.message());
+            // Load full history from DB (greeting + all messages are already persisted)
+            List<ChatMessageResponse> dbHistory = chatSessionService.getMessages(sessionId);
+            for (ChatMessageResponse msg : dbHistory) {
+                ObjectNode msgNode = messagesArray.addObject();
+                msgNode.put("role", msg.role());
+                msgNode.put("content", msg.content());
             }
 
-            // 9. Call Anthropic API with streaming
+            // 10. Call Anthropic API with streaming
             HttpRequest httpRequest = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.anthropic.com/v1/messages"))
                     .header("x-api-key", apiKey)
@@ -141,7 +131,7 @@ public class SimpleChatService {
                 throw new LlmProviderException("Anthropic API Fehler: HTTP " + response.statusCode());
             }
 
-            // 10. Parse SSE stream and forward tokens
+            // 11. Parse SSE stream and forward tokens
             StringBuilder fullResponse = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body()))) {
                 String line;
@@ -165,10 +155,10 @@ public class SimpleChatService {
                 }
             }
 
-            // 11. Save assistant message to DB
+            // 12. Save assistant message to DB
             chatSessionService.saveMessage(sessionId, "assistant", fullResponse.toString());
 
-            // 12. Auto-generate title on first message (new session)
+            // 13. Auto-generate title on first message (new session)
             if (request.sessionId() == null) {
                 String title = request.message().length() > 50
                         ? request.message().substring(0, 50) + "..."
@@ -176,7 +166,7 @@ public class SimpleChatService {
                 chatSessionService.updateSessionTitle(sessionId, title);
             }
 
-            // 13. Send done event
+            // 14. Send done event
             emitter.send(SseEmitter.event().data("{\"done\":true}"));
             emitter.complete();
 

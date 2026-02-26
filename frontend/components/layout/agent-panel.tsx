@@ -4,9 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Bot, X, Send, Loader2, Plus, List, Trash2 } from "lucide-react";
 import { usePrimaryAgent } from "@/hooks/use-primary-agent";
+import { useApi } from "@/hooks/api/use-api";
 import { MarkdownMessage } from "@/components/chat/markdown-message";
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
-import type { ChatSessionResponse } from "@/types/api";
+import type { ChatSessionResponse, LlmConfig } from "@/types/api";
 
 interface AgentPanelProps {
   open: boolean;
@@ -31,6 +32,7 @@ function formatDate(iso: string): string {
 
 export function AgentPanel({ open, onClose }: AgentPanelProps) {
   const { agent } = usePrimaryAgent();
+  const { data: llmConfig } = useApi<LlmConfig>("/api/settings/llm");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -51,7 +53,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
       role: "assistant",
       content: agent?.name
         ? `Guten Tag! Ich bin Ihr ${agent.name}. Wie kann ich Ihnen helfen?`
-        : "Guten Tag! Ich bin Ihr CEO Agent. Wie kann ich Ihnen helfen?",
+        : "Guten Tag! Wie kann ich Ihnen helfen?",
     };
   }, [agent?.name]);
 
@@ -210,14 +212,6 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
           message: userMsg,
           agentInstanceId: agent?.id,
           sessionId: currentSessionId,
-          history: currentSessionId
-            ? []
-            : messages
-                .filter((m) => m.role !== "assistant" || m.content !== greetingMessage().content)
-                .map((m) => ({
-                  role: m.role,
-                  content: m.content,
-                })),
         }),
       });
 
@@ -317,9 +311,16 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
             <Bot className="h-3.5 w-3.5 text-primary" />
           </div>
-          <span className="text-[13px] font-semibold">
-            {agent?.name ?? "Agent"}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-[13px] font-semibold leading-tight">
+              {agent?.name ?? "Agent"}
+            </span>
+            {llmConfig?.defaultModel && (
+              <span className="text-[10px] text-muted-foreground leading-tight font-mono">
+                {llmConfig.defaultModel}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-0.5">
           <Button
