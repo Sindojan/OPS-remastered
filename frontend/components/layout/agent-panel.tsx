@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bot, X, Send, Loader2 } from "lucide-react";
 import { usePrimaryAgent } from "@/hooks/use-primary-agent";
+import { MarkdownMessage } from "@/components/chat/markdown-message";
 
 interface AgentPanelProps {
   open: boolean;
@@ -205,14 +206,19 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
                 : "mr-8 rounded-lg rounded-tl-sm bg-muted p-3 text-sm text-foreground"
             }
           >
-            <span className="whitespace-pre-wrap">{msg.content}</span>
-            {isStreaming &&
-              msg.role === "assistant" &&
-              i === messages.length - 1 && (
-                <span className="inline-block animate-pulse text-primary">
-                  &#9611;
-                </span>
-              )}
+            {msg.role === "assistant" ? (
+              <>
+                <MarkdownMessage
+                  content={
+                    isStreaming && i === messages.length - 1
+                      ? msg.content + " \u258B"
+                      : msg.content
+                  }
+                />
+              </>
+            ) : (
+              <span className="whitespace-pre-wrap">{msg.content}</span>
+            )}
           </div>
         ))}
       </div>
