@@ -73,7 +73,7 @@ sindojan_ops_remastered/
 │   ├── app/                         # Routen (App Router)
 │   │   ├── login/                   # Login-Seite (außerhalb AppShell)
 │   │   └── (app)/                   # Auth-geschützte Route Group (mit AppShell)
-│   ├── components/                  # UI + Layout + Shared
+│   ├── components/                  # UI + Layout + Shared + Chat
 │   ├── contexts/                    # AuthContext Provider
 │   ├── hooks/                       # Custom Hooks (usePrimaryAgent, API Hooks)
 │   ├── lib/                         # Utilities
@@ -235,6 +235,23 @@ sindojan_ops_remastered/
 | TASK-FE-023 | 5 neue Settings-Tabs (Benutzer, Firma, Agents erweitert, Budget, Benachrichtigungen), Switch-Komponente, use-settings Hooks | `f6f788f` |
 | FIX-LLM | TenantLlmConfigEntity: BaseEntity-Vererbung für tenant_id/RLS | `ea80f43` |
 
+### Block 13: Agent Console (Chat) ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-019 | Simple Chat POC – SSE Streaming Endpoint (`POST /api/chat/message`), Anthropic API Integration | `f7632ab` |
+| TASK-FE-026 | Agent Panel mit SSE Streaming, Blinking Cursor, Auto-Scroll | `f7632ab` |
+| TASK-FE-027 | Markdown-Rendering für Agent-Antworten (react-markdown, remark-gfm, rehype-highlight) | `ad5b386` |
+| TASK-BE-020 | Chat Persistence – V11 Migration (chat_sessions, chat_messages), Session CRUD, History Loading | `228f3ba` |
+| TASK-BE-021 | CEO System Prompt – V12 Migration, detaillierter Prompt mit `{{TENANT_NAME}}` Placeholder | `228f3ba` |
+| TASK-FE-028 | Persistent Chat Frontend – Session-Liste, Auto-Load, Wechsel, Löschung | `228f3ba` |
+| FIX-CHAT | TenantContext-Propagation in Virtual Thread, Greeting persistieren, LLM-Model im Header | `b4fe23e` |
+| TASK-BE-022 | Per-Instance System Prompt – V13 Migration (`custom_system_prompt`), PATCH Endpoint, Editor in Settings | `6491189` |
+
+### FIX-BLOCK-G: Agent Tenant-Isolation Security ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-SEC-001 | `findByIdAndTenantId` auf allen Agent/Chat Repositories, `findByIdSecure()` im Service, AccessDeniedException → 403, PATCH Template Endpoint | `9e05204` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -299,6 +316,7 @@ Zuordnung:
 | Role-Agent Defaults | `/api/settings/role-agent-defaults` | ADMIN/MANAGER |
 | User Me | `/api/users/me` | authenticated |
 | Events | `/api/events` | authenticated |
+| Chat | `/api/chat` | authenticated |
 | Triggers | `/api/scheduled-triggers` | authenticated |
 | Health | `/actuator/health` | public |
 
@@ -317,6 +335,10 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V7__system_admin.sql | Tenant-Extension (slug, plan, status, suspended_at, suspend_reason), SYSTEM_ADMIN User Seed |
 | V8__customer_fields.sql | `customer_number VARCHAR(50)`, `short_name VARCHAR(100)` auf customers, Unique Index |
 | V9__knowledge.sql | Knowledge-Tabellen (categories, articles, tags, article_tags), Document-Erweiterung (category_id, excerpt), RLS Policies |
+| V10__tenant_config.sql | Tenant-Config-Felder, user_notification_settings, Budget-Felder |
+| V11__chat_sessions.sql | chat_sessions, chat_messages Tabellen mit RLS Policies |
+| V12__ceo_system_prompt.sql | CEO Agent Template: Detaillierter System-Prompt mit `{{TENANT_NAME}}` |
+| V13__instance_system_prompt.sql | `custom_system_prompt TEXT` auf agent_instances |
 
 ## Default Admin
 
@@ -349,7 +371,7 @@ Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEA
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-02-24
-**Session:** Block 12 (Knowledge & Dokumente) komplett
-**Status:** Backend ~475 Java-Dateien, V9 Migration. Knowledge-Base mit Markdown-Editor, Artikel-CRUD, Kategorien/Tags, Dokument-Vorschau. AuthContext validiert User-Existenz beim Start. Alles kompiliert und funktioniert.
-**Nächste Blöcke laut Masterplan:** Block 13 (Settings vervollständigen), Block 14 (Docker/Deployment), Block 15 (Agent Console)
+**Datum:** 2026-02-27
+**Session:** Block 13 (Agent Console) + Security Fix komplett
+**Status:** Backend ~490 Java-Dateien, V13 Migration. Chat mit SSE Streaming, Markdown-Rendering, persistente Sessions, CEO System-Prompt mit Tenant-Name, per-Instance Prompt-Override, Tenant-Isolation (Defense-in-Depth mit findByIdAndTenantId + 403). Alles kompiliert und funktioniert.
+**Nächste Blöcke:** Block 14 (Docker/Deployment), weitere Agent-Features (Tool-Anbindung, ReAct-Loop im Chat)
