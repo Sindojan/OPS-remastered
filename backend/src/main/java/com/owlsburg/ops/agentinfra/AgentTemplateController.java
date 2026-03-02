@@ -106,7 +106,30 @@ public class AgentTemplateController {
             existing.setBasePrompt((String) body.get("basePrompt"));
         }
         if (body.containsKey("allowedTools")) {
-            existing.setAllowedTools((String) body.get("allowedTools"));
+            Object toolsRaw = body.get("allowedTools");
+            String toolsValue;
+            if (toolsRaw instanceof String s) {
+                // Accept both JSON array string and comma-separated
+                if (s.trim().startsWith("[")) {
+                    toolsValue = s.trim();
+                } else {
+                    // Fallback: convert comma-separated to JSON array
+                    String[] parts = s.split(",");
+                    StringBuilder json = new StringBuilder("[");
+                    for (String part : parts) {
+                        String name = part.trim();
+                        if (!name.isEmpty()) {
+                            if (json.length() > 1) json.append(",");
+                            json.append("\"").append(name).append("\"");
+                        }
+                    }
+                    json.append("]");
+                    toolsValue = json.toString();
+                }
+            } else {
+                toolsValue = "[]";
+            }
+            existing.setAllowedTools(toolsValue);
         }
         if (body.containsKey("maxTokensPerRun")) {
             existing.setMaxTokensPerRun(((Number) body.get("maxTokensPerRun")).intValue());

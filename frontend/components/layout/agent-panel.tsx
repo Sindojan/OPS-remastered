@@ -14,9 +14,16 @@ interface AgentPanelProps {
   onClose: () => void;
 }
 
+interface ToolCallInfo {
+  name: string;
+  input: string;
+  result?: string;
+}
+
 interface ChatMessage {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
   content: string;
+  toolCalls?: ToolCallInfo[];
 }
 
 function formatDate(iso: string): string {
@@ -253,6 +260,45 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
               });
             }
 
+            if (data.toolCall) {
+              // Add tool call info as a separate message
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "tool" as const,
+                  content: `\u{1F527} **${data.toolCall.name}** wird aufgerufen...`,
+                  toolCalls: [{ name: data.toolCall.name, input: data.toolCall.input }],
+                },
+              ]);
+            }
+
+            if (data.toolResult) {
+              // Update the last tool message with result
+              setMessages((prev) => {
+                const updated = [...prev];
+                // Find the last tool message for this tool
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (
+                    updated[i].role === "tool" &&
+                    updated[i].toolCalls?.[0]?.name === data.toolResult.name
+                  ) {
+                    const msg = { ...updated[i] };
+                    const toolCalls = [...(msg.toolCalls || [])];
+                    toolCalls[0] = { ...toolCalls[0], result: data.toolResult.result };
+                    msg.toolCalls = toolCalls;
+                    msg.content = `\u{2705} **${data.toolResult.name}** abgeschlossen`;
+                    updated[i] = msg;
+                    break;
+                  }
+                }
+                // Add empty assistant message for next response
+                if (updated[updated.length - 1]?.role !== "assistant") {
+                  updated.push({ role: "assistant", content: "" });
+                }
+                return updated;
+              });
+            }
+
             if (data.error) {
               setMessages((prev) => {
                 const updated = [...prev];
@@ -265,6 +311,13 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             }
 
             if (data.done) {
+              // Remove empty trailing assistant messages
+              setMessages((prev) => {
+                if (prev[prev.length - 1]?.role === "assistant" && !prev[prev.length - 1]?.content) {
+                  return prev.slice(0, -1);
+                }
+                return prev;
+              });
               // Refresh session list to update titles
               fetchSessions();
             }
@@ -404,6 +457,8 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             className={
               msg.role === "user"
                 ? "ml-8 rounded-lg rounded-tr-sm bg-primary/10 p-3 text-sm text-foreground"
+                : msg.role === "tool"
+                ? "mx-4 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground font-mono"
                 : "mr-8 rounded-lg rounded-tl-sm bg-muted p-3 text-sm text-foreground"
             }
           >
@@ -415,6 +470,8 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
                     : msg.content
                 }
               />
+            ) : msg.role === "tool" ? (
+              <MarkdownMessage content={msg.content} />
             ) : (
               <span className="whitespace-pre-wrap">{msg.content}</span>
             )}

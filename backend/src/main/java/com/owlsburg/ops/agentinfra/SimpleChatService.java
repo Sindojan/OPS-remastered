@@ -6,8 +6,13 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.owlsburg.ops.agentinfra.dto.ChatMessageResponse;
 import com.owlsburg.ops.agentinfra.dto.SimpleChatRequest;
-import com.owlsburg.ops.agentinfra.llm.LlmConfigService;
 import com.owlsburg.ops.agentinfra.llm.LlmProviderException;
+import com.owlsburg.ops.agentinfra.llm.LlmConfigService;
+import com.owlsburg.ops.agentinfra.llm.LlmToolDefinition;
+import com.owlsburg.ops.agentinfra.tools.AgentTool;
+import com.owlsburg.ops.agentinfra.tools.AgentToolRegistry;
+import com.owlsburg.ops.agentinfra.tools.ToolExecutionContext;
+import com.owlsburg.ops.agentinfra.tools.ToolResult;
 import com.owlsburg.ops.common.TenantContext;
 import com.owlsburg.ops.tenant.TenantRepository;
 import org.springframework.security.access.AccessDeniedException;
@@ -25,13 +30,16 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class SimpleChatService {
 
     private static final Logger log = LoggerFactory.getLogger(SimpleChatService.class);
+    private static final int MAX_TOOL_ITERATIONS = 10;
 
     private final AgentInstanceRepository agentInstanceRepository;
     private final AgentTemplateRepository agentTemplateRepository;
@@ -40,13 +48,15 @@ public class SimpleChatService {
     private final HttpClient httpClient;
     private final ChatSessionService chatSessionService;
     private final TenantRepository tenantRepository;
+    private final AgentToolRegistry toolRegistry;
 
     public SimpleChatService(AgentInstanceRepository agentInstanceRepository,
                              AgentTemplateRepository agentTemplateRepository,
                              LlmConfigService llmConfigService,
                              ObjectMapper objectMapper,
                              ChatSessionService chatSessionService,
-                             TenantRepository tenantRepository) {
+                             TenantRepository tenantRepository,
+                             AgentToolRegistry toolRegistry) {
         this.agentInstanceRepository = agentInstanceRepository;
         this.agentTemplateRepository = agentTemplateRepository;
         this.llmConfigService = llmConfigService;
@@ -54,6 +64,7 @@ public class SimpleChatService {
         this.httpClient = HttpClient.newHttpClient();
         this.chatSessionService = chatSessionService;
         this.tenantRepository = tenantRepository;
+        this.toolRegistry = toolRegistry;
     }
 
     public UUID streamChat(SimpleChatRequest request, UUID userId, SseEmitter emitter) {
@@ -101,67 +112,104 @@ public class SimpleChatService {
                     .map(c -> c.getDefaultModel())
                     .orElse("claude-sonnet-4-20250514");
 
-            // 9. Build request body
-            ObjectNode body = objectMapper.createObjectNode();
-            body.put("model", model);
-            body.put("max_tokens", 2048);
-            body.put("system", systemPrompt);
-            body.put("stream", true);
+            // 9. Get tools for this agent template
+            List<AgentTool> agentTools = toolRegistry.getToolsForInstance(template);
+            List<LlmToolDefinition> toolDefs = agentTools.stream()
+                    .map(t -> new LlmToolDefinition(t.getName(), t.getDescription(), t.getInputSchema()))
+                    .toList();
 
-            ArrayNode messagesArray = body.putArray("messages");
-
-            // Load full history from DB (greeting + all messages are already persisted)
+            // 10. Load full history from DB and build messages
             List<ChatMessageResponse> dbHistory = chatSessionService.getMessages(sessionId);
+            List<ObjectNode> messages = new ArrayList<>();
             for (ChatMessageResponse msg : dbHistory) {
-                ObjectNode msgNode = messagesArray.addObject();
+                ObjectNode msgNode = objectMapper.createObjectNode();
                 msgNode.put("role", msg.role());
                 msgNode.put("content", msg.content());
+                messages.add(msgNode);
             }
 
-            // 10. Call Anthropic API with streaming
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.anthropic.com/v1/messages"))
-                    .header("x-api-key", apiKey)
-                    .header("anthropic-version", "2023-06-01")
-                    .header("content-type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-                    .timeout(Duration.ofSeconds(120))
-                    .build();
-
-            HttpResponse<InputStream> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
-
-            if (response.statusCode() != 200) {
-                String errorBody = new String(response.body().readAllBytes());
-                log.error("Anthropic API error ({}): {}", response.statusCode(), errorBody);
-                throw new LlmProviderException("Anthropic API Fehler: HTTP " + response.statusCode());
-            }
-
-            // 11. Parse SSE stream and forward tokens
+            // 11. ReAct loop – stream with tool calling
             StringBuilder fullResponse = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (!line.startsWith("data: ")) continue;
-                    String data = line.substring(6).trim();
-                    if ("[DONE]".equals(data)) break;
+            ToolExecutionContext toolContext = new ToolExecutionContext(
+                    TenantContext.getCurrentTenant(), instance.getId(), null);
 
-                    JsonNode event = objectMapper.readTree(data);
-                    String type = event.has("type") ? event.get("type").asText() : "";
+            for (int iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+                StreamResult streamResult = streamAnthropicRequest(
+                        apiKey, model, systemPrompt, messages, toolDefs, emitter);
 
-                    if ("content_block_delta".equals(type)) {
-                        JsonNode delta = event.get("delta");
-                        if (delta != null && "text_delta".equals(delta.get("type").asText())) {
-                            String token = delta.get("text").asText();
-                            fullResponse.append(token);
-                            emitter.send(SseEmitter.event().data(
-                                    "{\"token\":" + objectMapper.writeValueAsString(token) + "}"));
-                        }
+                fullResponse.append(streamResult.text);
+
+                if (!"tool_use".equals(streamResult.stopReason) || streamResult.toolUses.isEmpty()) {
+                    // No more tool calls – we're done
+                    break;
+                }
+
+                // Process each tool call in this response
+                // Build assistant message with all content blocks
+                ObjectNode assistantMsg = objectMapper.createObjectNode();
+                assistantMsg.put("role", "assistant");
+                ArrayNode contentBlocks = assistantMsg.putArray("content");
+
+                // Add text block if present
+                if (!streamResult.text.isEmpty()) {
+                    ObjectNode textBlock = contentBlocks.addObject();
+                    textBlock.put("type", "text");
+                    textBlock.put("text", streamResult.text);
+                }
+
+                // Add all tool_use blocks
+                for (ToolUseBlock toolUse : streamResult.toolUses) {
+                    ObjectNode toolUseBlock = contentBlocks.addObject();
+                    toolUseBlock.put("type", "tool_use");
+                    toolUseBlock.put("id", toolUse.id);
+                    toolUseBlock.put("name", toolUse.name);
+                    try {
+                        toolUseBlock.set("input", objectMapper.readTree(toolUse.input));
+                    } catch (Exception e) {
+                        toolUseBlock.putObject("input");
                     }
                 }
+                messages.add(assistantMsg);
+
+                // Execute tools and build tool result message
+                ObjectNode toolResultMsg = objectMapper.createObjectNode();
+                toolResultMsg.put("role", "user");
+                ArrayNode toolResultBlocks = toolResultMsg.putArray("content");
+
+                for (ToolUseBlock toolUse : streamResult.toolUses) {
+                    // Send toolCall event to client
+                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                            Map.of("toolCall", Map.of("name", toolUse.name, "input", toolUse.input)))));
+
+                    // Execute the tool
+                    String toolResultContent;
+                    try {
+                        AgentTool tool = toolRegistry.getTool(toolUse.name)
+                                .orElseThrow(() -> new IllegalArgumentException("Tool nicht gefunden: " + toolUse.name));
+                        ToolResult result = tool.execute(toolContext, toolUse.input);
+                        toolResultContent = result.success() ? result.data() : "Fehler: " + result.errorMessage();
+                    } catch (Exception e) {
+                        log.error("Tool execution error for '{}': {}", toolUse.name, e.getMessage());
+                        toolResultContent = "Fehler bei Tool-Ausführung: " + e.getMessage();
+                    }
+
+                    // Send toolResult event to client
+                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                            Map.of("toolResult", Map.of("name", toolUse.name, "result", toolResultContent)))));
+
+                    // Add to tool result message
+                    ObjectNode resultBlock = toolResultBlocks.addObject();
+                    resultBlock.put("type", "tool_result");
+                    resultBlock.put("tool_use_id", toolUse.id);
+                    resultBlock.put("content", toolResultContent);
+                }
+                messages.add(toolResultMsg);
             }
 
             // 12. Save assistant message to DB
-            chatSessionService.saveMessage(sessionId, "assistant", fullResponse.toString());
+            if (!fullResponse.isEmpty()) {
+                chatSessionService.saveMessage(sessionId, "assistant", fullResponse.toString());
+            }
 
             // 13. Auto-generate title on first message (new session)
             if (request.sessionId() == null) {
@@ -188,6 +236,130 @@ public class SimpleChatService {
             sendErrorAndComplete(emitter, "Interner Fehler");
             return sessionId;
         }
+    }
+
+    /**
+     * Streams a single Anthropic API request and returns the accumulated result.
+     * Handles both text_delta and tool_use content blocks in the streaming response.
+     */
+    private StreamResult streamAnthropicRequest(
+            String apiKey, String model, String systemPrompt,
+            List<ObjectNode> messages, List<LlmToolDefinition> tools,
+            SseEmitter emitter) throws Exception {
+
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("model", model);
+        body.put("max_tokens", 4096);
+        body.put("system", systemPrompt);
+        body.put("stream", true);
+
+        // Messages
+        ArrayNode messagesArray = body.putArray("messages");
+        for (ObjectNode msg : messages) {
+            messagesArray.add(msg);
+        }
+
+        // Tools
+        if (tools != null && !tools.isEmpty()) {
+            ArrayNode toolsArray = body.putArray("tools");
+            for (LlmToolDefinition tool : tools) {
+                ObjectNode toolNode = toolsArray.addObject();
+                toolNode.put("name", tool.name());
+                toolNode.put("description", tool.description());
+                try {
+                    toolNode.set("input_schema", objectMapper.readTree(tool.inputSchema()));
+                } catch (Exception e) {
+                    log.warn("Failed to parse input_schema for tool '{}': {}", tool.name(), e.getMessage());
+                    toolNode.putObject("input_schema");
+                }
+            }
+        }
+
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.anthropic.com/v1/messages"))
+                .header("x-api-key", apiKey)
+                .header("anthropic-version", "2023-06-01")
+                .header("content-type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                .timeout(Duration.ofSeconds(120))
+                .build();
+
+        HttpResponse<InputStream> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
+
+        if (response.statusCode() != 200) {
+            String errorBody = new String(response.body().readAllBytes());
+            log.error("Anthropic API error ({}): {}", response.statusCode(), errorBody);
+            throw new LlmProviderException("Anthropic API Fehler: HTTP " + response.statusCode());
+        }
+
+        // Parse SSE stream
+        StringBuilder textContent = new StringBuilder();
+        List<ToolUseBlock> toolUses = new ArrayList<>();
+        String stopReason = "end_turn";
+
+        // Track current tool_use block being accumulated
+        String currentToolId = null;
+        String currentToolName = null;
+        StringBuilder currentToolInput = new StringBuilder();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith("data: ")) continue;
+                String data = line.substring(6).trim();
+                if ("[DONE]".equals(data)) break;
+
+                JsonNode event = objectMapper.readTree(data);
+                String type = event.has("type") ? event.get("type").asText() : "";
+
+                switch (type) {
+                    case "content_block_start" -> {
+                        JsonNode contentBlock = event.get("content_block");
+                        if (contentBlock != null && "tool_use".equals(contentBlock.get("type").asText())) {
+                            currentToolId = contentBlock.get("id").asText();
+                            currentToolName = contentBlock.get("name").asText();
+                            currentToolInput.setLength(0);
+                        }
+                    }
+
+                    case "content_block_delta" -> {
+                        JsonNode delta = event.get("delta");
+                        if (delta == null) continue;
+
+                        String deltaType = delta.get("type").asText();
+                        if ("text_delta".equals(deltaType)) {
+                            String token = delta.get("text").asText();
+                            textContent.append(token);
+                            emitter.send(SseEmitter.event().data(
+                                    "{\"token\":" + objectMapper.writeValueAsString(token) + "}"));
+                        } else if ("input_json_delta".equals(deltaType)) {
+                            String partialJson = delta.get("partial_json").asText();
+                            currentToolInput.append(partialJson);
+                        }
+                    }
+
+                    case "content_block_stop" -> {
+                        if (currentToolId != null) {
+                            String inputJson = currentToolInput.toString();
+                            if (inputJson.isEmpty()) inputJson = "{}";
+                            toolUses.add(new ToolUseBlock(currentToolId, currentToolName, inputJson));
+                            currentToolId = null;
+                            currentToolName = null;
+                            currentToolInput.setLength(0);
+                        }
+                    }
+
+                    case "message_delta" -> {
+                        JsonNode delta = event.get("delta");
+                        if (delta != null && delta.has("stop_reason")) {
+                            stopReason = delta.get("stop_reason").asText();
+                        }
+                    }
+                }
+            }
+        }
+
+        return new StreamResult(textContent.toString(), stopReason, toolUses);
     }
 
     private String buildSystemPrompt(String basePrompt, String tenantName) {
@@ -225,4 +397,10 @@ public class SimpleChatService {
             }
         }
     }
+
+    // Internal data structures for streaming
+
+    private record StreamResult(String text, String stopReason, List<ToolUseBlock> toolUses) {}
+
+    private record ToolUseBlock(String id, String name, String input) {}
 }

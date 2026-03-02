@@ -252,6 +252,12 @@ sindojan_ops_remastered/
 |------|-------------|--------|
 | TASK-SEC-001 | `findByIdAndTenantId` auf allen Agent/Chat Repositories, `findByIdSecure()` im Service, AccessDeniedException → 403, PATCH Template Endpoint | `9e05204` |
 
+### Block 13.5: CEO Tool-Calling ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-023 | ReAct-Loop in SimpleChatService (Streaming + Tool-Calling), 10 Chat-Tools (get_jobs, get_job_detail, update_job_status, get_machines, get_machine_detail, get_critical_stock, get_stock_level, get_attendance_today, get_absences, get_customer_orders), V14 Migration (CEO Prompt + allowed_tools) | - |
+| TASK-FE-029 | Tool-Call/Result SSE Events im Agent-Panel anzeigen (inline als Info-Cards) | - |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -339,6 +345,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V11__chat_sessions.sql | chat_sessions, chat_messages Tabellen mit RLS Policies |
 | V12__ceo_system_prompt.sql | CEO Agent Template: Detaillierter System-Prompt mit `{{TENANT_NAME}}` |
 | V13__instance_system_prompt.sql | `custom_system_prompt TEXT` auf agent_instances |
+| V14__ceo_tools_prompt.sql | CEO Tool-Section im System-Prompt, allowed_tools für 10 Tools |
 
 ## Default Admin
 
@@ -371,7 +378,7 @@ Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEA
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-02-27
-**Session:** Block 13 (Agent Console) + Security Fix komplett
-**Status:** Backend ~490 Java-Dateien, V13 Migration. Chat mit SSE Streaming, Markdown-Rendering, persistente Sessions, CEO System-Prompt mit Tenant-Name, per-Instance Prompt-Override, Tenant-Isolation (Defense-in-Depth mit findByIdAndTenantId + 403). Alles kompiliert und funktioniert.
-**Nächste Blöcke:** Block 14 (Docker/Deployment), weitere Agent-Features (Tool-Anbindung, ReAct-Loop im Chat)
+**Datum:** 2026-03-02
+**Session:** Block 13.5 (CEO Tool-Calling) komplett
+**Status:** Backend ~500 Java-Dateien, V14 Migration. ReAct-Loop im Chat mit Streaming-SSE + Tool-Calling (10 Tools: Produktion, Maschinen, Lager, Personal, Kunden). Tool-Calls werden im Frontend als inline Info-Cards angezeigt. CEO Agent kann jetzt echte Daten abfragen und Aufträge steuern.
+**Nächste Blöcke:** Block 14 (Docker/Deployment), Block 13.6 (Tool-Call UI Verfeinerung)

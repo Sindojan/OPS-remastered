@@ -269,7 +269,13 @@ function AgentDetailSheet({ instance, open, onOpenChange, models, onSaved }: Age
     if (template) {
       setSystemPrompt(instance.customSystemPrompt || template.basePrompt || "");
       setMaxTokens(template.maxTokensPerRun || 4096);
-      const tools = template.allowedTools ? template.allowedTools.split(",").map((t) => t.trim()).filter(Boolean) : [];
+      let tools: string[] = [];
+      try {
+        const parsed = JSON.parse(template.allowedTools || "[]");
+        tools = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        tools = [];
+      }
       setEnabledTools(new Set(tools));
     }
   }, [template, instance.customSystemPrompt]);
@@ -282,7 +288,7 @@ function AgentDetailSheet({ instance, open, onOpenChange, models, onSaved }: Age
       await apiClient.patch(`/api/agent-instances/${instance.id}`, { systemPrompt });
       // Save tools + tokens to template
       await mutations.patch(template.id, {
-        allowedTools: Array.from(enabledTools).join(","),
+        allowedTools: JSON.stringify(Array.from(enabledTools)),
         maxTokensPerRun: maxTokens,
       });
       toast.success("Agent-Konfiguration gespeichert");
@@ -301,7 +307,13 @@ function AgentDetailSheet({ instance, open, onOpenChange, models, onSaved }: Age
     if (!template) return;
     setSystemPrompt(template.basePrompt || "");
     setMaxTokens(template.maxTokensPerRun || 4096);
-    const tools = template.allowedTools ? template.allowedTools.split(",").map((t) => t.trim()).filter(Boolean) : [];
+    let tools: string[] = [];
+    try {
+      const parsed = JSON.parse(template.allowedTools || "[]");
+      tools = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      tools = [];
+    }
     setEnabledTools(new Set(tools));
     setShowResetDialog(false);
     toast.success("Auf Vorlage zurückgesetzt");
