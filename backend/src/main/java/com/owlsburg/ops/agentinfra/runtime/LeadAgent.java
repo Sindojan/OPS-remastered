@@ -50,6 +50,7 @@ public final class LeadAgent implements Agent {
                     context.tenantId(), identity.instanceId(), null);
 
             List<String> toolsUsed = new ArrayList<>();
+            List<LeadStep> steps = new ArrayList<>();
             int totalInputTokens = 0;
             int totalOutputTokens = 0;
 
@@ -62,8 +63,16 @@ public final class LeadAgent implements Agent {
                 totalInputTokens += response.inputTokens();
                 totalOutputTokens += response.outputTokens();
 
+                // Capture reasoning if present
+                if (response.content() != null && !response.content().isBlank()) {
+                    steps.add(new LeadStep("reasoning", null, response.content(), i));
+                }
+
                 if (response.toolUse() != null) {
                     messages.add(LlmMessage.assistantToolUse(response.toolUse()));
+
+                    // Capture tool call
+                    steps.add(new LeadStep("tool_call", response.toolUse().name(), response.toolUse().input(), i));
 
                     String toolResultContent;
                     try {
@@ -79,15 +88,19 @@ public final class LeadAgent implements Agent {
                         toolResultContent = "Fehler bei Tool-Ausführung: " + e.getMessage();
                     }
 
+                    // Capture tool result
+                    steps.add(new LeadStep("tool_result", response.toolUse().name(), toolResultContent, i));
+
                     messages.add(LlmMessage.toolResult(
                             new LlmToolResult(response.toolUse().id(), toolResultContent)));
 
                     log.debug("Lead {} used tool: {} (iteration {})",
                             identity.name(), response.toolUse().name(), i + 1);
                 } else {
-                    log.info("Lead {} completed task in {} iterations", identity.name(), i + 1);
+                    log.info("Lead {} completed task in {} iterations ({} steps)",
+                            identity.name(), i + 1, steps.size());
                     String content = response.content() != null ? response.content() : "";
-                    return AgentResult.completed(content, totalInputTokens, totalOutputTokens, toolsUsed);
+                    return AgentResult.completed(content, totalInputTokens, totalOutputTokens, toolsUsed, steps);
                 }
             }
 

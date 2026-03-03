@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Bot, X, Send, Loader2, Plus, List, Trash2 } from "lucide-react";
+import { Bot, X, Send, Loader2, Plus, List, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 import { usePrimaryAgent } from "@/hooks/use-primary-agent";
 import { useApi } from "@/hooks/api/use-api";
 import { MarkdownMessage } from "@/components/chat/markdown-message";
@@ -20,10 +20,19 @@ interface ToolCallInfo {
   result?: string;
 }
 
+interface LeadStepInfo {
+  type: "reasoning" | "tool_call" | "tool_result";
+  toolName?: string;
+  content: string;
+  iteration: number;
+}
+
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
   content: string;
   toolCalls?: ToolCallInfo[];
+  leadSteps?: LeadStepInfo[];
+  delegationId?: string;
 }
 
 const LEAD_LABELS: Record<string, string> = {
@@ -43,6 +52,63 @@ function formatDate(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function DelegationCard({ msg, isStreaming }: { msg: ChatMessage; isStreaming: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasResult = !!msg.toolCalls?.[0]?.result;
+  const steps = msg.leadSteps || [];
+  const hasSteps = steps.length > 0;
+
+  return (
+    <div>
+      <div
+        className={`flex items-center gap-1.5 ${hasSteps ? "cursor-pointer select-none" : ""}`}
+        onClick={() => hasSteps && setExpanded((v) => !v)}
+      >
+        {hasSteps ? (
+          expanded ? (
+            <ChevronDown className="h-3 w-3 shrink-0" />
+          ) : (
+            <ChevronRight className="h-3 w-3 shrink-0" />
+          )
+        ) : null}
+        <MarkdownMessage content={
+          (!hasResult && isStreaming ? "\u{23F3} " : hasResult ? "\u{2705} " : "\u{1F4E4} ") + msg.content
+        } />
+      </div>
+      {expanded && hasSteps && (
+        <div className="mt-2 ml-4 space-y-1.5 border-l-2 border-border/50 pl-3">
+          {steps.map((step, j) => (
+            <div key={j} className="text-[11px] leading-relaxed">
+              {step.type === "reasoning" ? (
+                <span className="italic text-muted-foreground">{step.content}</span>
+              ) : step.type === "tool_call" ? (
+                <div>
+                  <span className="font-semibold text-primary/80">{step.toolName}</span>
+                  <pre className="mt-0.5 overflow-x-auto rounded bg-muted/50 px-1.5 py-0.5 text-[10px]">
+                    {truncate(step.content, 200)}
+                  </pre>
+                </div>
+              ) : step.type === "tool_result" ? (
+                <div>
+                  <span className="text-muted-foreground/70">{step.toolName} Ergebnis:</span>
+                  <pre className="mt-0.5 overflow-x-auto rounded bg-muted/50 px-1.5 py-0.5 text-[10px]">
+                    {truncate(step.content, 300)}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function truncate(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen) + "...";
 }
 
 export function AgentPanel({ open, onClose }: AgentPanelProps) {
@@ -269,30 +335,62 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             }
 
             if (data.delegation) {
-              // Show delegation event
+              // Show delegation event with ID for matching
               const label = LEAD_LABELS[data.delegation.lead] || data.delegation.lead;
+              const delegationId = data.delegation.id || undefined;
               setMessages((prev) => [
                 ...prev,
                 {
                   role: "tool" as const,
-                  content: `\u{1F4E4} Delegiere an **${label}**...\n_${data.delegation.task}_`,
+                  content: `Delegiere an **${label}**...\n_${data.delegation.task}_`,
                   toolCalls: [{ name: "delegate_to_lead", input: data.delegation.task }],
+                  leadSteps: [],
+                  delegationId,
                 },
               ]);
             }
 
-            if (data.delegationResult) {
-              // Update the delegation message with result
+            if (data.leadStep) {
+              // Accumulate leadStep into the matching delegation message
+              const step: LeadStepInfo = {
+                type: data.leadStep.type,
+                toolName: data.leadStep.toolName,
+                content: data.leadStep.content,
+                iteration: data.leadStep.iteration,
+              };
+              const matchId = data.leadStep.id;
               setMessages((prev) => {
                 const updated = [...prev];
                 for (let i = updated.length - 1; i >= 0; i--) {
                   if (
                     updated[i].role === "tool" &&
-                    updated[i].toolCalls?.[0]?.name === "delegate_to_lead"
+                    updated[i].delegationId === matchId
+                  ) {
+                    const msg = { ...updated[i] };
+                    msg.leadSteps = [...(msg.leadSteps || []), step];
+                    updated[i] = msg;
+                    break;
+                  }
+                }
+                return updated;
+              });
+            }
+
+            if (data.delegationResult) {
+              // Update the delegation message with result, match by ID
+              const matchId = data.delegationResult.id;
+              setMessages((prev) => {
+                const updated = [...prev];
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (
+                    updated[i].role === "tool" &&
+                    (matchId ? updated[i].delegationId === matchId :
+                      updated[i].toolCalls?.[0]?.name === "delegate_to_lead")
                   ) {
                     const label = LEAD_LABELS[data.delegationResult.lead] || data.delegationResult.lead;
                     const msg = { ...updated[i] };
-                    msg.content = `\u{2705} **${label}** hat geantwortet`;
+                    const stepCount = msg.leadSteps?.length || 0;
+                    msg.content = `**${label}** hat geantwortet` + (stepCount > 0 ? ` (${stepCount} Schritte)` : "");
                     const toolCalls = [...(msg.toolCalls || [])];
                     toolCalls[0] = { ...toolCalls[0], result: data.delegationResult.result };
                     msg.toolCalls = toolCalls;
@@ -518,7 +616,11 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
                 }
               />
             ) : msg.role === "tool" ? (
-              <MarkdownMessage content={msg.content} />
+              msg.delegationId != null ? (
+                <DelegationCard msg={msg} isStreaming={isStreaming} />
+              ) : (
+                <MarkdownMessage content={msg.content} />
+              )
             ) : (
               <span className="whitespace-pre-wrap">{msg.content}</span>
             )}

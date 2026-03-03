@@ -22,8 +22,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class CeoAgent implements Agent {
 
@@ -150,68 +152,109 @@ public final class CeoAgent implements Agent {
             }
             messages.add(assistantMsg);
 
-            // Execute tools and build tool result message
-            ObjectNode toolResultMsg = objectMapper.createObjectNode();
-            toolResultMsg.put("role", "user");
-            ArrayNode toolResultBlocks = toolResultMsg.putArray("content");
-
+            // Partition tools into delegations and regular tools
+            List<ToolUseBlock> delegations = new ArrayList<>();
+            List<ToolUseBlock> regularTools = new ArrayList<>();
             for (ToolUseBlock toolUse : streamResult.toolUses) {
-                // Send delegation/toolCall SSE events
                 if ("delegate_to_lead".equals(toolUse.name)) {
+                    delegations.add(toolUse);
+                } else {
+                    regularTools.add(toolUse);
+                }
+            }
+
+            // Results map: toolUseId -> resultContent (preserves insertion order)
+            Map<String, String> toolResults = new LinkedHashMap<>();
+
+            // Phase 1: Execute regular tools sequentially
+            for (ToolUseBlock toolUse : regularTools) {
+                try {
+                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                            Map.of("toolCall", Map.of("name", toolUse.name, "input", toolUse.input)))));
+                } catch (Exception e) {
+                    log.debug("SSE toolCall event send failed: {}", e.getMessage());
+                }
+
+                String toolResultContent = executeToolSafe(toolContext, toolUse);
+                toolResults.put(toolUse.id, toolResultContent);
+
+                try {
+                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                            Map.of("toolResult", Map.of("name", toolUse.name, "result", toolResultContent)))));
+                } catch (Exception e) {
+                    log.debug("SSE toolResult event send failed: {}", e.getMessage());
+                }
+            }
+
+            // Phase 2: Execute delegations in parallel via Virtual Threads
+            if (!delegations.isEmpty()) {
+                // Send all delegation-start events immediately
+                for (ToolUseBlock toolUse : delegations) {
                     try {
                         JsonNode delegateInput = objectMapper.readTree(toolUse.input);
                         String leadName = delegateInput.has("lead") ? delegateInput.get("lead").asText() : "unknown";
                         String delegateTask = delegateInput.has("task") ? delegateInput.get("task").asText() : "";
                         emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
-                                Map.of("delegation", Map.of("lead", leadName, "task", delegateTask, "status", "running")))));
+                                Map.of("delegation", Map.of("lead", leadName, "task", delegateTask,
+                                        "status", "running", "id", toolUse.id)))));
                     } catch (Exception e) {
                         log.debug("SSE delegation event send failed: {}", e.getMessage());
                     }
-                } else {
+                }
+
+                // Capture TenantContext for Virtual Thread propagation
+                String capturedTenantId = context.tenantId();
+                ConcurrentLinkedQueue<DelegationResult> delegationResults = new ConcurrentLinkedQueue<>();
+
+                List<Thread> threads = new ArrayList<>();
+                for (ToolUseBlock toolUse : delegations) {
+                    Thread t = Thread.startVirtualThread(() -> {
+                        try {
+                            com.owlsburg.ops.common.TenantContext.setCurrentTenant(capturedTenantId);
+                            String resultContent = executeToolSafe(toolContext, toolUse);
+
+                            // Parse structured result and emit leadStep events
+                            emitLeadStepEvents(emitter, toolUse, resultContent);
+
+                            delegationResults.add(new DelegationResult(toolUse.id, resultContent));
+                        } catch (Exception e) {
+                            log.error("Parallel delegation error for '{}': {}", toolUse.id, e.getMessage());
+                            delegationResults.add(new DelegationResult(toolUse.id,
+                                    "Fehler bei der Delegation: " + e.getMessage()));
+                        } finally {
+                            com.owlsburg.ops.common.TenantContext.clear();
+                        }
+                    });
+                    threads.add(t);
+                }
+
+                // Wait for all delegation threads
+                for (Thread t : threads) {
                     try {
-                        emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
-                                Map.of("toolCall", Map.of("name", toolUse.name, "input", toolUse.input)))));
-                    } catch (Exception e) {
-                        log.debug("SSE toolCall event send failed: {}", e.getMessage());
+                        t.join(90_000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Interrupted while waiting for delegation thread");
                     }
                 }
 
-                // Execute tool
-                String toolResultContent;
-                try {
-                    AgentTool tool = toolRegistry.getTool(toolUse.name)
-                            .orElseThrow(() -> new IllegalArgumentException("Tool nicht gefunden: " + toolUse.name));
-                    ToolResult result = tool.execute(toolContext, toolUse.input);
-                    toolResultContent = result.success() ? result.data() : "Fehler: " + result.errorMessage();
-                } catch (Exception e) {
-                    log.error("Tool execution error for '{}': {}", toolUse.name, e.getMessage());
-                    toolResultContent = "Fehler bei Tool-Ausführung: " + e.getMessage();
+                // Collect results
+                for (DelegationResult dr : delegationResults) {
+                    toolResults.put(dr.toolUseId, dr.resultContent);
                 }
+            }
 
-                // Send result SSE events
-                if ("delegate_to_lead".equals(toolUse.name)) {
-                    try {
-                        JsonNode delegateInput = objectMapper.readTree(toolUse.input);
-                        String leadName = delegateInput.has("lead") ? delegateInput.get("lead").asText() : "unknown";
-                        emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
-                                Map.of("delegationResult", Map.of("lead", leadName, "result", toolResultContent)))));
-                    } catch (Exception e) {
-                        log.debug("SSE delegationResult event send failed: {}", e.getMessage());
-                    }
-                } else {
-                    try {
-                        emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
-                                Map.of("toolResult", Map.of("name", toolUse.name, "result", toolResultContent)))));
-                    } catch (Exception e) {
-                        log.debug("SSE toolResult event send failed: {}", e.getMessage());
-                    }
-                }
+            // Build tool result message for Anthropic API
+            ObjectNode toolResultMsg = objectMapper.createObjectNode();
+            toolResultMsg.put("role", "user");
+            ArrayNode toolResultBlocks = toolResultMsg.putArray("content");
 
-                // Add to tool result message
+            for (ToolUseBlock toolUse : streamResult.toolUses) {
                 ObjectNode resultBlock = toolResultBlocks.addObject();
                 resultBlock.put("type", "tool_result");
                 resultBlock.put("tool_use_id", toolUse.id);
-                resultBlock.put("content", toolResultContent);
+                resultBlock.put("content", toolResults.getOrDefault(toolUse.id,
+                        "Fehler: Kein Ergebnis erhalten (Timeout?)"));
             }
             messages.add(toolResultMsg);
         }
@@ -369,6 +412,57 @@ public final class CeoAgent implements Agent {
         }
     }
 
+    private String executeToolSafe(ToolExecutionContext toolContext, ToolUseBlock toolUse) {
+        try {
+            AgentTool tool = toolRegistry.getTool(toolUse.name)
+                    .orElseThrow(() -> new IllegalArgumentException("Tool nicht gefunden: " + toolUse.name));
+            ToolResult result = tool.execute(toolContext, toolUse.input);
+            return result.success() ? result.data() : "Fehler: " + result.errorMessage();
+        } catch (Exception e) {
+            log.error("Tool execution error for '{}': {}", toolUse.name, e.getMessage());
+            return "Fehler bei Tool-Ausführung: " + e.getMessage();
+        }
+    }
+
+    private void emitLeadStepEvents(SseEmitter emitter, ToolUseBlock toolUse, String resultContent) {
+        try {
+            JsonNode delegateInput = objectMapper.readTree(toolUse.input);
+            String leadName = delegateInput.has("lead") ? delegateInput.get("lead").asText() : "unknown";
+
+            // Try to parse structured result with steps
+            JsonNode resultJson = objectMapper.readTree(resultContent);
+            String output = resultContent;
+            if (resultJson.has("output") && resultJson.has("steps")) {
+                output = resultJson.get("output").asText();
+
+                // Emit leadStep events for each step
+                JsonNode stepsArray = resultJson.get("steps");
+                for (JsonNode step : stepsArray) {
+                    Map<String, Object> stepEvent = new LinkedHashMap<>();
+                    stepEvent.put("lead", leadName);
+                    stepEvent.put("type", step.get("type").asText());
+                    if (step.has("toolName") && !step.get("toolName").isNull()) {
+                        stepEvent.put("toolName", step.get("toolName").asText());
+                    }
+                    stepEvent.put("content", step.get("content").asText());
+                    stepEvent.put("iteration", step.get("iteration").asInt());
+                    stepEvent.put("id", toolUse.id);
+
+                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                            Map.of("leadStep", stepEvent))));
+                }
+            }
+
+            // Emit delegationResult with only the output
+            emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                    Map.of("delegationResult", Map.of("lead", leadName, "result", output, "id", toolUse.id)))));
+
+        } catch (Exception e) {
+            log.debug("Failed to emit leadStep/delegationResult events: {}", e.getMessage());
+        }
+    }
+
     private record StreamResult(String text, String stopReason, List<ToolUseBlock> toolUses) {}
     private record ToolUseBlock(String id, String name, String input) {}
+    private record DelegationResult(String toolUseId, String resultContent) {}
 }

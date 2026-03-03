@@ -2,6 +2,7 @@ package com.owlsburg.ops.agentinfra.tools.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.owlsburg.ops.agentinfra.AgentInstanceEntity;
 import com.owlsburg.ops.agentinfra.AgentInstanceRepository;
 import com.owlsburg.ops.agentinfra.AgentTemplateEntity;
@@ -10,6 +11,7 @@ import com.owlsburg.ops.agentinfra.runtime.Agent;
 import com.owlsburg.ops.agentinfra.runtime.AgentContext;
 import com.owlsburg.ops.agentinfra.runtime.AgentFactory;
 import com.owlsburg.ops.agentinfra.runtime.AgentResult;
+import com.owlsburg.ops.agentinfra.runtime.LeadStep;
 import com.owlsburg.ops.agentinfra.tools.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,10 +115,25 @@ public class DelegateToLeadTool implements AgentTool {
             AgentResult result = leadAgent.execute(agentContext, task);
             long elapsed = System.currentTimeMillis() - startTime;
 
-            log.info("Delegation to {} completed in {}ms (status: {}, tokens: {}+{})",
-                    leadName, elapsed, result.status(), result.inputTokens(), result.outputTokens());
+            log.info("Delegation to {} completed in {}ms (status: {}, tokens: {}+{}, steps: {})",
+                    leadName, elapsed, result.status(), result.inputTokens(), result.outputTokens(),
+                    result.steps().size());
 
-            return ToolResult.success(result.output());
+            // Build structured JSON with output + steps for CeoAgent transparency
+            ObjectNode resultJson = objectMapper.createObjectNode();
+            resultJson.put("output", result.output());
+            var stepsArray = resultJson.putArray("steps");
+            for (LeadStep step : result.steps()) {
+                ObjectNode stepNode = stepsArray.addObject();
+                stepNode.put("type", step.type());
+                if (step.toolName() != null) {
+                    stepNode.put("toolName", step.toolName());
+                }
+                stepNode.put("content", step.content());
+                stepNode.put("iteration", step.iteration());
+            }
+
+            return ToolResult.success(objectMapper.writeValueAsString(resultJson));
         } catch (Exception e) {
             log.error("Error executing delegate_to_lead: {}", e.getMessage(), e);
             return ToolResult.error("Fehler bei der Delegation: " + e.getMessage());
