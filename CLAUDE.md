@@ -258,6 +258,13 @@ sindojan_ops_remastered/
 | TASK-BE-023 | ReAct-Loop in SimpleChatService (Streaming + Tool-Calling), 10 Chat-Tools (get_jobs, get_job_detail, update_job_status, get_machines, get_machine_detail, get_critical_stock, get_stock_level, get_attendance_today, get_absences, get_customer_orders), V14 Migration (CEO Prompt + allowed_tools) | - |
 | TASK-FE-029 | Tool-Call/Result SSE Events im Agent-Panel anzeigen (inline als Info-Cards) | - |
 
+### Block 13.6: CEO → Lead-Agent Delegation ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-024 | LeadAgentRunner (sync ReAct-Loop für Leads), DelegateToLeadTool, 9 neue Lead-Tools (Produktion, Maschinen, Lager, Personal, Support), ReorderRequest Entity/Service/Repo | - |
+| TASK-BE-025 | V15 Migration (reorder_requests, CEO auf 2 Tools, Lead-Tool-Zuweisungen, Lead-Instance System-Prompts) | - |
+| TASK-FE-030 | Delegation SSE-Events im Agent-Panel (delegation/delegationResult statt toolCall/toolResult) | - |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -346,6 +353,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V12__ceo_system_prompt.sql | CEO Agent Template: Detaillierter System-Prompt mit `{{TENANT_NAME}}` |
 | V13__instance_system_prompt.sql | `custom_system_prompt TEXT` auf agent_instances |
 | V14__ceo_tools_prompt.sql | CEO Tool-Section im System-Prompt, allowed_tools für 10 Tools |
+| V15__lead_delegation.sql | reorder_requests Tabelle, CEO auf 2 Tools (delegate_to_lead, get_kpi_summary), Lead-Tool-Zuweisungen, Lead-Instance System-Prompts |
 
 ## Default Admin
 
@@ -378,7 +386,7 @@ Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEA
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-03-02
-**Session:** Block 13.5 (CEO Tool-Calling) komplett
-**Status:** Backend ~500 Java-Dateien, V14 Migration. ReAct-Loop im Chat mit Streaming-SSE + Tool-Calling (10 Tools: Produktion, Maschinen, Lager, Personal, Kunden). Tool-Calls werden im Frontend als inline Info-Cards angezeigt. CEO Agent kann jetzt echte Daten abfragen und Aufträge steuern.
-**Nächste Blöcke:** Block 14 (Docker/Deployment), Block 13.6 (Tool-Call UI Verfeinerung)
+**Datum:** 2026-03-03
+**Session:** Block 13.6 (CEO → Lead-Agent Delegation) komplett
+**Status:** Backend ~530 Java-Dateien, V15 Migration. CEO delegiert an 5 Lead-Agents (Produktion, Maschinen, Lager, Personal, Support) via `delegate_to_lead` Tool. Leads haben eigene Tools und laufen als sync ReAct-Loop (LeadAgentRunner, max 5 Iterationen). 33 Tools total registriert. Delegation-Events im Frontend als eigene UI-Elemente.
+**Nächste Blöcke:** Block 14 (Docker/Deployment)

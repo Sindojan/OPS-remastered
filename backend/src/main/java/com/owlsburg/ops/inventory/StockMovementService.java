@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -104,5 +107,15 @@ public class StockMovementService {
         movement.setPerformedBy(performedBy);
         movement.setNotes(notes);
         return movementRepository.save(movement);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StockMovementEntity> findRecentMovements(Pageable pageable) {
+        return movementRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StockMovementEntity> findByArticle(UUID articleId, Pageable pageable) {
+        return movementRepository.findByArticleIdOrderByCreatedAtDesc(articleId, pageable);
     }
 }

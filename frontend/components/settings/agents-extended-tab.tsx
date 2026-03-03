@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
-import { useApi } from "@/hooks/api/use-api";
 import { useAgentTemplateDetail, useAgentTemplateMutations, useAvailableTools } from "@/hooks/api/use-settings";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -55,6 +54,12 @@ interface ModelInfo {
   name: string;
 }
 
+const VALID_MODELS: ModelInfo[] = [
+  { id: "claude-opus-4-6", name: "Claude Opus 4.6" },
+  { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
+  { id: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5" },
+];
+
 const PERMISSION_CONFIG: Record<string, { label: string; className: string }> = {
   READ_ONLY: { label: "NUR_LESEN", className: "bg-success/10 text-success border-success/20" },
   WRITE: { label: "SCHREIBEN", className: "bg-warning/10 text-warning border-warning/20" },
@@ -63,7 +68,7 @@ const PERMISSION_CONFIG: Record<string, { label: string; className: string }> = 
 
 export function AgentsExtendedTab() {
   const [instances, setInstances] = useState<InstanceRow[]>([]);
-  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [models] = useState<ModelInfo[]>(VALID_MODELS);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -74,26 +79,12 @@ export function AgentsExtendedTab() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [instancesRes, templatesRes, modelsRes] = await Promise.all([
+      const [instancesRes, templatesRes] = await Promise.all([
         apiClient.get<ApiResponse<AgentInstance[]>>("/api/agent-instances"),
         apiClient.get<ApiResponse<AgentTemplate[]>>("/api/agent-templates"),
-        apiClient.get<ApiResponse<string[]>>("/api/settings/llm/models").catch(() => ({
-          success: true,
-          data: [] as string[],
-          timestamp: "",
-        })),
       ]);
 
       const templateMap = new Map(templatesRes.data.map((t) => [t.id, t]));
-      const rawModels = modelsRes.data || [];
-      const mappedModels: ModelInfo[] = rawModels.length > 0
-        ? rawModels.map((id) => ({ id, name: id }))
-        : [
-            { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
-            { id: "claude-opus-4-20250514", name: "Claude Opus 4" },
-            { id: "claude-haiku-4-20250414", name: "Claude Haiku 4" },
-          ];
-      setModels(mappedModels);
 
       const rows: InstanceRow[] = instancesRes.data.map((inst) => {
         const template = templateMap.get(inst.templateId);
@@ -196,14 +187,14 @@ export function AgentsExtendedTab() {
                     Aktualisieren...
                   </span>
                 ) : (
-                  <span className="font-mono text-xs">{row.model || "Nicht gesetzt"}</span>
+                  <span className="font-mono text-xs">{VALID_MODELS.find(m => m.id === row.model)?.name || row.model || "Nicht gesetzt"}</span>
                 )}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {models.map((model) => (
+              {VALID_MODELS.map((model) => (
                 <SelectItem key={model.id} value={model.id}>
-                  <span className="font-mono text-xs">{model.name}</span>
+                  <span className="text-xs">{model.name}</span>
                 </SelectItem>
               ))}
             </SelectContent>

@@ -9,11 +9,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/agent-instances")
 public class AgentInstanceController {
+
+    private static final Set<String> VALID_MODELS = Set.of(
+            "claude-opus-4-6",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5-20251001"
+    );
 
     private final AgentInstanceService instanceService;
 
@@ -112,6 +119,11 @@ public class AgentInstanceController {
         if (model == null || model.isBlank()) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("model field is required"));
+        }
+        if (!VALID_MODELS.contains(model)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Ungültiges Modell: " + model
+                            + ". Erlaubt: " + VALID_MODELS));
         }
         AgentInstanceEntity instance = instanceService.findByIdSecure(id);
         // Merge model into existing config JSON

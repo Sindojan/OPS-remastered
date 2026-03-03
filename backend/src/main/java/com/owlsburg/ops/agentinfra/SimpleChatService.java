@@ -106,11 +106,9 @@ public class SimpleChatService {
             String tenantName = resolveTenantName();
             String systemPrompt = buildSystemPrompt(basePrompt, tenantName);
 
-            // 8. Get API key and model
+            // 8. Get API key and model (per-instance override → tenant default → fallback)
             String apiKey = llmConfigService.getDecryptedApiKey();
-            String model = llmConfigService.getConfig()
-                    .map(c -> c.getDefaultModel())
-                    .orElse("claude-sonnet-4-20250514");
+            String model = resolveModel(instance);
 
             // 9. Get tools for this agent template
             List<AgentTool> agentTools = toolRegistry.getToolsForInstance(template);
@@ -177,9 +175,20 @@ public class SimpleChatService {
                 ArrayNode toolResultBlocks = toolResultMsg.putArray("content");
 
                 for (ToolUseBlock toolUse : streamResult.toolUses) {
-                    // Send toolCall event to client
-                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
-                            Map.of("toolCall", Map.of("name", toolUse.name, "input", toolUse.input)))));
+                    // Send delegation event before executing delegate_to_lead
+                    if ("delegate_to_lead".equals(toolUse.name)) {
+                        try {
+                            com.fasterxml.jackson.databind.JsonNode delegateInput = objectMapper.readTree(toolUse.input);
+                            String leadName = delegateInput.has("lead") ? delegateInput.get("lead").asText() : "unknown";
+                            String delegateTask = delegateInput.has("task") ? delegateInput.get("task").asText() : "";
+                            emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                                    Map.of("delegation", Map.of("lead", leadName, "task", delegateTask, "status", "running")))));
+                        } catch (Exception ignored) {}
+                    } else {
+                        // Send toolCall event to client (skip for delegate_to_lead, which has its own events)
+                        emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                                Map.of("toolCall", Map.of("name", toolUse.name, "input", toolUse.input)))));
+                    }
 
                     // Execute the tool
                     String toolResultContent;
@@ -193,9 +202,21 @@ public class SimpleChatService {
                         toolResultContent = "Fehler bei Tool-Ausführung: " + e.getMessage();
                     }
 
-                    // Send toolResult event to client
-                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
-                            Map.of("toolResult", Map.of("name", toolUse.name, "result", toolResultContent)))));
+                    // Send delegation result event after delegate_to_lead completes
+                    if ("delegate_to_lead".equals(toolUse.name)) {
+                        try {
+                            com.fasterxml.jackson.databind.JsonNode delegateInput = objectMapper.readTree(toolUse.input);
+                            String leadName = delegateInput.has("lead") ? delegateInput.get("lead").asText() : "unknown";
+                            emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                                    Map.of("delegationResult", Map.of("lead", leadName, "result", toolResultContent)))));
+                        } catch (Exception ignored) {}
+                    }
+
+                    // Send toolResult event to client (skip for delegate_to_lead, which has its own events)
+                    if (!"delegate_to_lead".equals(toolUse.name)) {
+                        emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                                Map.of("toolResult", Map.of("name", toolUse.name, "result", toolResultContent)))));
+                    }
 
                     // Add to tool result message
                     ObjectNode resultBlock = toolResultBlocks.addObject();
@@ -360,6 +381,27 @@ public class SimpleChatService {
         }
 
         return new StreamResult(textContent.toString(), stopReason, toolUses);
+    }
+
+    /**
+     * Resolves the LLM model: instance config → tenant default → hardcoded fallback.
+     */
+    private String resolveModel(AgentInstanceEntity instance) {
+        // 1. Try per-instance config
+        if (instance.getConfig() != null && !instance.getConfig().equals("{}")) {
+            try {
+                com.fasterxml.jackson.databind.JsonNode configNode = objectMapper.readTree(instance.getConfig());
+                if (configNode.has("model") && !configNode.get("model").asText().isBlank()) {
+                    return configNode.get("model").asText();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse instance config for model: {}", e.getMessage());
+            }
+        }
+        // 2. Tenant default
+        return llmConfigService.getConfig()
+                .map(c -> c.getDefaultModel())
+                .orElse("claude-sonnet-4-6");
     }
 
     private String buildSystemPrompt(String basePrompt, String tenantName) {

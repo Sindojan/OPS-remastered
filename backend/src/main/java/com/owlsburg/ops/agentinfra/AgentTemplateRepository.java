@@ -15,4 +15,6 @@ public interface AgentTemplateRepository extends JpaRepository<AgentTemplateEnti
     List<AgentTemplateEntity> findByStatus(String status);
 
     List<AgentTemplateEntity> findByRole(String role);
+
+    Optional<AgentTemplateEntity> findByRoleAndTenantId(String role, UUID tenantId);
 }

@@ -26,6 +26,14 @@ interface ChatMessage {
   toolCalls?: ToolCallInfo[];
 }
 
+const LEAD_LABELS: Record<string, string> = {
+  produktions_lead: "Produktions-Lead",
+  maschinen_lead: "Maschinen-Lead",
+  lager_lead: "Lager-Lead",
+  personal_lead: "Personal-Lead",
+  support_lead: "Support-Lead",
+};
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("de-DE", {
@@ -256,6 +264,45 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
                 const last = { ...updated[updated.length - 1] };
                 last.content += data.token;
                 updated[updated.length - 1] = last;
+                return updated;
+              });
+            }
+
+            if (data.delegation) {
+              // Show delegation event
+              const label = LEAD_LABELS[data.delegation.lead] || data.delegation.lead;
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "tool" as const,
+                  content: `\u{1F4E4} Delegiere an **${label}**...\n_${data.delegation.task}_`,
+                  toolCalls: [{ name: "delegate_to_lead", input: data.delegation.task }],
+                },
+              ]);
+            }
+
+            if (data.delegationResult) {
+              // Update the delegation message with result
+              setMessages((prev) => {
+                const updated = [...prev];
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (
+                    updated[i].role === "tool" &&
+                    updated[i].toolCalls?.[0]?.name === "delegate_to_lead"
+                  ) {
+                    const label = LEAD_LABELS[data.delegationResult.lead] || data.delegationResult.lead;
+                    const msg = { ...updated[i] };
+                    msg.content = `\u{2705} **${label}** hat geantwortet`;
+                    const toolCalls = [...(msg.toolCalls || [])];
+                    toolCalls[0] = { ...toolCalls[0], result: data.delegationResult.result };
+                    msg.toolCalls = toolCalls;
+                    updated[i] = msg;
+                    break;
+                  }
+                }
+                if (updated[updated.length - 1]?.role !== "assistant") {
+                  updated.push({ role: "assistant", content: "" });
+                }
                 return updated;
               });
             }
