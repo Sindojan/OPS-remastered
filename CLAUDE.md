@@ -261,9 +261,15 @@ sindojan_ops_remastered/
 ### Block 13.6: CEO → Lead-Agent Delegation ✅
 | Task | Beschreibung | Commit |
 |------|-------------|--------|
-| TASK-BE-024 | LeadAgentRunner (sync ReAct-Loop für Leads), DelegateToLeadTool, 9 neue Lead-Tools (Produktion, Maschinen, Lager, Personal, Support), ReorderRequest Entity/Service/Repo | - |
-| TASK-BE-025 | V15 Migration (reorder_requests, CEO auf 2 Tools, Lead-Tool-Zuweisungen, Lead-Instance System-Prompts) | - |
-| TASK-FE-030 | Delegation SSE-Events im Agent-Panel (delegation/delegationResult statt toolCall/toolResult) | - |
+| TASK-BE-024 | LeadAgentRunner (sync ReAct-Loop für Leads), DelegateToLeadTool, 9 neue Lead-Tools (Produktion, Maschinen, Lager, Personal, Support), ReorderRequest Entity/Service/Repo | `81363de` |
+| TASK-BE-025 | V15 Migration (reorder_requests, CEO auf 2 Tools, Lead-Tool-Zuweisungen, Lead-Instance System-Prompts) | `81363de` |
+| TASK-FE-030 | Delegation SSE-Events im Agent-Panel (delegation/delegationResult statt toolCall/toolResult) | `81363de` |
+
+### FIX-BLOCK-H: LLM Model Normalisierung ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-026 | V16 Migration (Model-Normalisierung: CEO→opus, Leads→sonnet), Per-Instance Model Resolution in SimpleChatService + LeadAgentRunner, Backend-Validierung (VALID_MODELS Set) | `81363de` |
+| TASK-FE-031 | Fixed 3-Option Model Dropdown (Opus 4.6, Sonnet 4.6, Haiku 4.5), keine API-Abfrage mehr | `81363de` |
 
 ## Arbeitsweise mit Agents
 
@@ -354,6 +360,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V13__instance_system_prompt.sql | `custom_system_prompt TEXT` auf agent_instances |
 | V14__ceo_tools_prompt.sql | CEO Tool-Section im System-Prompt, allowed_tools für 10 Tools |
 | V15__lead_delegation.sql | reorder_requests Tabelle, CEO auf 2 Tools (delegate_to_lead, get_kpi_summary), Lead-Tool-Zuweisungen, Lead-Instance System-Prompts |
+| V16__model_normalization.sql | Model-Normalisierung in agent_instances config JSONB: CEO→opus, Leads→sonnet, Catch-All→sonnet |
 
 ## Default Admin
 
@@ -387,6 +394,6 @@ Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEA
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-03-03
-**Session:** Block 13.6 (CEO → Lead-Agent Delegation) komplett
-**Status:** Backend ~530 Java-Dateien, V15 Migration. CEO delegiert an 5 Lead-Agents (Produktion, Maschinen, Lager, Personal, Support) via `delegate_to_lead` Tool. Leads haben eigene Tools und laufen als sync ReAct-Loop (LeadAgentRunner, max 5 Iterationen). 33 Tools total registriert. Delegation-Events im Frontend als eigene UI-Elemente.
+**Session:** Block 13.6 + FIX-BLOCK-H komplett
+**Status:** Backend ~530 Java-Dateien, V16 Migration. CEO delegiert an 5 Lead-Agents via `delegate_to_lead`. Per-Instance Model Resolution (config JSONB → Runtime). CEO=Opus, Leads=Sonnet. 33 Tools, Backend-Validierung für 3 erlaubte Modelle. Frontend: Fixed Model Dropdown.
 **Nächste Blöcke:** Block 14 (Docker/Deployment)
