@@ -29,6 +29,8 @@ public final class CeoAgent implements Agent {
 
     private static final Logger log = LoggerFactory.getLogger(CeoAgent.class);
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+    private static final int MAX_RETRIES = 3;
+    private static final long[] RETRY_DELAYS_MS = {1000, 3000, 8000};
 
     private final AgentIdentity identity;
     private final AgentCapabilities capabilities;
@@ -253,15 +255,7 @@ public final class CeoAgent implements Agent {
                 .timeout(Duration.ofSeconds(120))
                 .build();
 
-        HttpResponse<java.io.InputStream> response = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
-
-        if (response.statusCode() != 200) {
-            try (java.io.InputStream errStream = response.body()) {
-                String errorBody = new String(errStream.readAllBytes());
-                log.error("Anthropic API error ({}): {}", response.statusCode(), errorBody);
-            }
-            throw new LlmProviderException("Anthropic API Fehler: HTTP " + response.statusCode());
-        }
+        HttpResponse<java.io.InputStream> response = sendWithRetry(httpRequest);
 
         StringBuilder textContent = new StringBuilder();
         List<ToolUseBlock> toolUses = new ArrayList<>();
@@ -326,6 +320,44 @@ public final class CeoAgent implements Agent {
         }
 
         return new StreamResult(textContent.toString(), stopReason, toolUses);
+    }
+
+    private HttpResponse<java.io.InputStream> sendWithRetry(HttpRequest httpRequest) throws Exception {
+        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            HttpResponse<java.io.InputStream> response = HTTP_CLIENT.send(httpRequest,
+                    HttpResponse.BodyHandlers.ofInputStream());
+
+            if (response.statusCode() == 200) {
+                return response;
+            }
+
+            String errorBody;
+            try (java.io.InputStream errStream = response.body()) {
+                errorBody = new String(errStream.readAllBytes());
+            }
+
+            int status = response.statusCode();
+            if (isRetryable(status) && attempt < MAX_RETRIES) {
+                log.warn("Anthropic streaming API returned {} (attempt {}/{}), retrying in {}ms...",
+                        status, attempt + 1, MAX_RETRIES + 1, RETRY_DELAYS_MS[attempt]);
+                try {
+                    Thread.sleep(RETRY_DELAYS_MS[attempt]);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new LlmProviderException("Unterbrochen während Retry");
+                }
+                continue;
+            }
+
+            log.error("Anthropic API error ({}): {}", status, errorBody);
+            throw new LlmProviderException("Anthropic API Fehler: HTTP " + status);
+        }
+        throw new LlmProviderException("Anthropic API nicht erreichbar nach " + (MAX_RETRIES + 1) + " Versuchen");
+    }
+
+    private boolean isRetryable(int statusCode) {
+        return statusCode == 429 || statusCode == 529 || statusCode == 500
+                || statusCode == 502 || statusCode == 503;
     }
 
     private void sendErrorEvent(SseEmitter emitter, String message) {

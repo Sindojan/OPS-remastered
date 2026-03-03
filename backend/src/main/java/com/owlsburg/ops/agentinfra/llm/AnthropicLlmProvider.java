@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -35,6 +36,8 @@ public class AnthropicLlmProvider implements LlmProvider {
     // Cache: apiKey hash -> (timestamp, models)
     private final ConcurrentHashMap<Integer, CachedModels> modelsCache = new ConcurrentHashMap<>();
     private static final long CACHE_TTL_MS = 3600_000; // 1 hour
+    private static final int MAX_RETRIES = 3;
+    private static final long[] RETRY_DELAYS_MS = {1000, 3000, 8000}; // Exponential backoff
 
     public AnthropicLlmProvider(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
@@ -48,30 +51,63 @@ public class AnthropicLlmProvider implements LlmProvider {
 
     @Override
     public LlmResponse chat(LlmRequest request, String apiKey) {
+        HttpHeaders headers = buildHeaders(apiKey);
+        ObjectNode body = buildRequestBody(request);
+
+        log.debug("Sending chat request to Anthropic API, model: {}", request.model());
+
+        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                HttpEntity<String> httpEntity = new HttpEntity<>(objectMapper.writeValueAsString(body), headers);
+                ResponseEntity<String> response = restTemplate.exchange(
+                        MESSAGES_URL, HttpMethod.POST, httpEntity, String.class
+                );
+
+                return parseResponse(response.getBody());
+            } catch (HttpServerErrorException e) {
+                int status = e.getStatusCode().value();
+                if (isRetryable(status) && attempt < MAX_RETRIES) {
+                    log.warn("Anthropic API returned {} (attempt {}/{}), retrying in {}ms...",
+                            status, attempt + 1, MAX_RETRIES + 1, RETRY_DELAYS_MS[attempt]);
+                    sleep(RETRY_DELAYS_MS[attempt]);
+                    continue;
+                }
+                log.error("Anthropic API server error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+                throw new LlmProviderException(
+                        "Anthropic API error: " + e.getResponseBodyAsString(),
+                        status, e);
+            } catch (HttpClientErrorException e) {
+                int status = e.getStatusCode().value();
+                if (status == 429 && attempt < MAX_RETRIES) {
+                    log.warn("Anthropic API rate limited (429, attempt {}/{}), retrying in {}ms...",
+                            attempt + 1, MAX_RETRIES + 1, RETRY_DELAYS_MS[attempt]);
+                    sleep(RETRY_DELAYS_MS[attempt]);
+                    continue;
+                }
+                log.error("Anthropic API error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+                throw new LlmProviderException(
+                        "Anthropic API error: " + e.getResponseBodyAsString(),
+                        status, e);
+            } catch (LlmProviderException e) {
+                throw e;
+            } catch (Exception e) {
+                log.error("Failed to call Anthropic API", e);
+                throw new LlmProviderException("Failed to call Anthropic API: " + e.getMessage(), e);
+            }
+        }
+        throw new LlmProviderException("Anthropic API nicht erreichbar nach " + (MAX_RETRIES + 1) + " Versuchen");
+    }
+
+    private boolean isRetryable(int statusCode) {
+        return statusCode == 429 || statusCode == 529 || statusCode == 500
+                || statusCode == 502 || statusCode == 503;
+    }
+
+    private void sleep(long ms) {
         try {
-            HttpHeaders headers = buildHeaders(apiKey);
-            ObjectNode body = buildRequestBody(request);
-
-            log.debug("Sending chat request to Anthropic API, model: {}", request.model());
-
-            HttpEntity<String> httpEntity = new HttpEntity<>(objectMapper.writeValueAsString(body), headers);
-            ResponseEntity<String> response = restTemplate.exchange(
-                    MESSAGES_URL, HttpMethod.POST, httpEntity, String.class
-            );
-
-            return parseResponse(response.getBody());
-        } catch (HttpClientErrorException e) {
-            log.error("Anthropic API error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new LlmProviderException(
-                    "Anthropic API error: " + e.getResponseBodyAsString(),
-                    e.getStatusCode().value(),
-                    e
-            );
-        } catch (LlmProviderException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Failed to call Anthropic API", e);
-            throw new LlmProviderException("Failed to call Anthropic API: " + e.getMessage(), e);
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
