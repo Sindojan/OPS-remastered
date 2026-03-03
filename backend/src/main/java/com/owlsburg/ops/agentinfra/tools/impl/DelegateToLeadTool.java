@@ -6,12 +6,16 @@ import com.owlsburg.ops.agentinfra.AgentInstanceEntity;
 import com.owlsburg.ops.agentinfra.AgentInstanceRepository;
 import com.owlsburg.ops.agentinfra.AgentTemplateEntity;
 import com.owlsburg.ops.agentinfra.AgentTemplateRepository;
-import com.owlsburg.ops.agentinfra.execution.LeadAgentRunner;
+import com.owlsburg.ops.agentinfra.runtime.Agent;
+import com.owlsburg.ops.agentinfra.runtime.AgentContext;
+import com.owlsburg.ops.agentinfra.runtime.AgentFactory;
+import com.owlsburg.ops.agentinfra.runtime.AgentResult;
 import com.owlsburg.ops.agentinfra.tools.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,16 +35,16 @@ public class DelegateToLeadTool implements AgentTool {
 
     private final AgentTemplateRepository templateRepository;
     private final AgentInstanceRepository instanceRepository;
-    private final LeadAgentRunner leadAgentRunner;
+    private final AgentFactory agentFactory;
     private final ObjectMapper objectMapper;
 
     public DelegateToLeadTool(AgentTemplateRepository templateRepository,
                               AgentInstanceRepository instanceRepository,
-                              LeadAgentRunner leadAgentRunner,
+                              AgentFactory agentFactory,
                               ObjectMapper objectMapper) {
         this.templateRepository = templateRepository;
         this.instanceRepository = instanceRepository;
-        this.leadAgentRunner = leadAgentRunner;
+        this.agentFactory = agentFactory;
         this.objectMapper = objectMapper;
     }
 
@@ -101,15 +105,18 @@ public class DelegateToLeadTool implements AgentTool {
             log.info("Delegating to {} (role: {}, instance: {}): {}",
                     leadName, role, leadInstance.getId(), task);
 
-            // Run lead agent synchronously
+            // Create Lead Agent via Factory and execute
             long startTime = System.currentTimeMillis();
-            String result = leadAgentRunner.runLead(leadInstance, task, context.tenantId());
+            Agent leadAgent = agentFactory.createAgent(leadInstance.getId(), context.tenantId());
+            AgentContext agentContext = new AgentContext(
+                    UUID.randomUUID(), context.tenantId(), null, null, 1, Instant.now());
+            AgentResult result = leadAgent.execute(agentContext, task);
             long elapsed = System.currentTimeMillis() - startTime;
 
-            log.info("Delegation to {} completed in {}ms (result length: {})",
-                    leadName, elapsed, result != null ? result.length() : 0);
+            log.info("Delegation to {} completed in {}ms (status: {}, tokens: {}+{})",
+                    leadName, elapsed, result.status(), result.inputTokens(), result.outputTokens());
 
-            return ToolResult.success(result);
+            return ToolResult.success(result.output());
         } catch (Exception e) {
             log.error("Error executing delegate_to_lead: {}", e.getMessage(), e);
             return ToolResult.error("Fehler bei der Delegation: " + e.getMessage());

@@ -273,7 +273,7 @@ public class AgentExecutionService {
         // Fall back to LLM config default model, then template-implied default
         return llmConfigService.getConfig()
                 .map(TenantLlmConfigEntity::getDefaultModel)
-                .orElse("claude-sonnet-4-20250514");
+                .orElse("claude-sonnet-4-6");
     }
 
     private BigDecimal calculateCost(String model, int inputTokens, int outputTokens) {
