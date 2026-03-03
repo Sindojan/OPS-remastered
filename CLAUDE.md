@@ -110,9 +110,12 @@ sindojan_ops_remastered/
         └── agentinfra/              # Agent Templates, Instances, Runs, Steps
             ├── dto/
             ├── llm/                 # LLM Provider, Config, Anthropic-Integration
-            ├── tools/               # Tool Registry + 13 Domain Tools
+            ├── runtime/             # OOP Agent-System (Agent sealed interface, Factory, Records)
+            ├── memory/              # Agent Memory (Entity, Repository, Service, Pruning)
+            ├── messaging/           # Agent Message Bus (Entity, Repository, Bus, Level)
+            ├── tools/               # Tool Registry + 40 Tools (13 Domain + 20 CEO/Lead + 7 Agent-Infra)
             │   └── impl/
-            ├── execution/           # ReAct-Loop, Orchestrator, SystemPromptBuilder
+            ├── execution/           # Orchestrator, SystemPromptBuilder
             └── events/              # Event Subscriptions, Scheduled Run Executor
 ```
 
@@ -271,6 +274,16 @@ sindojan_ops_remastered/
 | TASK-BE-026 | V16 Migration (Model-Normalisierung: CEO→opus, Leads→sonnet), Per-Instance Model Resolution in SimpleChatService + LeadAgentRunner, Backend-Validierung (VALID_MODELS Set) | `81363de` |
 | TASK-FE-031 | Fixed 3-Option Model Dropdown (Opus 4.6, Sonnet 4.6, Haiku 4.5), keine API-Abfrage mehr | `81363de` |
 
+### Block 14: Agent-System Redesign (OOP) ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-027 | Sealed Agent Interface (CeoAgent, LeadAgent, SubAgent), AgentFactory, Records (AgentIdentity, AgentCapabilities, AgentContext, AgentResult) | `d9e39c0` |
+| TASK-BE-028 | Memory-System: V17 Migration (agent_memories + RLS), AgentMemoryService (Upsert, LRU-Eviction, Pruning, Promotion), 3 Memory-Tools (save_memory, recall_memory, read_agent_memory) | `d9e39c0` |
+| TASK-BE-029 | Message Bus: V17 Migration (agent_messages + RLS), AgentMessageBus (Hierarchie-Enforcement), 3 Message-Tools (send_message, report_to_ceo, check_messages) | `d9e39c0` |
+| TASK-BE-030 | Sub-Agent Lifecycle: SpawnSubAgentTool, SubAgentCleanupScheduler (TTL 1h), MemoryPruningScheduler (täglich 3 Uhr), Memory-Promotion (importance ≥ 7) | `d9e39c0` |
+| REFACTOR-1 | SimpleChatService refactored auf AgentFactory/CeoAgent, DelegateToLeadTool auf AgentFactory, LeadAgentRunner gelöscht | `d9e39c0` |
+| CLEANUP-1 | CeoAgent: HttpClient static shared, InputStream Leak Fix, silenced Exceptions → debug logs. AgentMemoryService: read-only Transaction Fix. Model-Name Normalisierung auf `claude-sonnet-4-6` | `d9e39c0` |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -361,6 +374,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V14__ceo_tools_prompt.sql | CEO Tool-Section im System-Prompt, allowed_tools für 10 Tools |
 | V15__lead_delegation.sql | reorder_requests Tabelle, CEO auf 2 Tools (delegate_to_lead, get_kpi_summary), Lead-Tool-Zuweisungen, Lead-Instance System-Prompts |
 | V16__model_normalization.sql | Model-Normalisierung in agent_instances config JSONB: CEO→opus, Leads→sonnet, Catch-All→sonnet |
+| V17__agent_communication.sql | agent_memories + agent_messages Tabellen mit RLS, spawned_by_run_id, CEO + Lead Tool-Zuweisungen aktualisiert (40 Tools) |
 
 ## Default Admin
 
@@ -394,6 +408,6 @@ Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEA
 ## Zuletzt bearbeitet
 
 **Datum:** 2026-03-03
-**Session:** Block 13.6 + FIX-BLOCK-H komplett
-**Status:** Backend ~530 Java-Dateien, V16 Migration. CEO delegiert an 5 Lead-Agents via `delegate_to_lead`. Per-Instance Model Resolution (config JSONB → Runtime). CEO=Opus, Leads=Sonnet. 33 Tools, Backend-Validierung für 3 erlaubte Modelle. Frontend: Fixed Model Dropdown.
-**Nächste Blöcke:** Block 14 (Docker/Deployment)
+**Session:** Block 14 komplett (Agent-System Redesign)
+**Status:** Backend ~550 Java-Dateien, V17 Migration. OOP Agent-System mit sealed interface (CeoAgent/LeadAgent/SubAgent). Agent Memory (Upsert, LRU-Eviction, Pruning). Agent Message Bus (Hierarchie-Enforcement). Sub-Agent Lifecycle (Spawn, TTL-Cleanup). 40 Tools total. SimpleChatService delegiert an AgentFactory/CeoAgent.
+**Nächste Blöcke:** Block 15 (Docker/Deployment)
