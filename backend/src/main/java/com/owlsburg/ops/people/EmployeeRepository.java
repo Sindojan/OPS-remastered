@@ -17,4 +17,6 @@ public interface EmployeeRepository extends JpaRepository<EmployeeEntity, UUID> 
     List<EmployeeEntity> findByStatus(EmployeeStatus status);
 
     boolean existsByEmployeeNumber(String employeeNumber);
+
+    Optional<EmployeeEntity> findByUserId(UUID userId);
 }

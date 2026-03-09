@@ -10,6 +10,7 @@ public record MeResponse(
         String lastName,
         String role,
         UUID tenantId,
+        UUID employeeId,
         PrimaryAgentResponse primaryAgentInstance,
         List<String> enabledModules
 ) {}

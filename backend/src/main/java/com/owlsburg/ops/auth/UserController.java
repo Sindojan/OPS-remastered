@@ -15,6 +15,7 @@ import com.owlsburg.ops.auth.notifications.UserNotificationSettingsEntity;
 import com.owlsburg.ops.common.ApiResponse;
 import com.owlsburg.ops.common.ModuleService;
 import com.owlsburg.ops.common.TenantContext;
+import com.owlsburg.ops.people.EmployeeService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,17 +36,20 @@ public class UserController {
     private final AgentTemplateRepository agentTemplateRepository;
     private final NotificationSettingsService notificationSettingsService;
     private final ModuleService moduleService;
+    private final EmployeeService employeeService;
 
     public UserController(UserService userService,
                           PrimaryAgentService primaryAgentService,
                           AgentTemplateRepository agentTemplateRepository,
                           NotificationSettingsService notificationSettingsService,
-                          ModuleService moduleService) {
+                          ModuleService moduleService,
+                          EmployeeService employeeService) {
         this.userService = userService;
         this.primaryAgentService = primaryAgentService;
         this.agentTemplateRepository = agentTemplateRepository;
         this.notificationSettingsService = notificationSettingsService;
         this.moduleService = moduleService;
+        this.employeeService = employeeService;
     }
 
     @GetMapping
@@ -127,6 +131,9 @@ public class UserController {
                 ? new java.util.ArrayList<>(moduleService.getEnabledModules(user.getTenantId()))
                 : java.util.List.of();
 
+        // Resolve employeeId from user
+        UUID employeeId = employeeService.findEmployeeIdByUserId(user.getId());
+
         MeResponse response = new MeResponse(
                 user.getId(),
                 user.getEmail(),
@@ -134,6 +141,7 @@ public class UserController {
                 user.getLastName(),
                 user.getRole().name(),
                 user.getTenantId(),
+                employeeId,
                 agentResponse,
                 enabledModules
         );

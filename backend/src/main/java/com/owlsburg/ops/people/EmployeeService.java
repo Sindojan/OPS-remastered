@@ -113,6 +113,13 @@ public class EmployeeService {
         return qualificationRepository.findByEmployeeId(employeeId);
     }
 
+    @Transactional(readOnly = true)
+    public UUID findEmployeeIdByUserId(UUID userId) {
+        return employeeRepository.findByUserId(userId)
+                .map(EmployeeEntity::getId)
+                .orElse(null);
+    }
+
     @Transactional
     public EmployeeShiftEntity assignShift(UUID employeeId, ShiftAssignmentRequest request) {
         getById(employeeId); // verify exists

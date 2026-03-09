@@ -11,6 +11,8 @@ import java.util.UUID;
 public record AbsenceResponse(
         UUID id,
         UUID employeeId,
+        String employeeFirstName,
+        String employeeLastName,
         AbsenceType type,
         LocalDate fromDate,
         LocalDate toDate,
@@ -21,7 +23,15 @@ public record AbsenceResponse(
 ) {
     public static AbsenceResponse from(AbsenceEntity e) {
         return new AbsenceResponse(
-                e.getId(), e.getEmployeeId(), e.getType(),
+                e.getId(), e.getEmployeeId(), null, null, e.getType(),
+                e.getFromDate(), e.getToDate(), e.getStatus(),
+                e.getNotes(), e.getCreatedAt(), e.getUpdatedAt()
+        );
+    }
+
+    public static AbsenceResponse from(AbsenceEntity e, String firstName, String lastName) {
+        return new AbsenceResponse(
+                e.getId(), e.getEmployeeId(), firstName, lastName, e.getType(),
                 e.getFromDate(), e.getToDate(), e.getStatus(),
                 e.getNotes(), e.getCreatedAt(), e.getUpdatedAt()
         );

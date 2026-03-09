@@ -5,6 +5,8 @@ import java.util.UUID;
 
 public record CriticalArticleResponse(
         UUID articleId,
+        String articleName,
+        String articleNumber,
         UUID warehouseLocationId,
         BigDecimal currentQuantity,
         BigDecimal minStock,

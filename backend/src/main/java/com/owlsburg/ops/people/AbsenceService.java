@@ -1,5 +1,6 @@
 package com.owlsburg.ops.people;
 
+import com.owlsburg.ops.people.dto.AbsenceResponse;
 import com.owlsburg.ops.people.dto.CreateAbsenceRequest;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -9,7 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class AbsenceService {
@@ -64,6 +68,11 @@ public class AbsenceService {
     }
 
     @Transactional(readOnly = true)
+    public List<AbsenceEntity> findAll() {
+        return absenceRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public List<AbsenceEntity> findByEmployee(UUID employeeId) {
         return absenceRepository.findByEmployeeId(employeeId);
     }
@@ -71,6 +80,32 @@ public class AbsenceService {
     @Transactional(readOnly = true)
     public List<AbsenceEntity> findByDateRange(LocalDate from, LocalDate to) {
         return absenceRepository.findByDateRange(from, to);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AbsenceEntity> findByEmployeeAndStatus(UUID employeeId, AbsenceStatus status) {
+        return absenceRepository.findByEmployeeIdAndStatus(employeeId, status);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AbsenceEntity> findByStatus(AbsenceStatus status) {
+        return absenceRepository.findByStatus(status);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AbsenceResponse> toResponsesWithNames(List<AbsenceEntity> absences) {
+        if (absences.isEmpty()) return List.of();
+        List<UUID> employeeIds = absences.stream().map(AbsenceEntity::getEmployeeId).distinct().toList();
+        Map<UUID, EmployeeEntity> employeesById = employeeRepository.findAllById(employeeIds)
+                .stream().collect(Collectors.toMap(EmployeeEntity::getId, Function.identity()));
+        return absences.stream()
+                .map(a -> {
+                    EmployeeEntity emp = employeesById.get(a.getEmployeeId());
+                    return AbsenceResponse.from(a,
+                            emp != null ? emp.getFirstName() : null,
+                            emp != null ? emp.getLastName() : null);
+                })
+                .toList();
     }
 
     private AbsenceEntity getById(UUID id) {

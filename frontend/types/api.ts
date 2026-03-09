@@ -47,6 +47,7 @@ export interface MeResponse {
   lastName: string;
   role: string;
   tenantId: string;
+  employeeId: string | null;
   primaryAgentInstance: PrimaryAgentInfo | null;
   enabledModules: string[];
 }
@@ -434,6 +435,8 @@ export interface SupplierArticleResponse {
 
 export interface CriticalArticleResponse {
   articleId: string;
+  articleName: string | null;
+  articleNumber: string | null;
   warehouseLocationId: string | null;
   currentQuantity: number;
   minStock: number;
@@ -506,6 +509,8 @@ export interface MyDayResponse {
 export interface AbsenceResponse {
   id: string;
   employeeId: string;
+  employeeFirstName: string | null;
+  employeeLastName: string | null;
   type: AbsenceType;
   fromDate: string;
   toDate: string;

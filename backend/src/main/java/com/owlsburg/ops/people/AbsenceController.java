@@ -46,18 +46,31 @@ public class AbsenceController {
     public ResponseEntity<ApiResponse<List<AbsenceResponse>>> findAbsences(
             @RequestParam(required = false) UUID employeeId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) String status) {
+        AbsenceStatus absenceStatus = null;
+        if (status != null) {
+            try {
+                absenceStatus = AbsenceStatus.valueOf(status);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid status: " + status));
+            }
+        }
+
         List<AbsenceEntity> results;
-        if (employeeId != null) {
+        if (employeeId != null && absenceStatus != null) {
+            results = absenceService.findByEmployeeAndStatus(employeeId, absenceStatus);
+        } else if (employeeId != null) {
             results = absenceService.findByEmployee(employeeId);
         } else if (from != null && to != null) {
             results = absenceService.findByDateRange(from, to);
+        } else if (absenceStatus != null) {
+            results = absenceService.findByStatus(absenceStatus);
         } else {
-            results = absenceService.findByEmployee(null);
+            results = absenceService.findAll();
         }
-        List<AbsenceResponse> list = results.stream()
-                .map(AbsenceResponse::from)
-                .toList();
+        List<AbsenceResponse> list = absenceService.toResponsesWithNames(results);
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 }

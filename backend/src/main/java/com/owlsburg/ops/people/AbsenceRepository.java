@@ -18,4 +18,6 @@ public interface AbsenceRepository extends JpaRepository<AbsenceEntity, UUID> {
     List<AbsenceEntity> findByDateRange(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
     List<AbsenceEntity> findByEmployeeIdAndStatus(UUID employeeId, AbsenceStatus status);
+
+    List<AbsenceEntity> findByStatus(AbsenceStatus status);
 }

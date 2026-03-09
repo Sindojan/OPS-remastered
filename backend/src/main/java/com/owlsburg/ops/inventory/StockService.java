@@ -75,6 +75,8 @@ public class StockService {
                     BigDecimal minStock = article != null ? article.getMinStock() : BigDecimal.ZERO;
                     return new CriticalArticleResponse(
                             s.getArticleId(),
+                            article != null ? article.getName() : null,
+                            article != null ? article.getArticleNumber() : null,
                             s.getWarehouseLocationId(),
                             s.getQuantity(),
                             minStock,

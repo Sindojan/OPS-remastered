@@ -11,6 +11,7 @@ interface UserProfile {
   lastName: string;
   role: string;
   tenantId: string;
+  employeeId: string | null;
   enabledModules: string[];
 }
 
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastName: me.lastName,
         role: me.role,
         tenantId: me.tenantId,
+        employeeId: me.employeeId || null,
         enabledModules: me.enabledModules || [],
       };
     } catch {
@@ -103,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastName: userData.lastName,
       role: userData.role,
       tenantId: userData.tenantId || "",
+      employeeId: null,
       enabledModules: [],
     };
     setUser(profile);
