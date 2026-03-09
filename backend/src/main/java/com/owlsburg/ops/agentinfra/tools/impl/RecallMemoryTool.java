@@ -9,7 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class RecallMemoryTool implements AgentTool {
@@ -31,16 +34,17 @@ public class RecallMemoryTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "Ruft gespeicherte Erinnerungen aus dem Langzeitgedächtnis ab. " +
-                "Optional nach Kategorie filterbar.";
+        return "Ruft Erinnerungen ab. scope=persistent für Langzeitgedächtnis, " +
+                "scope=run für Arbeitsnotizen des aktuellen Runs.";
     }
 
     @Override
     public String getInputSchema() {
         return """
             {"type":"object","properties":{
-              "category":{"type":"string","description":"Kategorie zum Filtern (optional)"},
-              "limit":{"type":"integer","minimum":1,"maximum":50,"description":"Maximale Anzahl (Standard: 20)"}
+              "category":{"type":"string","description":"Kategorie zum Filtern (optional, nur persistent)"},
+              "limit":{"type":"integer","minimum":1,"maximum":50,"description":"Maximale Anzahl (Standard: 20, nur persistent)"},
+              "scope":{"type":"string","enum":["persistent","run"],"default":"persistent","description":"persistent=Langzeitgedächtnis, run=Arbeitsnotizen des aktuellen Runs"}
             }}""";
     }
 
@@ -53,26 +57,40 @@ public class RecallMemoryTool implements AgentTool {
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             JsonNode node = objectMapper.readTree(input);
+            String scope = node.has("scope") ? node.get("scope").asText("persistent") : "persistent";
+
+            if ("run".equals(scope)) {
+                if (context.runMemory() == null || context.runMemory().isEmpty()) {
+                    return ToolResult.success("[]");
+                }
+                List<Map<String, String>> runEntries = new ArrayList<>();
+                for (var entry : context.runMemory().getAll().entrySet()) {
+                    Map<String, String> item = new LinkedHashMap<>();
+                    item.put("key", entry.getKey());
+                    item.put("value", entry.getValue());
+                    runEntries.add(item);
+                }
+                return ToolResult.success(objectMapper.writeValueAsString(runEntries));
+            }
+
             String category = node.has("category") ? node.get("category").asText() : null;
             int limit = node.has("limit") ? node.get("limit").asInt(20) : 20;
 
             List<AgentMemoryEntity> memories = memoryService.recallMemories(
                     context.instanceId(), category, limit);
 
-            StringBuilder sb = new StringBuilder("[");
-            for (int i = 0; i < memories.size(); i++) {
-                AgentMemoryEntity m = memories.get(i);
-                if (i > 0) sb.append(",");
-                sb.append("{\"type\":\"").append(m.getType())
-                  .append("\",\"category\":\"").append(m.getCategory())
-                  .append("\",\"key\":\"").append(m.getKey())
-                  .append("\",\"value\":").append(objectMapper.writeValueAsString(m.getValue()))
-                  .append(",\"importance\":").append(m.getImportance())
-                  .append("}");
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (AgentMemoryEntity m : memories) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("type", m.getType());
+                item.put("category", m.getCategory());
+                item.put("key", m.getKey());
+                item.put("value", m.getValue());
+                item.put("importance", m.getImportance());
+                result.add(item);
             }
-            sb.append("]");
 
-            return ToolResult.success(sb.toString());
+            return ToolResult.success(objectMapper.writeValueAsString(result));
         } catch (Exception e) {
             log.error("Error recalling memory: {}", e.getMessage());
             return ToolResult.error("Fehler beim Abrufen: " + e.getMessage());

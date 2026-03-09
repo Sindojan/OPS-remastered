@@ -30,7 +30,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class CeoAgent implements Agent {
 
-    public record ChatResult(String response, int inputTokens, int outputTokens) {}
+    public record ChatResult(String response, int inputTokens, int outputTokens,
+                                 List<ToolCallLog> toolCallLogs) {}
+
+    public record ToolCallLog(String toolName, String input, String result, boolean success) {}
 
     private static final Logger log = LoggerFactory.getLogger(CeoAgent.class);
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
@@ -71,7 +74,8 @@ public final class CeoAgent implements Agent {
             dummy.onError(e -> dummy.complete());
             StringBuilder result = new StringBuilder();
             int[] tokenAccumulator = new int[2];
-            executeStreamingInternal(context, task, List.of(), dummy, result, tokenAccumulator);
+            List<ToolCallLog> toolCallLogs = new ArrayList<>();
+            executeStreamingInternal(context, task, List.of(), dummy, result, tokenAccumulator, toolCallLogs);
             return AgentResult.completed(result.toString(), tokenAccumulator[0] + tokenAccumulator[1], 0, List.of());
         } catch (Exception e) {
             log.error("CEO non-streaming execution error", e);
@@ -91,8 +95,9 @@ public final class CeoAgent implements Agent {
                                              List<ObjectNode> chatHistory, SseEmitter emitter) {
         StringBuilder fullResponse = new StringBuilder();
         int[] tokenAccumulator = new int[2];
+        List<ToolCallLog> toolCallLogs = new ArrayList<>();
         try {
-            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse, tokenAccumulator);
+            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse, tokenAccumulator, toolCallLogs);
         } catch (LlmProviderException e) {
             sendErrorEvent(emitter, e.getMessage());
         } catch (Exception e) {
@@ -108,29 +113,37 @@ public final class CeoAgent implements Agent {
                                        List<ObjectNode> chatHistory, SseEmitter emitter) {
         StringBuilder fullResponse = new StringBuilder();
         int[] tokenAccumulator = new int[2]; // [inputTokens, outputTokens]
+        List<ToolCallLog> toolCallLogs = new ArrayList<>();
         try {
-            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse, tokenAccumulator);
+            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse, tokenAccumulator, toolCallLogs);
         } catch (Exception e) {
             log.error("CEO streaming error", e);
             sendErrorEvent(emitter, "Interner Fehler");
         }
-        return new ChatResult(fullResponse.toString(), tokenAccumulator[0], tokenAccumulator[1]);
+        return new ChatResult(fullResponse.toString(), tokenAccumulator[0], tokenAccumulator[1], toolCallLogs);
     }
 
     private void executeStreamingInternal(AgentContext context, String task,
                                            List<ObjectNode> chatHistory, SseEmitter emitter,
-                                           StringBuilder fullResponse, int[] tokenAccumulator) throws Exception {
+                                           StringBuilder fullResponse, int[] tokenAccumulator,
+                                           List<ToolCallLog> toolCallLogs) throws Exception {
         List<ObjectNode> messages = new ArrayList<>(chatHistory);
 
         ToolExecutionContext toolContext = new ToolExecutionContext(
-                context.tenantId(), identity.instanceId(), null, context.activityBus());
+                context.tenantId(), identity.instanceId(), null, context.activityBus(), context.runMemory());
 
         for (int iteration = 0; iteration < capabilities.maxIterations(); iteration++) {
             // Publish THINKING event
             publishActivity(context, AgentActivityEvent.Type.THINKING, null, null);
 
+            // Inject RunMemory summary into system prompt if available
+            String effectiveSystemPrompt = identity.systemPrompt();
+            if (context.runMemory() != null && !context.runMemory().isEmpty()) {
+                effectiveSystemPrompt = effectiveSystemPrompt + "\n\n" + context.runMemory().buildSummary();
+            }
+
             StreamResult streamResult = streamAnthropicRequest(
-                    identity.systemPrompt(), messages, capabilities.toolDefinitions(), emitter);
+                    effectiveSystemPrompt, messages, capabilities.toolDefinitions(), emitter);
 
             fullResponse.append(streamResult.text);
             tokenAccumulator[0] += streamResult.inputTokens;
@@ -199,7 +212,9 @@ public final class CeoAgent implements Agent {
                         truncateDetail(toolUse.name));
 
                 String toolResultContent = executeToolSafe(toolContext, toolUse);
+                boolean toolSuccess = !toolResultContent.startsWith("Fehler");
                 toolResults.put(toolUse.id, toolResultContent);
+                toolCallLogs.add(new ToolCallLog(toolUse.name, toolUse.input, toolResultContent, toolSuccess));
 
                 try {
                     emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
@@ -272,8 +287,12 @@ public final class CeoAgent implements Agent {
                     toolResults.put(dr.toolUseId, dr.resultContent);
                 }
                 for (ToolUseBlock toolUse : delegations) {
-                    toolResults.putIfAbsent(toolUse.id,
-                            "Fehler: Delegation-Timeout nach 90 Sekunden");
+                    String delegResult = toolResults.get(toolUse.id);
+                    if (delegResult == null) {
+                        delegResult = "Fehler: Delegation-Timeout nach 90 Sekunden";
+                        toolResults.put(toolUse.id, delegResult);
+                    }
+                    toolCallLogs.add(new ToolCallLog(toolUse.name, toolUse.input, delegResult, !delegResult.startsWith("Fehler")));
                 }
             }
 

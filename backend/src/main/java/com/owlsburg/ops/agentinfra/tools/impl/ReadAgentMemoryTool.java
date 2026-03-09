@@ -11,7 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -75,24 +78,25 @@ public class ReadAgentMemoryTool implements AgentTool {
 
             List<AgentMemoryEntity> memories = memoryService.readAgentMemories(target.getId());
 
+            List<Map<String, Object>> memoryList = new ArrayList<>();
+            for (AgentMemoryEntity m : memories) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("type", m.getType());
+                item.put("category", m.getCategory());
+                item.put("key", m.getKey());
+                item.put("value", m.getValue());
+                item.put("importance", m.getImportance());
+                memoryList.add(item);
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("agent", agentName);
+            result.put("memories", memoryList);
             if (memories.isEmpty()) {
-                return ToolResult.success("{\"agent\":\"" + agentName + "\",\"memories\":[],\"message\":\"Keine Erinnerungen vorhanden\"}");
+                result.put("message", "Keine Erinnerungen vorhanden");
             }
 
-            StringBuilder sb = new StringBuilder("{\"agent\":\"").append(agentName).append("\",\"memories\":[");
-            for (int i = 0; i < memories.size(); i++) {
-                AgentMemoryEntity m = memories.get(i);
-                if (i > 0) sb.append(",");
-                sb.append("{\"type\":\"").append(m.getType())
-                  .append("\",\"category\":\"").append(m.getCategory())
-                  .append("\",\"key\":\"").append(m.getKey())
-                  .append("\",\"value\":").append(objectMapper.writeValueAsString(m.getValue()))
-                  .append(",\"importance\":").append(m.getImportance())
-                  .append("}");
-            }
-            sb.append("]}");
-
-            return ToolResult.success(sb.toString());
+            return ToolResult.success(objectMapper.writeValueAsString(result));
         } catch (Exception e) {
             log.error("Error reading agent memory: {}", e.getMessage());
             return ToolResult.error("Fehler beim Lesen: " + e.getMessage());

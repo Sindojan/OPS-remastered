@@ -139,7 +139,7 @@ public class DelegateToLeadTool implements AgentTool {
             long startTime = System.currentTimeMillis();
             Agent leadAgent = agentFactory.createAgent(leadInstance.getId(), context.tenantId());
             AgentContext agentContext = new AgentContext(
-                    UUID.randomUUID(), context.tenantId(), null, null, 1, Instant.now(), bus);
+                    UUID.randomUUID(), context.tenantId(), null, null, 1, Instant.now(), bus, new com.owlsburg.ops.agentinfra.runtime.RunMemory());
             AgentResult result = leadAgent.execute(agentContext, task);
             long elapsed = System.currentTimeMillis() - startTime;
 

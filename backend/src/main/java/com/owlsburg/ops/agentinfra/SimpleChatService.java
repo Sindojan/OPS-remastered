@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.owlsburg.ops.agentinfra.dto.ChatMessageResponse;
 import com.owlsburg.ops.agentinfra.dto.SimpleChatRequest;
 import com.owlsburg.ops.agentinfra.llm.LlmProviderException;
+import com.owlsburg.ops.agentinfra.memory.EpisodicMemoryExtractor;
+import com.owlsburg.ops.agentinfra.memory.AgentMemoryService;
 import com.owlsburg.ops.agentinfra.runtime.*;
 import com.owlsburg.ops.common.TenantContext;
 import org.slf4j.Logger;
@@ -32,6 +34,8 @@ public class SimpleChatService {
     private final AgentRunService agentRunService;
     private final AgentInstanceService agentInstanceService;
     private final AgentIncidentService agentIncidentService;
+    private final EpisodicMemoryExtractor episodicMemoryExtractor;
+    private final AgentMemoryService agentMemoryService;
 
     public SimpleChatService(AgentInstanceRepository agentInstanceRepository,
                              ChatSessionService chatSessionService,
@@ -40,7 +44,9 @@ public class SimpleChatService {
                              AgentActivityBus activityBus,
                              AgentRunService agentRunService,
                              AgentInstanceService agentInstanceService,
-                             AgentIncidentService agentIncidentService) {
+                             AgentIncidentService agentIncidentService,
+                             EpisodicMemoryExtractor episodicMemoryExtractor,
+                             AgentMemoryService agentMemoryService) {
         this.agentInstanceRepository = agentInstanceRepository;
         this.chatSessionService = chatSessionService;
         this.agentFactory = agentFactory;
@@ -49,6 +55,8 @@ public class SimpleChatService {
         this.agentRunService = agentRunService;
         this.agentInstanceService = agentInstanceService;
         this.agentIncidentService = agentIncidentService;
+        this.episodicMemoryExtractor = episodicMemoryExtractor;
+        this.agentMemoryService = agentMemoryService;
     }
 
     public UUID streamChat(SimpleChatRequest request, UUID userId, SseEmitter emitter) {
@@ -81,7 +89,8 @@ public class SimpleChatService {
             chatSessionService.saveMessage(sessionId, "user", request.message());
 
             // 5. Send sessionId as first SSE event
-            emitter.send(SseEmitter.event().data("{\"sessionId\":\"" + sessionId + "\"}"));
+            emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                    Map.of("sessionId", sessionId.toString()))));
 
             // 6. Create Agent via Factory (builds system prompt, tools, memory injection)
             Agent agent = agentFactory.createAgent(instanceId, tenantId);
@@ -117,6 +126,12 @@ public class SimpleChatService {
                 fullResponse = chatResult.response();
                 inputTokens = chatResult.inputTokens();
                 outputTokens = chatResult.outputTokens();
+
+                // Extract episodic memories and record tool outcomes
+                if (chatResult.toolCallLogs() != null && !chatResult.toolCallLogs().isEmpty()) {
+                    safeExtractEpisodicMemories(instanceId, chatResult.toolCallLogs());
+                    safeRecordToolOutcomes(instanceId, chatResult.toolCallLogs());
+                }
             } else {
                 // Non-CEO agents: execute synchronously and send result as token
                 AgentResult result = agent.execute(context, request.message());
@@ -274,6 +289,28 @@ public class SimpleChatService {
             return BigDecimal.valueOf(inputTokens * 0.80 / 1_000_000 + outputTokens * 4.0 / 1_000_000);
         }
         return BigDecimal.valueOf(inputTokens * 3.0 / 1_000_000 + outputTokens * 15.0 / 1_000_000);
+    }
+
+    private void safeExtractEpisodicMemories(UUID instanceId, List<CeoAgent.ToolCallLog> toolCallLogs) {
+        try {
+            List<EpisodicMemoryExtractor.ToolCallRecord> records = toolCallLogs.stream()
+                    .map(tcl -> new EpisodicMemoryExtractor.ToolCallRecord(
+                            tcl.toolName(), tcl.input(), tcl.result(), tcl.success()))
+                    .toList();
+            episodicMemoryExtractor.extractFromToolCalls(instanceId, records);
+        } catch (Exception e) {
+            log.debug("Failed to extract episodic memories: {}", e.getMessage());
+        }
+    }
+
+    private void safeRecordToolOutcomes(UUID instanceId, List<CeoAgent.ToolCallLog> toolCallLogs) {
+        try {
+            for (CeoAgent.ToolCallLog tcl : toolCallLogs) {
+                agentMemoryService.recordToolOutcome(instanceId, tcl.toolName(), tcl.success());
+            }
+        } catch (Exception e) {
+            log.debug("Failed to record tool outcomes: {}", e.getMessage());
+        }
     }
 
     private void sendErrorAndComplete(SseEmitter emitter, String message) {

@@ -33,4 +33,10 @@ public interface AgentMemoryRepository extends JpaRepository<AgentMemoryEntity, 
     @Modifying
     @Query("DELETE FROM AgentMemoryEntity m WHERE m.instanceId = :instanceId")
     int deleteAllByInstanceId(UUID instanceId);
+
+    List<AgentMemoryEntity> findByInstanceIdAndTypeInOrderByImportanceDescLastAccessedAtDesc(
+            UUID instanceId, List<String> types, Pageable pageable);
+
+    List<AgentMemoryEntity> findByInstanceIdAndTypeInOrderByLastAccessedAtDescImportanceDesc(
+            UUID instanceId, List<String> types, Pageable pageable);
 }

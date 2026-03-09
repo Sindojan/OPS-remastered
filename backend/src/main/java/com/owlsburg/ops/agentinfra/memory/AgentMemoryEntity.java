@@ -39,4 +39,10 @@ public class AgentMemoryEntity extends BaseEntity {
 
     @Column(name = "expires_at")
     private Instant expiresAt;
+
+    @Column(length = 50)
+    private String source = "agent";
+
+    @Column(columnDefinition = "jsonb")
+    private String metadata = "{}";
 }

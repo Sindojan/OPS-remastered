@@ -48,7 +48,7 @@ public final class LeadAgent implements Agent {
             messages.add(LlmMessage.user(task));
 
             ToolExecutionContext toolContext = new ToolExecutionContext(
-                    context.tenantId(), identity.instanceId(), null, context.activityBus());
+                    context.tenantId(), identity.instanceId(), null, context.activityBus(), context.runMemory());
 
             List<String> toolsUsed = new ArrayList<>();
             List<LeadStep> steps = new ArrayList<>();
@@ -56,8 +56,14 @@ public final class LeadAgent implements Agent {
             int totalOutputTokens = 0;
 
             for (int i = 0; i < capabilities.maxIterations(); i++) {
+                // Inject RunMemory summary into system prompt if available
+                String effectiveSystemPrompt = identity.systemPrompt();
+                if (context.runMemory() != null && !context.runMemory().isEmpty()) {
+                    effectiveSystemPrompt = effectiveSystemPrompt + "\n\n" + context.runMemory().buildSummary();
+                }
+
                 LlmRequest request = new LlmRequest(
-                        identity.systemPrompt(), messages, capabilities.toolDefinitions(),
+                        effectiveSystemPrompt, messages, capabilities.toolDefinitions(),
                         identity.model(), capabilities.maxTokensPerRun());
                 LlmResponse response = llmProvider.chat(request, apiKey);
 
