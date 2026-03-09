@@ -3,7 +3,8 @@ package com.owlsburg.ops.tenant;
 import com.owlsburg.ops.auth.UserEntity;
 import com.owlsburg.ops.auth.UserService;
 import com.owlsburg.ops.auth.dto.UserResponse;
-import com.owlsburg.ops.common.ApiResponse;
+import com.owlsburg.ops.common.*;
+import com.owlsburg.ops.common.dto.ModuleResponse;
 import com.owlsburg.ops.tenant.dto.*;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -15,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -27,12 +29,14 @@ public class SystemCompanyController {
     private final SystemCompanyService companyService;
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final ModuleService moduleService;
 
     public SystemCompanyController(SystemCompanyService companyService, UserService userService,
-                                   PasswordEncoder passwordEncoder) {
+                                   PasswordEncoder passwordEncoder, ModuleService moduleService) {
         this.companyService = companyService;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
+        this.moduleService = moduleService;
     }
 
     @GetMapping
@@ -118,5 +122,63 @@ public class SystemCompanyController {
         userService.resetPassword(userId, newPassword);
         log.info("Reset password for admin {} in company {}", userId, id);
         return ResponseEntity.ok(ApiResponse.ok(newPassword, "Password reset successfully"));
+    }
+
+    // ─── Module Management ─────────────────────────────────
+
+    @GetMapping("/{id}/modules")
+    public ResponseEntity<ApiResponse<List<ModuleResponse>>> getModules(@PathVariable UUID id) {
+        return withTenantContext(id, () -> {
+            List<ModuleEntity> allModules = moduleService.getAllModules();
+            Set<String> enabled = moduleService.getEnabledModules(id);
+
+            List<ModuleResponse> responses = allModules.stream()
+                    .map(m -> new ModuleResponse(
+                            m.getId(), m.getLabel(), m.getDescription(),
+                            m.isCore(), m.getDisplayOrder(),
+                            m.isCore() || enabled.contains(m.getId())
+                    ))
+                    .toList();
+
+            return ResponseEntity.ok(ApiResponse.ok(responses));
+        });
+    }
+
+    @PutMapping("/{id}/modules/{moduleId}/toggle")
+    public ResponseEntity<ApiResponse<ModuleResponse>> toggleModule(
+            @PathVariable UUID id,
+            @PathVariable String moduleId,
+            @RequestBody ModuleToggleRequest request) {
+        return withTenantContext(id, () -> {
+            moduleService.toggleModule(id, moduleId, request.enabled());
+
+            ModuleEntity module = moduleService.getAllModules().stream()
+                    .filter(m -> m.getId().equals(moduleId))
+                    .findFirst()
+                    .orElseThrow();
+
+            ModuleResponse response = new ModuleResponse(
+                    module.getId(), module.getLabel(), module.getDescription(),
+                    module.isCore(), module.getDisplayOrder(), request.enabled()
+            );
+
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        });
+    }
+
+    public record ModuleToggleRequest(boolean enabled) {}
+
+    /**
+     * Executes the given operation with the tenant context temporarily set.
+     * Required because SYSTEM_ADMIN has no tenant context, but RLS on tenant_modules
+     * requires it.
+     */
+    private <T> T withTenantContext(UUID tenantId, java.util.function.Supplier<T> operation) {
+        try {
+            TenantContext.setCurrentTenant(tenantId.toString());
+            return operation.get();
+        } finally {
+            TenantContext.clear();
+        }
     }
 }

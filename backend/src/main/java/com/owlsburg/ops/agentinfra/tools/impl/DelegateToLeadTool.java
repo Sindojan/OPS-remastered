@@ -7,12 +7,9 @@ import com.owlsburg.ops.agentinfra.AgentInstanceEntity;
 import com.owlsburg.ops.agentinfra.AgentInstanceRepository;
 import com.owlsburg.ops.agentinfra.AgentTemplateEntity;
 import com.owlsburg.ops.agentinfra.AgentTemplateRepository;
-import com.owlsburg.ops.agentinfra.runtime.Agent;
-import com.owlsburg.ops.agentinfra.runtime.AgentContext;
-import com.owlsburg.ops.agentinfra.runtime.AgentFactory;
-import com.owlsburg.ops.agentinfra.runtime.AgentResult;
-import com.owlsburg.ops.agentinfra.runtime.LeadStep;
+import com.owlsburg.ops.agentinfra.runtime.*;
 import com.owlsburg.ops.agentinfra.tools.*;
+import com.owlsburg.ops.common.ModuleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -35,18 +32,29 @@ public class DelegateToLeadTool implements AgentTool {
             "support_lead", "support_lead"
     );
 
+    private static final Map<String, String> LEAD_MODULE_MAPPING = Map.of(
+            "produktions_lead", "production",
+            "maschinen_lead", "machines",
+            "lager_lead", "inventory",
+            "personal_lead", "people",
+            "support_lead", "inbox"
+    );
+
     private final AgentTemplateRepository templateRepository;
     private final AgentInstanceRepository instanceRepository;
     private final AgentFactory agentFactory;
+    private final ModuleService moduleService;
     private final ObjectMapper objectMapper;
 
     public DelegateToLeadTool(AgentTemplateRepository templateRepository,
                               AgentInstanceRepository instanceRepository,
                               AgentFactory agentFactory,
+                              ModuleService moduleService,
                               ObjectMapper objectMapper) {
         this.templateRepository = templateRepository;
         this.instanceRepository = instanceRepository;
         this.agentFactory = agentFactory;
+        this.moduleService = moduleService;
         this.objectMapper = objectMapper;
     }
 
@@ -92,6 +100,13 @@ public class DelegateToLeadTool implements AgentTool {
 
             UUID tenantId = UUID.fromString(context.tenantId());
 
+            // Check if the lead's module is enabled
+            String requiredModule = LEAD_MODULE_MAPPING.get(leadName);
+            if (requiredModule != null && !moduleService.isModuleEnabled(tenantId, requiredModule)) {
+                return ToolResult.error("Modul '" + requiredModule + "' ist deaktiviert. " +
+                        "Delegation an " + leadName + " nicht möglich.");
+            }
+
             // Find template by role and tenant
             AgentTemplateEntity template = templateRepository.findByRoleAndTenantId(role, tenantId)
                     .orElseThrow(() -> new IllegalStateException(
@@ -107,13 +122,38 @@ public class DelegateToLeadTool implements AgentTool {
             log.info("Delegating to {} (role: {}, instance: {}): {}",
                     leadName, role, leadInstance.getId(), task);
 
+            // Publish DELEGATION_START event
+            AgentActivityBus bus = context.activityBus();
+            if (bus != null) {
+                try {
+                    bus.publish(context.tenantId(), new AgentActivityEvent(
+                            AgentActivityEvent.Type.DELEGATION_START,
+                            context.instanceId(), leadInstance.getId(),
+                            "CEO", leadName, Instant.now()));
+                } catch (Exception e) {
+                    log.debug("Failed to publish DELEGATION_START: {}", e.getMessage());
+                }
+            }
+
             // Create Lead Agent via Factory and execute
             long startTime = System.currentTimeMillis();
             Agent leadAgent = agentFactory.createAgent(leadInstance.getId(), context.tenantId());
             AgentContext agentContext = new AgentContext(
-                    UUID.randomUUID(), context.tenantId(), null, null, 1, Instant.now());
+                    UUID.randomUUID(), context.tenantId(), null, null, 1, Instant.now(), bus);
             AgentResult result = leadAgent.execute(agentContext, task);
             long elapsed = System.currentTimeMillis() - startTime;
+
+            // Publish DELEGATION_END event
+            if (bus != null) {
+                try {
+                    bus.publish(context.tenantId(), new AgentActivityEvent(
+                            AgentActivityEvent.Type.DELEGATION_END,
+                            context.instanceId(), leadInstance.getId(),
+                            "CEO", leadName, Instant.now()));
+                } catch (Exception e) {
+                    log.debug("Failed to publish DELEGATION_END: {}", e.getMessage());
+                }
+            }
 
             log.info("Delegation to {} completed in {}ms (status: {}, tokens: {}+{}, steps: {})",
                     leadName, elapsed, result.status(), result.inputTokens(), result.outputTokens(),

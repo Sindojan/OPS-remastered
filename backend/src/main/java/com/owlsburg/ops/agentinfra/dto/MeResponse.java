@@ -1,5 +1,6 @@
 package com.owlsburg.ops.agentinfra.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 public record MeResponse(
@@ -9,5 +10,6 @@ public record MeResponse(
         String lastName,
         String role,
         UUID tenantId,
-        PrimaryAgentResponse primaryAgentInstance
+        PrimaryAgentResponse primaryAgentInstance,
+        List<String> enabledModules
 ) {}

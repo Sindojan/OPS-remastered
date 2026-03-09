@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { apiClient } from "@/lib/api-client";
-import type { ApiResponse, LoginResponse } from "@/types/api";
+import type { ApiResponse, LoginResponse, MeResponse } from "@/types/api";
 
 interface UserProfile {
   id: string;
@@ -11,6 +11,7 @@ interface UserProfile {
   lastName: string;
   role: string;
   tenantId: string;
+  enabledModules: string[];
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshModules: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -26,6 +28,24 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchMe = useCallback(async (): Promise<UserProfile | null> => {
+    try {
+      const res = await apiClient.get<ApiResponse<MeResponse>>("/api/users/me");
+      const me = res.data;
+      return {
+        id: me.id,
+        email: me.email,
+        firstName: me.firstName,
+        lastName: me.lastName,
+        role: me.role,
+        tenantId: me.tenantId,
+        enabledModules: me.enabledModules || [],
+      };
+    } catch {
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("owlsburg_token");
@@ -43,14 +63,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         // Token not expired – verify user still exists via /me
         setUser(JSON.parse(storedUser));
-        apiClient.get("/api/users/me").then(() => {
-          setIsLoading(false);
-        }).catch(() => {
-          // User no longer exists in DB (e.g. after DB reset)
-          localStorage.removeItem("owlsburg_token");
-          localStorage.removeItem("owlsburg_user");
-          localStorage.removeItem("owlsburg_refresh_token");
-          setUser(null);
+        fetchMe().then((profile) => {
+          if (profile) {
+            setUser(profile);
+            localStorage.setItem("owlsburg_user", JSON.stringify(profile));
+          } else {
+            // User no longer exists in DB (e.g. after DB reset)
+            localStorage.removeItem("owlsburg_token");
+            localStorage.removeItem("owlsburg_user");
+            localStorage.removeItem("owlsburg_refresh_token");
+            setUser(null);
+          }
           setIsLoading(false);
         });
         return;
@@ -60,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     setIsLoading(false);
-  }, []);
+  }, [fetchMe]);
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await apiClient.post<ApiResponse<LoginResponse>>(
@@ -72,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("owlsburg_token", accessToken);
     localStorage.setItem("owlsburg_refresh_token", refreshToken);
 
+    // Fetch full profile including enabledModules
     const profile: UserProfile = {
       id: userData.id,
       email: userData.email,
@@ -79,10 +103,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastName: userData.lastName,
       role: userData.role,
       tenantId: userData.tenantId || "",
+      enabledModules: [],
     };
-    localStorage.setItem("owlsburg_user", JSON.stringify(profile));
     setUser(profile);
-  }, []);
+    localStorage.setItem("owlsburg_user", JSON.stringify(profile));
+
+    // Fetch modules from /me
+    const fullProfile = await fetchMe();
+    if (fullProfile) {
+      setUser(fullProfile);
+      localStorage.setItem("owlsburg_user", JSON.stringify(fullProfile));
+    }
+  }, [fetchMe]);
 
   const logout = useCallback(async () => {
     const refreshToken = localStorage.getItem("owlsburg_refresh_token");
@@ -99,8 +131,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshModules = useCallback(async () => {
+    const profile = await fetchMe();
+    if (profile) {
+      setUser(profile);
+      localStorage.setItem("owlsburg_user", JSON.stringify(profile));
+    }
+  }, [fetchMe]);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, refreshModules }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,6 +9,7 @@ import {
   Check,
   Copy,
   KeyRound,
+  Package,
   RotateCcw,
   Save,
 } from "lucide-react";
@@ -42,6 +43,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useApi, useMutation } from "@/hooks/api/use-api";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type {
@@ -51,6 +54,7 @@ import type {
   CompanyAdminResponse,
   CompanyPlan,
   CompanyStatus,
+  ModuleResponse,
 } from "@/types/api";
 
 function getCompanyStatusVariant(status: CompanyStatus) {
@@ -64,6 +68,91 @@ function getCompanyStatusVariant(status: CompanyStatus) {
     default:
       return "neutral" as const;
   }
+}
+
+function CompanyModulesTab({ companyId }: { companyId: string }) {
+  const {
+    data: modules,
+    loading: modulesLoading,
+    refetch: refetchModules,
+  } = useApi<ModuleResponse[]>(`/api/system/companies/${companyId}/modules`);
+  const { mutate: mutateMod } = useMutation();
+
+  const handleToggleModule = async (moduleId: string, enabled: boolean) => {
+    try {
+      await mutateMod(
+        "put",
+        `/api/system/companies/${companyId}/modules/${moduleId}/toggle`,
+        { enabled }
+      );
+      toast.success(enabled ? "Modul aktiviert" : "Modul deaktiviert");
+      refetchModules();
+    } catch {
+      toast.error("Fehler beim Umschalten des Moduls");
+    }
+  };
+
+  if (modulesLoading) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-muted-foreground">Laden...</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-6">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold">Feature-Module</h3>
+        <p className="text-xs text-muted-foreground">
+          Module fuer dieses Unternehmen aktivieren oder deaktivieren.
+          Deaktivierte Module sind in Navigation, API und Agent-Tools nicht
+          verfuegbar.
+        </p>
+      </div>
+      <div className="rounded-md border">
+        <div className="grid grid-cols-[1fr_auto] gap-4 border-b px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <span>Modul</span>
+          <span>Status</span>
+        </div>
+        {(modules || []).map((mod) => (
+          <div
+            key={mod.id}
+            className="grid grid-cols-[1fr_auto] items-center gap-4 border-b px-4 py-3 last:border-b-0"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                <Package className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{mod.label}</span>
+                  {mod.core && (
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      Kern
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {mod.description}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={mod.enabled}
+              onCheckedChange={(checked) =>
+                handleToggleModule(mod.id, checked)
+              }
+              disabled={mod.core}
+            />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
 }
 
 export default function CompanyDetailPage() {
@@ -251,6 +340,7 @@ export default function CompanyDetailPage() {
           <TabsTrigger value="overview">Uebersicht</TabsTrigger>
           <TabsTrigger value="stats">Statistiken</TabsTrigger>
           <TabsTrigger value="admins">Admin-Benutzer</TabsTrigger>
+          <TabsTrigger value="modules">Module</TabsTrigger>
         </TabsList>
 
         {/* ─── Overview Tab ──────────────────────────── */}
@@ -447,6 +537,11 @@ export default function CompanyDetailPage() {
               </div>
             )}
           </Card>
+        </TabsContent>
+
+        {/* ─── Modules Tab ──────────────────────────── */}
+        <TabsContent value="modules">
+          <CompanyModulesTab companyId={companyId} />
         </TabsContent>
       </Tabs>
 

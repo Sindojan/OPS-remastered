@@ -21,6 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -116,15 +117,20 @@ public final class CeoAgent implements Agent {
         List<ObjectNode> messages = new ArrayList<>(chatHistory);
 
         ToolExecutionContext toolContext = new ToolExecutionContext(
-                context.tenantId(), identity.instanceId(), null);
+                context.tenantId(), identity.instanceId(), null, context.activityBus());
 
         for (int iteration = 0; iteration < capabilities.maxIterations(); iteration++) {
+            // Publish THINKING event
+            publishActivity(context, AgentActivityEvent.Type.THINKING, null, null);
+
             StreamResult streamResult = streamAnthropicRequest(
                     identity.systemPrompt(), messages, capabilities.toolDefinitions(), emitter);
 
             fullResponse.append(streamResult.text);
 
             if (!"tool_use".equals(streamResult.stopReason) || streamResult.toolUses.isEmpty()) {
+                // Publish IDLE event
+                publishActivity(context, AgentActivityEvent.Type.IDLE, null, null);
                 break;
             }
 
@@ -174,6 +180,8 @@ public final class CeoAgent implements Agent {
                 } catch (Exception e) {
                     log.debug("SSE toolCall event send failed: {}", e.getMessage());
                 }
+                publishActivity(context, AgentActivityEvent.Type.TOOL_CALL, null,
+                        truncateDetail(toolUse.name));
 
                 String toolResultContent = executeToolSafe(toolContext, toolUse);
                 toolResults.put(toolUse.id, toolResultContent);
@@ -184,6 +192,8 @@ public final class CeoAgent implements Agent {
                 } catch (Exception e) {
                     log.debug("SSE toolResult event send failed: {}", e.getMessage());
                 }
+                publishActivity(context, AgentActivityEvent.Type.TOOL_RESULT, null,
+                        truncateDetail(toolUse.name));
             }
 
             // Phase 2: Execute delegations in parallel via Virtual Threads
@@ -460,6 +470,23 @@ public final class CeoAgent implements Agent {
         } catch (Exception e) {
             log.debug("Failed to emit leadStep/delegationResult events: {}", e.getMessage());
         }
+    }
+
+    private void publishActivity(AgentContext context, AgentActivityEvent.Type type,
+                                  java.util.UUID targetInstanceId, String detail) {
+        if (context.activityBus() == null) return;
+        try {
+            context.activityBus().publish(context.tenantId(), new AgentActivityEvent(
+                    type, identity.instanceId(), targetInstanceId, identity.name(),
+                    detail, Instant.now()));
+        } catch (Exception e) {
+            log.debug("Failed to publish activity event: {}", e.getMessage());
+        }
+    }
+
+    private static String truncateDetail(String text) {
+        if (text == null) return null;
+        return text.length() > 120 ? text.substring(0, 120) : text;
     }
 
     private record StreamResult(String text, String stopReason, List<ToolUseBlock> toolUses) {}

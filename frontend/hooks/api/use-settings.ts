@@ -10,6 +10,7 @@ import type {
   NotificationSettingsUpdateRequest,
   AvailableToolResponse,
   AgentTemplateDetailResponse,
+  ModuleResponse,
   ApiResponse,
 } from "@/types/api";
 
@@ -77,5 +78,23 @@ export function useAgentTemplateMutations() {
       mutate("patch", `/api/agent-templates/${id}`, data),
     loading,
     error,
+  };
+}
+
+// ─── Modules ──────────────────────────────────────────────
+
+export function useModules() {
+  return useApi<ModuleResponse[]>("/api/modules");
+}
+
+export function useModuleMutations() {
+  return {
+    toggle: async (moduleId: string, enabled: boolean) => {
+      const res = await apiClient.put<ApiResponse<ModuleResponse>>(
+        `/api/modules/${moduleId}/toggle`,
+        { enabled }
+      );
+      return res.data;
+    },
   };
 }

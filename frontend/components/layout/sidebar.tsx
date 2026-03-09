@@ -38,6 +38,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: typeof Bot;
+  moduleId?: string;
 }
 
 interface NavSection {
@@ -51,25 +52,25 @@ const ALL_NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "Mein Tag", href: "/my-day", icon: Sun },
       { label: "Konsole", href: "/agents", icon: Bot },
-      { label: "Produktion", href: "/production", icon: Factory },
-      { label: "Maschinen", href: "/machines", icon: Cog },
-      { label: "Lager", href: "/inventory", icon: Package },
-      { label: "Teile & Prozesse", href: "/parts-and-processes", icon: Puzzle },
+      { label: "Produktion", href: "/production", icon: Factory, moduleId: "production" },
+      { label: "Maschinen", href: "/machines", icon: Cog, moduleId: "machines" },
+      { label: "Lager", href: "/inventory", icon: Package, moduleId: "inventory" },
+      { label: "Teile & Prozesse", href: "/parts-and-processes", icon: Puzzle, moduleId: "bom" },
     ],
   },
   {
     label: "Kommunikation",
     items: [
-      { label: "Posteingang", href: "/inbox", icon: Inbox },
+      { label: "Posteingang", href: "/inbox", icon: Inbox, moduleId: "inbox" },
       { label: "Berichte", href: "/reports", icon: BarChart3 },
     ],
   },
   {
     label: "Organisation",
     items: [
-      { label: "Kunden", href: "/customers", icon: Building2 },
-      { label: "Mitarbeiter", href: "/employees", icon: Users },
-      { label: "Wissensdatenbank", href: "/knowledge", icon: BookOpen },
+      { label: "Kunden", href: "/customers", icon: Building2, moduleId: "customers" },
+      { label: "Mitarbeiter", href: "/employees", icon: Users, moduleId: "people" },
+      { label: "Wissensdatenbank", href: "/knowledge", icon: BookOpen, moduleId: "knowledge" },
       { label: "Einstellungen", href: "/settings", icon: Settings },
     ],
   },
@@ -82,15 +83,18 @@ const ROLE_HIDDEN_PATHS: Record<string, string[]> = {
   // MANAGER and ADMIN see everything
 };
 
-function getNavSectionsForRole(role: string): NavSection[] {
-  const hiddenPaths = ROLE_HIDDEN_PATHS[role];
-  if (!hiddenPaths) return ALL_NAV_SECTIONS;
+function getNavSections(role: string, enabledModules: string[]): NavSection[] {
+  const hiddenPaths = ROLE_HIDDEN_PATHS[role] || [];
 
   const sections: NavSection[] = [];
   for (const section of ALL_NAV_SECTIONS) {
-    const filteredItems = section.items.filter(
-      (item) => !hiddenPaths.includes(item.href)
-    );
+    const filteredItems = section.items.filter((item) => {
+      // Role-based filtering
+      if (hiddenPaths.includes(item.href)) return false;
+      // Module-based filtering
+      if (item.moduleId && !enabledModules.includes(item.moduleId)) return false;
+      return true;
+    });
     if (filteredItems.length > 0) {
       sections.push({ ...section, items: filteredItems });
     }
@@ -102,7 +106,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
-  const navSections = getNavSectionsForRole(user?.role || "WORKER");
+  const navSections = getNavSections(
+    user?.role || "WORKER",
+    user?.enabledModules || []
+  );
 
   return (
     <aside

@@ -13,6 +13,7 @@ import com.owlsburg.ops.auth.notifications.NotificationSettingsService;
 import com.owlsburg.ops.auth.notifications.NotificationSettingsUpdateRequest;
 import com.owlsburg.ops.auth.notifications.UserNotificationSettingsEntity;
 import com.owlsburg.ops.common.ApiResponse;
+import com.owlsburg.ops.common.ModuleService;
 import com.owlsburg.ops.common.TenantContext;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -33,15 +34,18 @@ public class UserController {
     private final PrimaryAgentService primaryAgentService;
     private final AgentTemplateRepository agentTemplateRepository;
     private final NotificationSettingsService notificationSettingsService;
+    private final ModuleService moduleService;
 
     public UserController(UserService userService,
                           PrimaryAgentService primaryAgentService,
                           AgentTemplateRepository agentTemplateRepository,
-                          NotificationSettingsService notificationSettingsService) {
+                          NotificationSettingsService notificationSettingsService,
+                          ModuleService moduleService) {
         this.userService = userService;
         this.primaryAgentService = primaryAgentService;
         this.agentTemplateRepository = agentTemplateRepository;
         this.notificationSettingsService = notificationSettingsService;
+        this.moduleService = moduleService;
     }
 
     @GetMapping
@@ -118,6 +122,11 @@ public class UserController {
             agentResponse = PrimaryAgentResponse.from(agentInstance, template);
         }
 
+        // Get enabled modules for this tenant
+        java.util.List<String> enabledModules = user.getTenantId() != null
+                ? new java.util.ArrayList<>(moduleService.getEnabledModules(user.getTenantId()))
+                : java.util.List.of();
+
         MeResponse response = new MeResponse(
                 user.getId(),
                 user.getEmail(),
@@ -125,7 +134,8 @@ public class UserController {
                 user.getLastName(),
                 user.getRole().name(),
                 user.getTenantId(),
-                agentResponse
+                agentResponse,
+                enabledModules
         );
         return ResponseEntity.ok(ApiResponse.ok(response));
     }

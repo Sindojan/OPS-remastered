@@ -3,6 +3,7 @@ package com.owlsburg.ops.agentinfra.tools;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.owlsburg.ops.agentinfra.AgentTemplateEntity;
+import com.owlsburg.ops.common.ModuleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -17,15 +18,21 @@ public class AgentToolRegistry {
 
     private final Map<String, AgentTool> toolMap;
     private final ObjectMapper objectMapper;
+    private final ModuleService moduleService;
 
-    public AgentToolRegistry(List<AgentTool> tools, ObjectMapper objectMapper) {
+    public AgentToolRegistry(List<AgentTool> tools, ObjectMapper objectMapper, ModuleService moduleService) {
         this.objectMapper = objectMapper;
+        this.moduleService = moduleService;
         this.toolMap = tools.stream()
                 .collect(Collectors.toMap(AgentTool::getName, t -> t));
         log.info("AgentToolRegistry initialized with {} tools: {}", toolMap.size(), toolMap.keySet());
     }
 
     public List<AgentTool> getToolsForInstance(AgentTemplateEntity template) {
+        return getToolsForInstance(template, null);
+    }
+
+    public List<AgentTool> getToolsForInstance(AgentTemplateEntity template, UUID tenantId) {
         try {
             List<String> allowedToolNames = objectMapper.readValue(
                     template.getAllowedTools(), new TypeReference<List<String>>() {});
@@ -33,6 +40,7 @@ public class AgentToolRegistry {
             return allowedToolNames.stream()
                     .map(toolMap::get)
                     .filter(Objects::nonNull)
+                    .filter(tool -> tenantId == null || moduleService.isModuleEnabled(tenantId, tool.getModuleId()))
                     .toList();
         } catch (Exception e) {
             log.error("Failed to parse allowedTools JSON for template {}: {}",

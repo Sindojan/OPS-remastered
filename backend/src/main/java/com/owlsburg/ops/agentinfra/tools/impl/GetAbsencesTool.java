@@ -61,6 +61,11 @@ public class GetAbsencesTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "people";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             JsonNode inputNode = objectMapper.readTree(input);

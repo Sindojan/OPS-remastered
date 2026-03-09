@@ -63,6 +63,11 @@ public class GetMachineDetailTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "machines";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             JsonNode inputNode = objectMapper.readTree(input);

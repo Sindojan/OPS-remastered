@@ -56,6 +56,11 @@ public class GetConversationDetailTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "inbox";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             JsonNode inputNode = objectMapper.readTree(input);

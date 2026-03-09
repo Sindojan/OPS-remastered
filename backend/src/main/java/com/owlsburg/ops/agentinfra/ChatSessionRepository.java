@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface ChatSessionRepository extends JpaRepository<ChatSessionEntity, UUID> {
     Optional<ChatSessionEntity> findByIdAndTenantId(UUID id, UUID tenantId);
     List<ChatSessionEntity> findByUserIdOrderByUpdatedAtDesc(UUID userId);
+    List<ChatSessionEntity> findByAgentInstanceId(UUID agentInstanceId);
 }

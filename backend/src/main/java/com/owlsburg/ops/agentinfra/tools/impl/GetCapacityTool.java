@@ -53,6 +53,11 @@ public class GetCapacityTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "production";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             List<StationResponse> stations = stationService.getAll();

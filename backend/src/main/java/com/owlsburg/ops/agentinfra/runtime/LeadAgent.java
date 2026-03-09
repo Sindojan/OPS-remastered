@@ -8,6 +8,7 @@ import com.owlsburg.ops.agentinfra.tools.ToolResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +48,7 @@ public final class LeadAgent implements Agent {
             messages.add(LlmMessage.user(task));
 
             ToolExecutionContext toolContext = new ToolExecutionContext(
-                    context.tenantId(), identity.instanceId(), null);
+                    context.tenantId(), identity.instanceId(), null, context.activityBus());
 
             List<String> toolsUsed = new ArrayList<>();
             List<LeadStep> steps = new ArrayList<>();
@@ -73,6 +74,7 @@ public final class LeadAgent implements Agent {
 
                     // Capture tool call
                     steps.add(new LeadStep("tool_call", response.toolUse().name(), response.toolUse().input(), i));
+                    publishActivity(context, AgentActivityEvent.Type.TOOL_CALL, response.toolUse().name());
 
                     String toolResultContent;
                     try {
@@ -90,6 +92,7 @@ public final class LeadAgent implements Agent {
 
                     // Capture tool result
                     steps.add(new LeadStep("tool_result", response.toolUse().name(), toolResultContent, i));
+                    publishActivity(context, AgentActivityEvent.Type.TOOL_RESULT, response.toolUse().name());
 
                     messages.add(LlmMessage.toolResult(
                             new LlmToolResult(response.toolUse().id(), toolResultContent)));
@@ -112,6 +115,18 @@ public final class LeadAgent implements Agent {
         } catch (Exception e) {
             log.error("LeadAgent error for '{}': {}", identity.name(), e.getMessage(), e);
             return AgentResult.error("Fehler beim Ausführen des Lead-Agents: " + e.getMessage());
+        }
+    }
+
+    private void publishActivity(AgentContext context, AgentActivityEvent.Type type, String detail) {
+        if (context.activityBus() == null) return;
+        try {
+            String truncated = detail != null && detail.length() > 120 ? detail.substring(0, 120) : detail;
+            context.activityBus().publish(context.tenantId(), new AgentActivityEvent(
+                    type, identity.instanceId(), null, identity.name(),
+                    truncated, Instant.now()));
+        } catch (Exception e) {
+            log.debug("Failed to publish lead activity event: {}", e.getMessage());
         }
     }
 }

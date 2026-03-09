@@ -46,6 +46,11 @@ public class ListMachinesTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "machines";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             List<MachineResponse> machines = machineService.getAll();

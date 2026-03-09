@@ -49,6 +49,11 @@ public class ListEmployeesTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "people";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             Page<EmployeeEntity> employees = employeeService.findAll(Pageable.unpaged());

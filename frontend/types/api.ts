@@ -48,6 +48,18 @@ export interface MeResponse {
   role: string;
   tenantId: string;
   primaryAgentInstance: PrimaryAgentInfo | null;
+  enabledModules: string[];
+}
+
+// ─── Modules ────────────────────────────────────────────
+
+export interface ModuleResponse {
+  id: string;
+  label: string;
+  description: string;
+  core: boolean;
+  displayOrder: number;
+  enabled: boolean;
 }
 
 // ─── LLM Config ─────────────────────────────────────────
@@ -1080,4 +1092,42 @@ export interface AgentTemplateDetailResponse {
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── Agent Activity ───────────────────────────────────
+
+export interface AgentInstanceActivity {
+  id: string;
+  name: string;
+  templateRole: string;
+  status: string;
+  parentInstanceId: string | null;
+  model: string;
+  type: string;
+  currentTask: string | null;
+  tokensUsedToday: number;
+  dailyTokenBudget: number;
+  activeRunId: string | null;
+  lastActivityAt: string | null;
+}
+
+export interface ActiveLink {
+  senderInstanceId: string;
+  targetInstanceId: string;
+  lastMessageAt: string;
+  messageType: string;
+}
+
+export interface AgentActivitySnapshot {
+  instances: AgentInstanceActivity[];
+  activeLinks: ActiveLink[];
+}
+
+export interface AgentActivityEvent {
+  type: "THINKING" | "TOOL_CALL" | "TOOL_RESULT" | "DELEGATION_START" | "DELEGATION_END" | "IDLE";
+  agentInstanceId: string;
+  targetInstanceId: string | null;
+  agentName: string;
+  detail: string | null;
+  timestamp: string;
 }

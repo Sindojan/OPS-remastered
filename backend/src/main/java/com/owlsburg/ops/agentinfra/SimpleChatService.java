@@ -26,15 +26,18 @@ public class SimpleChatService {
     private final ChatSessionService chatSessionService;
     private final AgentFactory agentFactory;
     private final ObjectMapper objectMapper;
+    private final AgentActivityBus activityBus;
 
     public SimpleChatService(AgentInstanceRepository agentInstanceRepository,
                              ChatSessionService chatSessionService,
                              AgentFactory agentFactory,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper,
+                             AgentActivityBus activityBus) {
         this.agentInstanceRepository = agentInstanceRepository;
         this.chatSessionService = chatSessionService;
         this.agentFactory = agentFactory;
         this.objectMapper = objectMapper;
+        this.activityBus = activityBus;
     }
 
     public UUID streamChat(SimpleChatRequest request, UUID userId, SseEmitter emitter) {
@@ -80,7 +83,7 @@ public class SimpleChatService {
             }
 
             // 8. Execute streaming via CeoAgent
-            AgentContext context = AgentContext.forChat(tenantId, userId, sessionId);
+            AgentContext context = AgentContext.forChat(tenantId, userId, sessionId, activityBus);
 
             String fullResponse;
             if (agent instanceof CeoAgent ceoAgent) {

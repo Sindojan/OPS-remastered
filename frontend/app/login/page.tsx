@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,18 @@ function getDefaultRoute(role: string): string {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="font-mono text-sm text-muted-foreground">Laden...</div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const { isAuthenticated, isLoading, user, login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();

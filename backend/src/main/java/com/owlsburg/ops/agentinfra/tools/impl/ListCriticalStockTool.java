@@ -46,6 +46,11 @@ public class ListCriticalStockTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "inventory";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             List<CriticalArticleResponse> criticalArticles = stockService.getCriticalArticles();

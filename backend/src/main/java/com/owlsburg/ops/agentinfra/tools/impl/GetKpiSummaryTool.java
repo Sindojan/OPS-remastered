@@ -2,6 +2,7 @@ package com.owlsburg.ops.agentinfra.tools.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.owlsburg.ops.agentinfra.tools.*;
+import com.owlsburg.ops.common.ModuleService;
 import com.owlsburg.ops.inbox.ConversationEntity;
 import com.owlsburg.ops.inbox.ConversationService;
 import com.owlsburg.ops.inventory.StockService;
@@ -19,9 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -34,6 +33,7 @@ public class GetKpiSummaryTool implements AgentTool {
     private final MachineService machineService;
     private final EmployeeService employeeService;
     private final ConversationService conversationService;
+    private final ModuleService moduleService;
     private final ObjectMapper objectMapper;
 
     public GetKpiSummaryTool(JobService jobService,
@@ -41,12 +41,14 @@ public class GetKpiSummaryTool implements AgentTool {
                               MachineService machineService,
                               EmployeeService employeeService,
                               ConversationService conversationService,
+                              ModuleService moduleService,
                               ObjectMapper objectMapper) {
         this.jobService = jobService;
         this.stockService = stockService;
         this.machineService = machineService;
         this.employeeService = employeeService;
         this.conversationService = conversationService;
+        this.moduleService = moduleService;
         this.objectMapper = objectMapper;
     }
 
@@ -73,41 +75,53 @@ public class GetKpiSummaryTool implements AgentTool {
     @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
-            // Jobs by status
-            Page<JobResponse> allJobs = jobService.getAll(Pageable.unpaged());
-            Map<String, Long> jobsByStatus = allJobs.getContent().stream()
-                    .collect(Collectors.groupingBy(
-                            job -> job.status().name(),
-                            Collectors.counting()));
-
-            // Critical stock
-            List<CriticalArticleResponse> criticalArticles = stockService.getCriticalArticles();
-
-            // Machine status distribution
-            List<MachineResponse> machines = machineService.getAll();
-            Map<String, Long> machinesByStatus = machines.stream()
-                    .collect(Collectors.groupingBy(
-                            m -> m.status().name(),
-                            Collectors.counting()));
-
-            // Employee count
-            Page<EmployeeEntity> employees = employeeService.findAll(Pageable.unpaged());
-
-            // Open conversations
-            Page<ConversationEntity> openConversations = conversationService.findAll(Pageable.unpaged(), "OPEN");
-
+            UUID tenantId = UUID.fromString(context.tenantId());
+            Set<String> modules = moduleService.getEnabledModules(tenantId);
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("jobs", Map.of(
-                    "total", allJobs.getTotalElements(),
-                    "byStatus", jobsByStatus
-            ));
-            result.put("criticalStockCount", criticalArticles.size());
-            result.put("machines", Map.of(
-                    "total", machines.size(),
-                    "byStatus", machinesByStatus
-            ));
-            result.put("employeeCount", employees.getTotalElements());
-            result.put("openConversationsCount", openConversations.getTotalElements());
+
+            // Jobs by status (production module)
+            if (modules.contains("production")) {
+                Page<JobResponse> allJobs = jobService.getAll(Pageable.unpaged());
+                Map<String, Long> jobsByStatus = allJobs.getContent().stream()
+                        .collect(Collectors.groupingBy(
+                                job -> job.status().name(),
+                                Collectors.counting()));
+                result.put("jobs", Map.of(
+                        "total", allJobs.getTotalElements(),
+                        "byStatus", jobsByStatus
+                ));
+            }
+
+            // Critical stock (inventory module)
+            if (modules.contains("inventory")) {
+                List<CriticalArticleResponse> criticalArticles = stockService.getCriticalArticles();
+                result.put("criticalStockCount", criticalArticles.size());
+            }
+
+            // Machine status distribution (machines module)
+            if (modules.contains("machines")) {
+                List<MachineResponse> machines = machineService.getAll();
+                Map<String, Long> machinesByStatus = machines.stream()
+                        .collect(Collectors.groupingBy(
+                                m -> m.status().name(),
+                                Collectors.counting()));
+                result.put("machines", Map.of(
+                        "total", machines.size(),
+                        "byStatus", machinesByStatus
+                ));
+            }
+
+            // Employee count (people module)
+            if (modules.contains("people")) {
+                Page<EmployeeEntity> employees = employeeService.findAll(Pageable.unpaged());
+                result.put("employeeCount", employees.getTotalElements());
+            }
+
+            // Open conversations (inbox module)
+            if (modules.contains("inbox")) {
+                Page<ConversationEntity> openConversations = conversationService.findAll(Pageable.unpaged(), "OPEN");
+                result.put("openConversationsCount", openConversations.getTotalElements());
+            }
 
             return ToolResult.success(objectMapper.writeValueAsString(result));
         } catch (Exception e) {

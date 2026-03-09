@@ -67,7 +67,8 @@ public class AgentExecutionService {
         }
 
         // Load allowed tools
-        List<AgentTool> tools = toolRegistry.getToolsForInstance(template);
+        UUID tenantUuid = UUID.fromString(TenantContext.getCurrentTenant());
+        List<AgentTool> tools = toolRegistry.getToolsForInstance(template, tenantUuid);
 
         // Determine model (instance config overrides template default)
         String model = resolveModel(instance, template);

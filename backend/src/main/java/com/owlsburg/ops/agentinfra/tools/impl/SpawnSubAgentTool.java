@@ -96,7 +96,7 @@ public class SpawnSubAgentTool implements AgentTool {
 
             // Execute synchronously
             AgentContext agentContext = new AgentContext(
-                    UUID.randomUUID(), context.tenantId(), null, null, 2, Instant.now());
+                    UUID.randomUUID(), context.tenantId(), null, null, 2, Instant.now(), context.activityBus());
             AgentResult result = subAgent.execute(agentContext, task);
 
             // Terminate and cleanup

@@ -154,7 +154,7 @@ public class AgentFactory {
                 instance.getParentInstanceId(), systemPrompt, model, allowedToolNames);
 
         // Build tools and capabilities
-        List<AgentTool> tools = toolRegistry.getToolsForInstance(template);
+        List<AgentTool> tools = toolRegistry.getToolsForInstance(template, UUID.fromString(tenantId));
         List<LlmToolDefinition> toolDefs = tools.stream()
                 .map(t -> new LlmToolDefinition(t.getName(), t.getDescription(), t.getInputSchema()))
                 .toList();

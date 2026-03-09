@@ -38,6 +38,7 @@ import {
   Building2,
   DollarSign,
   Bell,
+  Blocks,
 } from "lucide-react";
 import type {
   ApiResponse,
@@ -63,6 +64,7 @@ import { CompanyTab } from "@/components/settings/company-tab";
 import { AgentsExtendedTab } from "@/components/settings/agents-extended-tab";
 import { BudgetTab } from "@/components/settings/budget-tab";
 import { NotificationsTab } from "@/components/settings/notifications-tab";
+import { ModulesTab } from "@/components/settings/modules-tab";
 
 // ============ Types for internal use ============
 
@@ -918,6 +920,12 @@ export default function SettingsPage() {
               <Bell className="h-3.5 w-3.5" />
               Benachrichtigungen
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="modules" className="gap-1.5">
+                <Blocks className="h-3.5 w-3.5" />
+                Module
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="llm">
@@ -957,6 +965,12 @@ export default function SettingsPage() {
           <TabsContent value="notifications">
             <NotificationsTab />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="modules">
+              <ModulesTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
   );

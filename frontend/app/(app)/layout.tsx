@@ -11,16 +11,42 @@ const ROLE_BLOCKED_PATHS: Record<string, string[]> = {
   TEAM_LEAD: ["/settings"],
 };
 
-function isPathAllowed(role: string, pathname: string): boolean {
+// Route → module mapping for module-based access control
+const PATH_TO_MODULE: Record<string, string> = {
+  "/production": "production",
+  "/machines": "machines",
+  "/inventory": "inventory",
+  "/employees": "people",
+  "/customers": "customers",
+  "/inbox": "inbox",
+  "/parts-and-processes": "bom",
+  "/knowledge": "knowledge",
+};
+
+function isPathAllowed(role: string, pathname: string, enabledModules: string[]): boolean {
+  // Role-based blocking
   const blockedPaths = ROLE_BLOCKED_PATHS[role];
-  if (!blockedPaths) return true;
-  return !blockedPaths.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  if (blockedPaths?.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    return false;
+  }
+
+  // Module-based blocking
+  for (const [pathPrefix, moduleId] of Object.entries(PATH_TO_MODULE)) {
+    if (pathname === pathPrefix || pathname.startsWith(pathPrefix + "/")) {
+      if (!enabledModules.includes(moduleId)) {
+        return false;
+      }
+      break;
+    }
+  }
+
+  return true;
 }
 
 function getDefaultRoute(role: string): string {
   if (role === "WORKER") return "/my-day";
   if (role === "SYSTEM_ADMIN") return "/system/companies";
-  return "/production";
+  return "/my-day";
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -39,8 +65,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         router.replace("/system/companies");
         return;
       }
-      // Check role-based route access
-      if (!isPathAllowed(user.role, pathname)) {
+      // Check role-based and module-based route access
+      if (!isPathAllowed(user.role, pathname, user.enabledModules || [])) {
         router.replace(getDefaultRoute(user.role));
       }
     }

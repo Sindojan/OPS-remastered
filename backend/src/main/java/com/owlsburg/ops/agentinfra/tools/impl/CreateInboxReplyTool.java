@@ -51,6 +51,11 @@ public class CreateInboxReplyTool implements AgentTool {
     }
 
     @Override
+    public String getModuleId() {
+        return "inbox";
+    }
+
+    @Override
     public ToolResult execute(ToolExecutionContext context, String input) {
         try {
             JsonNode node = objectMapper.readTree(input);
