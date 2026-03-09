@@ -59,10 +59,14 @@ public class AgentExecutionService {
         run.setStatus(AgentRunStatus.RUNNING);
         run.setStartedAt(java.time.Instant.now());
 
+        // Set BUSY
+        safeUpdateActivity(instance.getId(), AgentActivityStatus.BUSY);
+
         // Budget check
         AgentRunService.BudgetCheckResult budget = runService.checkBudget(instance.getId());
         if (budget.tokensRemaining() <= 0) {
             runService.failRun(runId, "Token-Budget für heute erschöpft. Verbleibend: 0");
+            safeUpdateActivity(instance.getId(), AgentActivityStatus.IDLE);
             return;
         }
 
@@ -131,6 +135,9 @@ public class AgentExecutionService {
             } catch (LlmProviderException e) {
                 log.error("LLM call failed for run {}: {}", runId, e.getMessage());
                 runService.failRun(runId, "LLM-Fehler: " + e.getMessage());
+                safeUpdateActivity(instance.getId(), AgentActivityStatus.ERROR);
+                safeLinkLastRun(instance.getId(), runId);
+                reportIncidentSafe(instance.getId(), "LLM_ERROR", e.getMessage());
                 return;
             }
             long callDuration = System.currentTimeMillis() - callStart;
@@ -195,6 +202,11 @@ public class AgentExecutionService {
         // Complete the run
         String output = lastTextContent != null ? lastTextContent : "Keine Antwort generiert.";
         runService.completeRun(runId, output, totalTokens, cost);
+
+        // Set IDLE + link last run on success
+        safeUpdateActivity(instance.getId(), AgentActivityStatus.IDLE);
+        safeLinkLastRun(instance.getId(), runId);
+
         log.info("Run {} completed: {} tokens, ${}", runId, totalTokens, cost);
     }
 
@@ -307,5 +319,30 @@ public class AgentExecutionService {
     private String truncateForStep(String text) {
         if (text == null) return null;
         return text.length() > 4000 ? text.substring(0, 4000) + "..." : text;
+    }
+
+    private void safeUpdateActivity(UUID instanceId, AgentActivityStatus status) {
+        try {
+            instanceService.updateActivityStatus(instanceId, status);
+        } catch (Exception e) {
+            log.debug("Failed to update activity status: {}", e.getMessage());
+        }
+    }
+
+    private void safeLinkLastRun(UUID instanceId, UUID runId) {
+        if (runId == null) return;
+        try {
+            instanceService.linkLastRun(instanceId, runId);
+        } catch (Exception e) {
+            log.debug("Failed to link last run: {}", e.getMessage());
+        }
+    }
+
+    private void reportIncidentSafe(UUID instanceId, String type, String description) {
+        try {
+            incidentService.report(instanceId, type, description);
+        } catch (Exception e) {
+            log.debug("Failed to report incident: {}", e.getMessage());
+        }
     }
 }

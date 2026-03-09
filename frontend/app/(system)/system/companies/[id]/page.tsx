@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   Ban,
+  Bot,
   Check,
   Copy,
   KeyRound,
   Package,
   RotateCcw,
   Save,
+  Settings2,
+  Coins,
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -55,6 +58,9 @@ import type {
   CompanyPlan,
   CompanyStatus,
   ModuleResponse,
+  BudgetOverviewResponse,
+  AgentInstanceDetailResponse,
+  SystemLlmConfigResponse,
 } from "@/types/api";
 
 function getCompanyStatusVariant(status: CompanyStatus) {
@@ -69,6 +75,18 @@ function getCompanyStatusVariant(status: CompanyStatus) {
       return "neutral" as const;
   }
 }
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+  return String(n);
+}
+
+function formatCost(n: number): string {
+  return "$" + n.toFixed(4);
+}
+
+// ─── Modules Tab ────────────────────────────────────────
 
 function CompanyModulesTab({ companyId }: { companyId: string }) {
   const {
@@ -154,6 +172,412 @@ function CompanyModulesTab({ companyId }: { companyId: string }) {
     </Card>
   );
 }
+
+// ─── Token Usage Tab ────────────────────────────────────
+
+function CompanyBudgetTab({ companyId }: { companyId: string }) {
+  const { data: budget, loading } = useApi<BudgetOverviewResponse>(
+    `/api/system/companies/${companyId}/budget`
+  );
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-muted-foreground">Laden...</p>
+      </Card>
+    );
+  }
+
+  if (!budget) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-muted-foreground">
+          Keine Budget-Daten verfuegbar.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KpiCard
+          label="Kosten (30 Tage)"
+          value={formatCost(budget.last30Days.totalCostUsd)}
+        />
+        <KpiCard
+          label="Tokens (30 Tage)"
+          value={formatTokens(budget.last30Days.totalTokens)}
+        />
+        <KpiCard
+          label="Laeufe (30 Tage)"
+          value={String(budget.last30Days.totalRuns)}
+        />
+      </div>
+
+      {/* Agent Breakdown */}
+      {budget.last30Days.byAgent.length > 0 && (
+        <Card className="p-6">
+          <h3 className="mb-3 text-sm font-semibold">
+            Aufschluesselung nach Agent
+          </h3>
+          <div className="rounded-md border">
+            <div className="grid grid-cols-4 gap-4 border-b px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <span>Agent</span>
+              <span className="text-right">Kosten</span>
+              <span className="text-right">Tokens</span>
+              <span className="text-right">Laeufe</span>
+            </div>
+            {budget.last30Days.byAgent.map((agent) => (
+              <div
+                key={agent.agentName}
+                className="grid grid-cols-4 gap-4 border-b px-4 py-2.5 text-sm last:border-b-0"
+              >
+                <span className="font-medium">{agent.agentName}</span>
+                <span className="text-right font-mono text-xs">
+                  {formatCost(agent.costUsd)}
+                </span>
+                <span className="text-right font-mono text-xs">
+                  {formatTokens(agent.tokens)}
+                </span>
+                <span className="text-right font-mono text-xs">
+                  {agent.runs}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Daily Usage */}
+      {budget.dailyUsage.length > 0 && (
+        <Card className="p-6">
+          <h3 className="mb-3 text-sm font-semibold">Tagesverbrauch</h3>
+          <div className="rounded-md border">
+            <div className="grid grid-cols-3 gap-4 border-b px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <span>Datum</span>
+              <span className="text-right">Kosten</span>
+              <span className="text-right">Tokens</span>
+            </div>
+            {budget.dailyUsage
+              .slice()
+              .reverse()
+              .map((day) => (
+                <div
+                  key={day.date}
+                  className="grid grid-cols-3 gap-4 border-b px-4 py-2 text-sm last:border-b-0"
+                >
+                  <span className="font-mono text-xs">{day.date}</span>
+                  <span className="text-right font-mono text-xs">
+                    {formatCost(day.costUsd)}
+                  </span>
+                  <span className="text-right font-mono text-xs">
+                    {formatTokens(day.tokens)}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Agents Tab ─────────────────────────────────────────
+
+const MODEL_OPTIONS = [
+  { value: "claude-opus-4-20250514", label: "Claude Opus 4.6" },
+  { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4.6" },
+  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
+];
+
+function CompanyAgentsTab({ companyId }: { companyId: string }) {
+  const {
+    data: agents,
+    loading,
+    refetch,
+  } = useApi<AgentInstanceDetailResponse[]>(
+    `/api/system/companies/${companyId}/agents`
+  );
+  const { mutate } = useMutation();
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editPrompt, setEditPrompt] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  const handleModelChange = async (instanceId: string, model: string) => {
+    try {
+      await mutate(
+        "patch",
+        `/api/system/companies/${companyId}/agents/${instanceId}`,
+        { model }
+      );
+      toast.success("Model aktualisiert");
+      refetch();
+    } catch {
+      toast.error("Fehler beim Aktualisieren des Models");
+    }
+  };
+
+  const handleSavePrompt = async (instanceId: string) => {
+    setSaving(true);
+    try {
+      await mutate(
+        "patch",
+        `/api/system/companies/${companyId}/agents/${instanceId}`,
+        { customSystemPrompt: editPrompt }
+      );
+      toast.success("System-Prompt gespeichert");
+      refetch();
+      setExpandedId(null);
+    } catch {
+      toast.error("Fehler beim Speichern des System-Prompts");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-muted-foreground">Laden...</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-6">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold">Agent-Instanzen</h3>
+        <p className="text-xs text-muted-foreground">
+          Model und System-Prompt pro Agent-Instanz konfigurieren.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {(agents || []).map((agent) => (
+          <div key={agent.instanceId} className="rounded-lg border">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{agent.name}</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      {agent.templateName}
+                    </Badge>
+                    {agent.hasCustomPrompt && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        Custom Prompt
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{agent.status}</span>
+                    <span>·</span>
+                    <span className="flex items-center gap-1">
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                        agent.activityStatus === "BUSY" ? "bg-primary animate-pulse" :
+                        agent.activityStatus === "ERROR" ? "bg-destructive" : "bg-success"
+                      }`} />
+                      {agent.activityStatus === "BUSY" ? "Aktiv" : agent.activityStatus === "ERROR" ? "Fehler" : "Bereit"}
+                    </span>
+                    <span>·</span>
+                    <span>{agent.toolCount} Tools</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={agent.model}
+                  onValueChange={(v) => handleModelChange(agent.instanceId, v)}
+                >
+                  <SelectTrigger className="w-[200px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODEL_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {
+                    if (expandedId === agent.instanceId) {
+                      setExpandedId(null);
+                    } else {
+                      setExpandedId(agent.instanceId);
+                      setEditPrompt(agent.customSystemPrompt || "");
+                    }
+                  }}
+                >
+                  <Settings2 className="h-3.5 w-3.5 mr-1" />
+                  Prompt
+                </Button>
+              </div>
+            </div>
+            {expandedId === agent.instanceId && (
+              <div className="border-t px-4 py-3 space-y-2">
+                <Label className="text-xs">Custom System-Prompt</Label>
+                <Textarea
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                  rows={8}
+                  className="font-mono text-xs"
+                  placeholder="Leer = Template-Standard verwenden"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExpandedId(null)}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleSavePrompt(agent.instanceId)}
+                    disabled={saving}
+                  >
+                    <Save className="h-3.5 w-3.5 mr-1" />
+                    Speichern
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ─── LLM Config Tab ─────────────────────────────────────
+
+function CompanyLlmTab({ companyId }: { companyId: string }) {
+  const {
+    data: config,
+    loading,
+    refetch,
+  } = useApi<SystemLlmConfigResponse>(
+    `/api/system/companies/${companyId}/llm-config`
+  );
+  const { mutate } = useMutation();
+
+  const [apiKey, setApiKey] = useState("");
+  const [defaultModel, setDefaultModel] = useState("claude-sonnet-4-20250514");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (config?.defaultModel) {
+      setDefaultModel(config.defaultModel);
+    }
+  }, [config?.defaultModel]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await mutate("put", `/api/system/companies/${companyId}/llm-config`, {
+        provider: "anthropic",
+        apiKey: apiKey || undefined,
+        defaultModel,
+      });
+      toast.success("LLM-Konfiguration gespeichert");
+      setApiKey("");
+      refetch();
+    } catch {
+      toast.error("Fehler beim Speichern der LLM-Konfiguration");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-muted-foreground">Laden...</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-6 space-y-5">
+      <div>
+        <h3 className="text-sm font-semibold">LLM-Konfiguration</h3>
+        <p className="text-xs text-muted-foreground">
+          API-Schluessel und Standard-Modell fuer dieses Unternehmen
+          konfigurieren.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Provider</Label>
+          <p className="text-sm font-medium">Anthropic</p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">API-Key Status</Label>
+          <div className="flex items-center gap-2">
+            {config?.hasApiKey ? (
+              <Badge variant="default" className="text-xs">
+                Konfiguriert
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="text-xs">
+                Nicht konfiguriert
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="sys-api-key" className="text-xs">
+            API-Key {config?.hasApiKey ? "(neu setzen)" : ""}
+          </Label>
+          <Input
+            id="sys-api-key"
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={config?.hasApiKey ? "Neuen Key eingeben..." : "sk-ant-..."}
+            className="max-w-md font-mono text-sm"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">Standard-Modell</Label>
+          <Select value={defaultModel} onValueChange={setDefaultModel}>
+            <SelectTrigger className="w-[260px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MODEL_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button onClick={handleSave} disabled={saving} size="sm">
+          <Save className="h-3.5 w-3.5 mr-1" />
+          Speichern
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+// ─── Main Page ──────────────────────────────────────────
 
 export default function CompanyDetailPage() {
   const params = useParams();
@@ -341,6 +765,9 @@ export default function CompanyDetailPage() {
           <TabsTrigger value="stats">Statistiken</TabsTrigger>
           <TabsTrigger value="admins">Admin-Benutzer</TabsTrigger>
           <TabsTrigger value="modules">Module</TabsTrigger>
+          <TabsTrigger value="budget">Token-Verbrauch</TabsTrigger>
+          <TabsTrigger value="agents">Agenten</TabsTrigger>
+          <TabsTrigger value="llm">LLM</TabsTrigger>
         </TabsList>
 
         {/* ─── Overview Tab ──────────────────────────── */}
@@ -470,7 +897,7 @@ export default function CompanyDetailPage() {
 
         {/* ─── Statistics Tab ────────────────────────── */}
         <TabsContent value="stats">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <KpiCard
               label="Benutzer"
               value={String(stats?.userCount ?? 0)}
@@ -482,18 +909,28 @@ export default function CompanyDetailPage() {
               loading={statsLoading}
             />
             <KpiCard
-              label="Speicher"
-              value={String(stats?.storageUsedMb ?? 0)}
-              unit="MB"
-              loading={statsLoading}
-            />
-            <KpiCard
               label="Zuletzt aktiv"
               value={
                 stats?.lastActiveAt
                   ? formatDate(stats.lastActiveAt)
                   : "Nie"
               }
+              loading={statsLoading}
+            />
+            <KpiCard
+              label="Tokens (30T)"
+              value={formatTokens(stats?.totalTokens30d ?? 0)}
+              loading={statsLoading}
+            />
+            <KpiCard
+              label="Kosten (30T)"
+              value={formatCost(stats?.totalCostUsd30d ?? 0)}
+              loading={statsLoading}
+            />
+            <KpiCard
+              label="Speicher"
+              value={String(stats?.storageUsedMb ?? 0)}
+              unit="MB"
               loading={statsLoading}
             />
           </div>
@@ -542,6 +979,21 @@ export default function CompanyDetailPage() {
         {/* ─── Modules Tab ──────────────────────────── */}
         <TabsContent value="modules">
           <CompanyModulesTab companyId={companyId} />
+        </TabsContent>
+
+        {/* ─── Budget/Token Usage Tab ────────────────── */}
+        <TabsContent value="budget">
+          <CompanyBudgetTab companyId={companyId} />
+        </TabsContent>
+
+        {/* ─── Agents Tab ────────────────────────────── */}
+        <TabsContent value="agents">
+          <CompanyAgentsTab companyId={companyId} />
+        </TabsContent>
+
+        {/* ─── LLM Config Tab ────────────────────────── */}
+        <TabsContent value="llm">
+          <CompanyLlmTab companyId={companyId} />
         </TabsContent>
       </Tabs>
 

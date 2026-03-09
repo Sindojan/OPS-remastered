@@ -131,6 +131,23 @@ public class AgentInstanceService {
     }
 
     @Transactional
+    public void updateActivityStatus(UUID instanceId, AgentActivityStatus activityStatus) {
+        AgentInstanceEntity instance = findById(instanceId);
+        instance.setActivityStatus(activityStatus);
+        instance.setActivityStatusChangedAt(Instant.now());
+        instanceRepository.save(instance);
+        log.debug("Updated activity status for instance {} to {}", instanceId, activityStatus);
+    }
+
+    @Transactional
+    public void linkLastRun(UUID instanceId, UUID runId) {
+        AgentInstanceEntity instance = findById(instanceId);
+        instance.setLastRunId(runId);
+        instanceRepository.save(instance);
+        log.debug("Linked last run {} to instance {}", runId, instanceId);
+    }
+
+    @Transactional
     public void delete(UUID id) {
         AgentInstanceEntity existing = findById(id);
         instanceRepository.delete(existing);

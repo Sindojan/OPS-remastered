@@ -81,7 +81,7 @@ sindojan_ops_remastered/
 └── backend/                         # Spring Boot Backend
     ├── pom.xml
     └── src/main/java/com/owlsburg/ops/
-        ├── common/                  # BaseEntity, TenantAwareBaseEntity, TenantContext, Exceptions
+        ├── common/                  # BaseEntity, TenantAwareBaseEntity, TenantContext, Exceptions, Module-System
         ├── config/                  # Security, JPA, Flyway, CORS, MinIO, RlsTenantInterceptor, LoginRateLimiter
         ├── auth/                    # JWT, Login, AuthService, User-CRUD, Rollen
         │   └── dto/                 # Auth DTOs (LoginRequest, UserResponse, etc.)
@@ -284,6 +284,48 @@ sindojan_ops_remastered/
 | REFACTOR-1 | SimpleChatService refactored auf AgentFactory/CeoAgent, DelegateToLeadTool auf AgentFactory, LeadAgentRunner gelöscht | `d9e39c0` |
 | CLEANUP-1 | CeoAgent: HttpClient static shared, InputStream Leak Fix, silenced Exceptions → debug logs. AgentMemoryService: read-only Transaction Fix. Model-Name Normalisierung auf `claude-sonnet-4-6` | `d9e39c0` |
 
+### Block 15: Lead-Transparenz & Parallele Delegation ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-031 | Lead-Transparenz und parallele Delegation | `f019897` |
+
+### Block 16: Per-Tenant Feature-Module ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-032 | V18 Migration (modules + tenant_modules), ModuleEntity, TenantModuleEntity, ModuleRepository, TenantModuleRepository | `8b53b92` |
+| TASK-BE-033 | ModuleService (Caching, Toggle, Eviction), ModuleController (GET/PUT), ModuleResponse DTO | `8b53b92` |
+| TASK-BE-034 | AgentTool.getModuleId() Default + Override in 33 Domain-Tools, AgentToolRegistry Modul-Filter | `8b53b92` |
+| TASK-BE-035 | ModuleAccessInterceptor (API-Pfad→Modul Mapping, 403 bei deaktiviert), WebMvcConfig | `8b53b92` |
+| TASK-BE-036 | GetKpiSummaryTool + DelegateToLeadTool modul-aware, MeResponse + UserController erweitert | `8b53b92` |
+| TASK-FE-032 | Frontend Modul-Awareness: enabledModules in AuthContext, Sidebar-Filter, Route-Guard, Settings Modules-Tab | `8b53b92` |
+
+### Block 17: Systemverwaltung & Token-Tracking ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-037 | CeoAgent: Token-Parsing im Streaming (message_start/message_delta), StreamResult + ChatResult Records | - |
+| TASK-BE-038 | SimpleChatService: AgentRun-Erstellung pro Chat, Kosten-Berechnung (Opus/Sonnet/Haiku), Usage SSE-Event | - |
+| TASK-BE-039 | AgentRunRepository: 4 native Queries für Tenant-Aggregation (countByTenantSince, sumTokens, sumCost, lastActive) | - |
+| TASK-BE-040 | SystemCompanyService: Echte Stats (totalTokens30d, totalCostUsd30d), CompanyStatsResponse erweitert | - |
+| TASK-BE-041 | SystemCompanyController: +Budget, +Agents (GET/PATCH), +LLM-Config (GET/PUT) Endpoints | - |
+| TASK-FE-033 | Agent-Panel: Usage SSE-Event parsen, Token-Anzeige pro Nachricht + Session-Total im Header | - |
+| TASK-FE-034 | Firmendetail: 7 Tabs (Übersicht, Statistiken, Admins, Module, Token-Verbrauch, Agenten, LLM) | - |
+
+### Block 18: Agent-Optimierung (Activity Status, Last Run, Reliability) ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-042 | V19 Migration (activity_status, last_run_id, activity_status_changed_at auf agent_instances) | - |
+| TASK-BE-043 | AgentActivityStatus Enum (IDLE/BUSY/ERROR), Entity-Felder, Service-Methoden (updateActivityStatus, linkLastRun) | - |
+| TASK-BE-044 | AgentInstanceResponse + AgentInstanceActivity + AgentInstanceDetailResponse: +activityStatus Felder | - |
+| TASK-BE-045 | Last-Run Endpoint: GET /api/agent-instances/{id}/last-run → AgentRunResponse mit Steps | - |
+| TASK-BE-046 | SimpleChatService: BUSY/IDLE/ERROR Lifecycle, Incident-Reporting, Finally-Block für verwaiste Runs | - |
+| TASK-BE-047 | AgentExecutionService: BUSY/IDLE/ERROR Lifecycle, Incident-Reporting | - |
+| TASK-BE-048 | CeoAgent Reliability: Delegation-Timeout-Interrupt, Tool-Input-Parse-Warning, SSE-Alive-Check (trySend) | - |
+| TASK-BE-049 | BudgetExceededException + startRunWithBudgetCheck() atomisch in @Transactional | - |
+| TASK-FE-035 | Types: AgentActivityStatus, AgentRunDetail, AgentRunStep, erweiterte Interfaces | - |
+| TASK-FE-036 | Agent Settings: Activity-Badge (IDLE=grün, BUSY=pulsierend, ERROR=rot) neben Admin-Status | - |
+| TASK-FE-037 | Agent Panel: "Letzter Run" Button mit Steps-Anzeige (Collapsible Section) | - |
+| TASK-FE-038 | System Admin Firmendetail: Activity-Status Badge pro Agent im Agenten-Tab | - |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -350,6 +392,7 @@ Zuordnung:
 | Events | `/api/events` | authenticated |
 | Chat | `/api/chat` | authenticated |
 | Triggers | `/api/scheduled-triggers` | authenticated |
+| Modules | `/api/modules` | authenticated (Toggle: ADMIN/MANAGER) |
 | Health | `/actuator/health` | public |
 
 ## Flyway Migrationen
@@ -375,6 +418,8 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V15__lead_delegation.sql | reorder_requests Tabelle, CEO auf 2 Tools (delegate_to_lead, get_kpi_summary), Lead-Tool-Zuweisungen, Lead-Instance System-Prompts |
 | V16__model_normalization.sql | Model-Normalisierung in agent_instances config JSONB: CEO→opus, Leads→sonnet, Catch-All→sonnet |
 | V17__agent_communication.sql | agent_memories + agent_messages Tabellen mit RLS, spawned_by_run_id, CEO + Lead Tool-Zuweisungen aktualisiert (40 Tools) |
+| V18__tenant_modules.sql | modules + tenant_modules Tabellen, RLS Policy, Seed 9 Module, Backward-Compat für bestehende Tenants |
+| V19__agent_activity_status.sql | activity_status (IDLE/BUSY/ERROR), last_run_id, activity_status_changed_at auf agent_instances |
 
 ## Default Admin
 
@@ -405,9 +450,27 @@ Mitarbeiter-Erstellung bietet direkt System-Rollen zur Auswahl (WORKER, TEAM_LEA
 - **Ausnahmen (kein RLS):** TenantEntity, UserEntity (eigene tenant_id Logik), RefreshTokenBlacklistEntity (global)
 - **Login:** Nur email + password, tenantId wird aus User-Record gelesen
 
+## Per-Tenant Feature-Module
+
+9 Module (core immer aktiv, 8 togglebar pro Tenant):
+
+| Modul-ID | Label | Domain-Package | Frontend-Routes | Lead-Agent |
+|----------|-------|---------------|-----------------|------------|
+| `core` | Kern | auth, tenant, common, agentinfra, events, documents | /my-day, /agents, /settings, /reports | ceo |
+| `production` | Produktion | production | /production | production_lead |
+| `machines` | Maschinen | machines | /machines | machine_lead |
+| `inventory` | Lager & Material | inventory | /inventory | supply_lead |
+| `people` | Personal | people | /employees | people_lead |
+| `customers` | Kunden | customers | /customers | — |
+| `inbox` | Posteingang | inbox | /inbox | support_lead |
+| `bom` | Teile & Prozesse | bom | /parts-and-processes | — |
+| `knowledge` | Wissensdatenbank | knowledge | /knowledge | — |
+
+Deaktivierung: Kein Sidebar-Eintrag, kein API-Zugriff (403), keine Agent-Tools. Daten bleiben intakt.
+
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-03-03
-**Session:** Block 14 komplett (Agent-System Redesign)
-**Status:** Backend ~550 Java-Dateien, V17 Migration. OOP Agent-System mit sealed interface (CeoAgent/LeadAgent/SubAgent). Agent Memory (Upsert, LRU-Eviction, Pruning). Agent Message Bus (Hierarchie-Enforcement). Sub-Agent Lifecycle (Spawn, TTL-Cleanup). 40 Tools total. SimpleChatService delegiert an AgentFactory/CeoAgent.
-**Nächste Blöcke:** Block 15 (Docker/Deployment)
+**Datum:** 2026-03-09
+**Session:** Block 18 komplett (Agent-Optimierung)
+**Status:** Backend ~565 Java-Dateien, V19 Migration. Activity-Status (IDLE/BUSY/ERROR) auf agent_instances persistent gespeichert. Last-Run-Referenz (last_run_id) mit Quick-Access-Endpoint. Reliability-Fixes: SSE-Alive-Check, Delegation-Timeout-Interrupt, Budget-Exception, Incident-Reporting, Finally-Block für verwaiste Runs. Frontend: Activity-Badge in Settings + System Admin, Last-Run-Panel im Agent-Chat.
+**Nächste Blöcke:** Block 19 (Docker/Deployment), Dashboard-Verbesserungen, E2E-Tests

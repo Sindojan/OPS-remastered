@@ -1,5 +1,6 @@
 package com.owlsburg.ops.tenant;
 
+import com.owlsburg.ops.agentinfra.AgentRunRepository;
 import com.owlsburg.ops.auth.Role;
 import com.owlsburg.ops.auth.UserEntity;
 import com.owlsburg.ops.auth.UserRepository;
@@ -13,7 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,10 +27,13 @@ public class SystemCompanyService {
 
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
+    private final AgentRunRepository agentRunRepository;
 
-    public SystemCompanyService(TenantRepository tenantRepository, UserRepository userRepository) {
+    public SystemCompanyService(TenantRepository tenantRepository, UserRepository userRepository,
+                                AgentRunRepository agentRunRepository) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
+        this.agentRunRepository = agentRunRepository;
     }
 
     @Transactional(readOnly = true)
@@ -134,7 +140,12 @@ public class SystemCompanyService {
     public CompanyStatsResponse getStats(UUID id) {
         findById(id); // ensure exists
         long userCount = userRepository.countByTenantId(id);
-        return new CompanyStatsResponse(userCount, 0L, 0L, null);
+        Instant since = Instant.now().minus(30, ChronoUnit.DAYS);
+        long runs = agentRunRepository.countByTenantSince(id, since);
+        long tokens = agentRunRepository.sumTokensByTenantSince(id, since);
+        BigDecimal cost = agentRunRepository.sumCostByTenantSince(id, since);
+        Instant lastActive = agentRunRepository.findLastActiveByTenant(id);
+        return new CompanyStatsResponse(userCount, runs, 0L, lastActive, tokens, cost);
     }
 
     @Transactional(readOnly = true)

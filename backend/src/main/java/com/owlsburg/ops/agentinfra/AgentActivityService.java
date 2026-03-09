@@ -105,8 +105,8 @@ public class AgentActivityService {
                     .findTopByInstanceIdOrderByStartedAtDesc(instance.getId());
 
             String currentTask = null;
-            UUID activeRunId = null;
-            Instant lastActivityAt = null;
+            UUID activeRunId = instance.getLastRunId();
+            Instant lastActivityAt = instance.getActivityStatusChangedAt();
 
             if (latestRun.isPresent()) {
                 AgentRunEntity run = latestRun.get();
@@ -114,9 +114,9 @@ public class AgentActivityService {
                     currentTask = run.getInputContext();
                     activeRunId = run.getId();
                 }
-                // Use run timestamp as last activity
+                // Use run timestamp as last activity if more recent
                 Instant runTime = run.getCompletedAt() != null ? run.getCompletedAt() : run.getStartedAt();
-                if (runTime != null) {
+                if (runTime != null && (lastActivityAt == null || runTime.isAfter(lastActivityAt))) {
                     lastActivityAt = runTime;
                 }
             }
@@ -142,6 +142,7 @@ public class AgentActivityService {
                     instance.getName(),
                     templateRole,
                     instance.getStatus().name(),
+                    instance.getActivityStatus().name(),
                     instance.getParentInstanceId(),
                     model,
                     instance.getType().name(),

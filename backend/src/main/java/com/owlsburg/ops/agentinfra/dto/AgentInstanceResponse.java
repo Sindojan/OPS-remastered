@@ -1,5 +1,6 @@
 package com.owlsburg.ops.agentinfra.dto;
 
+import com.owlsburg.ops.agentinfra.AgentActivityStatus;
 import com.owlsburg.ops.agentinfra.AgentInstanceEntity;
 import com.owlsburg.ops.agentinfra.AgentInstanceStatus;
 import com.owlsburg.ops.agentinfra.AgentInstanceType;
@@ -14,6 +15,9 @@ public record AgentInstanceResponse(
         UUID parentInstanceId,
         AgentInstanceType type,
         AgentInstanceStatus status,
+        AgentActivityStatus activityStatus,
+        UUID lastRunId,
+        Instant activityStatusChangedAt,
         UUID tenantId,
         String config,
         String customSystemPrompt,
@@ -29,6 +33,9 @@ public record AgentInstanceResponse(
                 entity.getParentInstanceId(),
                 entity.getType(),
                 entity.getStatus(),
+                entity.getActivityStatus(),
+                entity.getLastRunId(),
+                entity.getActivityStatusChangedAt(),
                 entity.getTenantId(),
                 entity.getConfig(),
                 entity.getCustomSystemPrompt(),

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Bot, X, Send, Loader2, Plus, List, Trash2, ChevronRight, ChevronDown } from "lucide-react";
+import { Bot, X, Send, Loader2, Plus, List, Trash2, ChevronRight, ChevronDown, History } from "lucide-react";
 import { usePrimaryAgent } from "@/hooks/use-primary-agent";
 import { useApi } from "@/hooks/api/use-api";
 import { MarkdownMessage } from "@/components/chat/markdown-message";
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
-import type { ChatSessionResponse, LlmConfig } from "@/types/api";
+import type { ChatSessionResponse, LlmConfig, AgentRunDetail } from "@/types/api";
 
 interface AgentPanelProps {
   open: boolean;
@@ -27,12 +27,18 @@ interface LeadStepInfo {
   iteration: number;
 }
 
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 interface ChatMessage {
   role: "user" | "assistant" | "tool";
   content: string;
   toolCalls?: ToolCallInfo[];
   leadSteps?: LeadStepInfo[];
   delegationId?: string;
+  usage?: TokenUsage;
 }
 
 const LEAD_LABELS: Record<string, string> = {
@@ -106,6 +112,11 @@ function DelegationCard({ msg, isStreaming }: { msg: ChatMessage; isStreaming: b
   );
 }
 
+function formatTokens(n: number): string {
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+  return String(n);
+}
+
 function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
   return text.slice(0, maxLen) + "...";
@@ -125,9 +136,19 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<ChatSessionResponse | null>(
     null
   );
+  const [showLastRun, setShowLastRun] = useState(false);
+  const [lastRun, setLastRun] = useState<AgentRunDetail | null>(null);
+  const [lastRunLoading, setLastRunLoading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const sessionTokenTotal = useMemo(() => {
+    return messages.reduce((sum, m) => {
+      if (m.usage) return sum + m.usage.inputTokens + m.usage.outputTokens;
+      return sum;
+    }, 0);
+  }, [messages]);
 
   const greetingMessage = useCallback((): ChatMessage => {
     return {
@@ -263,6 +284,30 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
       setDeleteTarget(null);
     }
   };
+
+  const fetchLastRun = useCallback(async () => {
+    if (!agent?.id) return;
+    const token = localStorage.getItem("owlsburg_token");
+    if (!token) return;
+    setLastRunLoading(true);
+    try {
+      const res = await fetch(`http://localhost:8080/api/agent-instances/${agent.id}/last-run`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setLastRun(json.data);
+        setShowLastRun(true);
+      } else {
+        setLastRun(null);
+        setShowLastRun(true);
+      }
+    } catch {
+      setLastRun(null);
+    } finally {
+      setLastRunLoading(false);
+    }
+  }, [agent?.id]);
 
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
@@ -444,6 +489,20 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
               });
             }
 
+            if (data.usage) {
+              // Attach usage to the last assistant message
+              setMessages((prev) => {
+                const updated = [...prev];
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (updated[i].role === "assistant" && updated[i].content) {
+                    updated[i] = { ...updated[i], usage: data.usage };
+                    break;
+                  }
+                }
+                return updated;
+              });
+            }
+
             if (data.error) {
               setMessages((prev) => {
                 const updated = [...prev];
@@ -513,14 +572,31 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             <span className="text-[13px] font-semibold leading-tight">
               {agent?.name ?? "Agent"}
             </span>
-            {llmConfig?.defaultModel && (
-              <span className="text-[10px] text-muted-foreground leading-tight font-mono">
-                {llmConfig.defaultModel}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {llmConfig?.defaultModel && (
+                <span className="text-[10px] text-muted-foreground leading-tight font-mono">
+                  {llmConfig.defaultModel}
+                </span>
+              )}
+              {sessionTokenTotal > 0 && (
+                <span className="text-[10px] text-muted-foreground/60 font-mono">
+                  {formatTokens(sessionTokenTotal)} tok
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={fetchLastRun}
+            title="Letzter Run"
+            disabled={lastRunLoading}
+            className={showLastRun ? "bg-muted" : ""}
+          >
+            {lastRunLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <History className="h-3.5 w-3.5" />}
+          </Button>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -594,6 +670,67 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
         </div>
       )}
 
+      {/* Last Run panel */}
+      {showLastRun && (
+        <div className="max-h-[280px] overflow-y-auto border-b border-border">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-xs font-medium text-muted-foreground">Letzter Run</span>
+            <Button variant="ghost" size="icon-sm" onClick={() => setShowLastRun(false)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          {!lastRun ? (
+            <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+              Kein letzter Run vorhanden
+            </div>
+          ) : (
+            <div className="px-3 pb-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                  lastRun.status === "SUCCESS" ? "bg-success" : lastRun.status === "FAILED" ? "bg-destructive" : "bg-warning"
+                }`} />
+                <span className="font-mono">{lastRun.status}</span>
+                <span className="text-muted-foreground">{formatTokens(lastRun.tokensUsed)} tok</span>
+                {lastRun.completedAt && (
+                  <span className="text-muted-foreground">{formatDate(lastRun.completedAt)}</span>
+                )}
+              </div>
+              {lastRun.errorMessage && (
+                <div className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1">
+                  {lastRun.errorMessage}
+                </div>
+              )}
+              {lastRun.steps && lastRun.steps.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Schritte ({lastRun.steps.length})
+                  </span>
+                  {lastRun.steps.map((step) => (
+                    <div key={step.id} className="rounded border border-border/50 bg-muted/30 px-2 py-1.5 text-[11px] font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary/80 font-semibold">{step.type}</span>
+                        {step.toolName && <span className="text-muted-foreground">{step.toolName}</span>}
+                        {step.durationMs != null && (
+                          <span className="text-muted-foreground/60">{step.durationMs}ms</span>
+                        )}
+                        {step.tokensUsed > 0 && (
+                          <span className="text-muted-foreground/60">{formatTokens(step.tokensUsed)} tok</span>
+                        )}
+                      </div>
+                      {step.output && (
+                        <pre className="mt-0.5 overflow-x-auto text-[10px] text-muted-foreground whitespace-pre-wrap">
+                          {truncate(step.output, 200)}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.map((msg, i) => (
@@ -608,13 +745,20 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             }
           >
             {msg.role === "assistant" ? (
-              <MarkdownMessage
-                content={
-                  isStreaming && i === messages.length - 1
-                    ? msg.content + " \u258B"
-                    : msg.content
-                }
-              />
+              <>
+                <MarkdownMessage
+                  content={
+                    isStreaming && i === messages.length - 1
+                      ? msg.content + " \u258B"
+                      : msg.content
+                  }
+                />
+                {msg.usage && (
+                  <div className="mt-1.5 text-[10px] text-muted-foreground/60 font-mono">
+                    {"\u2191"}{formatTokens(msg.usage.inputTokens)} {"\u2193"}{formatTokens(msg.usage.outputTokens)}
+                  </div>
+                )}
+              </>
             ) : msg.role === "tool" ? (
               msg.delegationId != null ? (
                 <DelegationCard msg={msg} isStreaming={isStreaming} />

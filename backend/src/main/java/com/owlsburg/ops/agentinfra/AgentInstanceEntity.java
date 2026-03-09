@@ -41,4 +41,14 @@ public class AgentInstanceEntity extends BaseEntity {
 
     @Column(name = "terminated_at")
     private Instant terminatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "activity_status", nullable = false)
+    private AgentActivityStatus activityStatus = AgentActivityStatus.IDLE;
+
+    @Column(name = "last_run_id")
+    private UUID lastRunId;
+
+    @Column(name = "activity_status_changed_at")
+    private Instant activityStatusChangedAt;
 }

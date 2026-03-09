@@ -44,6 +44,7 @@ interface InstanceRow {
   name: string;
   role: string;
   status: string;
+  activityStatus: string;
   model: string;
   templateId: string;
   customSystemPrompt: string | null;
@@ -100,6 +101,7 @@ export function AgentsExtendedTab() {
           name: inst.name,
           role: template?.role || "Unknown",
           status: inst.status,
+          activityStatus: inst.activityStatus || "IDLE",
           model,
           templateId: inst.templateId,
           customSystemPrompt: inst.customSystemPrompt ?? null,
@@ -164,7 +166,21 @@ export function AgentsExtendedTab() {
           ERROR: "error",
           DISABLED: "quarantine",
         };
-        return <StatusBadge status={statusMap[row.status] || "idle"}>{row.status}</StatusBadge>;
+        const activityConfig: Record<string, { dot: string; label: string }> = {
+          IDLE: { dot: "bg-success", label: "Bereit" },
+          BUSY: { dot: "bg-primary animate-pulse", label: "Aktiv" },
+          ERROR: { dot: "bg-destructive", label: "Fehler" },
+        };
+        const activity = activityConfig[row.activityStatus] || activityConfig.IDLE;
+        return (
+          <div className="flex items-center gap-2">
+            <StatusBadge status={statusMap[row.status] || "idle"}>{row.status}</StatusBadge>
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${activity.dot}`} />
+              {activity.label}
+            </span>
+          </div>
+        );
       },
     },
     {

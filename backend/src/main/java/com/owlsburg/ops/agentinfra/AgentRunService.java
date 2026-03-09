@@ -78,6 +78,22 @@ public class AgentRunService {
         return runRepository.save(run);
     }
 
+    /**
+     * Atomic budget check + run creation in a single transaction.
+     * Throws BudgetExceededException if daily token budget is exhausted.
+     */
+    @Transactional
+    public AgentRunEntity startRunWithBudgetCheck(UUID instanceId, TriggerType triggerType,
+                                                   String triggerSource, String inputContext) {
+        BudgetCheckResult budget = checkBudget(instanceId);
+        if (budget.tokensRemaining() <= 0) {
+            throw new BudgetExceededException(
+                    "Token-Budget für heute erschöpft. Verbraucht: " + budget.tokensUsedToday()
+                            + " / " + budget.dailyBudget());
+        }
+        return startRun(instanceId, triggerType, triggerSource, inputContext);
+    }
+
     @Transactional
     public AgentRunStepEntity addStep(UUID runId, AgentStepType type, String toolName,
                                       String input, String output, int tokensUsed, int durationMs) {

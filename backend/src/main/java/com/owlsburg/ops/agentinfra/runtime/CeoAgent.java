@@ -30,6 +30,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class CeoAgent implements Agent {
 
+    public record ChatResult(String response, int inputTokens, int outputTokens) {}
+
     private static final Logger log = LoggerFactory.getLogger(CeoAgent.class);
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final int MAX_RETRIES = 3;
@@ -68,10 +70,12 @@ public final class CeoAgent implements Agent {
             dummy.onTimeout(dummy::complete);
             dummy.onError(e -> dummy.complete());
             StringBuilder result = new StringBuilder();
-            executeStreamingInternal(context, task, List.of(), dummy, result);
-            return AgentResult.completed(result.toString(), 0, 0, List.of());
+            int[] tokenAccumulator = new int[2];
+            executeStreamingInternal(context, task, List.of(), dummy, result, tokenAccumulator);
+            return AgentResult.completed(result.toString(), tokenAccumulator[0] + tokenAccumulator[1], 0, List.of());
         } catch (Exception e) {
-            return AgentResult.error("CEO execution error: " + e.getMessage());
+            log.error("CEO non-streaming execution error", e);
+            return AgentResult.error("Interner Fehler bei der Ausführung");
         }
     }
 
@@ -86,8 +90,9 @@ public final class CeoAgent implements Agent {
     public void executeStreamingWithHistory(AgentContext context, String task,
                                              List<ObjectNode> chatHistory, SseEmitter emitter) {
         StringBuilder fullResponse = new StringBuilder();
+        int[] tokenAccumulator = new int[2];
         try {
-            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse);
+            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse, tokenAccumulator);
         } catch (LlmProviderException e) {
             sendErrorEvent(emitter, e.getMessage());
         } catch (Exception e) {
@@ -97,23 +102,24 @@ public final class CeoAgent implements Agent {
     }
 
     /**
-     * Returns the accumulated full response text.
+     * Returns the accumulated full response text with token usage.
      */
-    public String getLastResponse(AgentContext context, String task,
-                                   List<ObjectNode> chatHistory, SseEmitter emitter) {
+    public ChatResult getLastResponse(AgentContext context, String task,
+                                       List<ObjectNode> chatHistory, SseEmitter emitter) {
         StringBuilder fullResponse = new StringBuilder();
+        int[] tokenAccumulator = new int[2]; // [inputTokens, outputTokens]
         try {
-            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse);
+            executeStreamingInternal(context, task, chatHistory, emitter, fullResponse, tokenAccumulator);
         } catch (Exception e) {
             log.error("CEO streaming error", e);
             sendErrorEvent(emitter, "Interner Fehler");
         }
-        return fullResponse.toString();
+        return new ChatResult(fullResponse.toString(), tokenAccumulator[0], tokenAccumulator[1]);
     }
 
     private void executeStreamingInternal(AgentContext context, String task,
                                            List<ObjectNode> chatHistory, SseEmitter emitter,
-                                           StringBuilder fullResponse) throws Exception {
+                                           StringBuilder fullResponse, int[] tokenAccumulator) throws Exception {
         List<ObjectNode> messages = new ArrayList<>(chatHistory);
 
         ToolExecutionContext toolContext = new ToolExecutionContext(
@@ -127,6 +133,14 @@ public final class CeoAgent implements Agent {
                     identity.systemPrompt(), messages, capabilities.toolDefinitions(), emitter);
 
             fullResponse.append(streamResult.text);
+            tokenAccumulator[0] += streamResult.inputTokens;
+            tokenAccumulator[1] += streamResult.outputTokens;
+
+            if ("client_disconnected".equals(streamResult.stopReason)) {
+                // Client disconnected — abort ReAct loop to save API tokens
+                publishActivity(context, AgentActivityEvent.Type.IDLE, null, null);
+                break;
+            }
 
             if (!"tool_use".equals(streamResult.stopReason) || streamResult.toolUses.isEmpty()) {
                 // Publish IDLE event
@@ -153,6 +167,7 @@ public final class CeoAgent implements Agent {
                 try {
                     toolUseBlock.set("input", objectMapper.readTree(toolUse.input));
                 } catch (Exception e) {
+                    log.warn("Failed to parse tool input JSON for '{}': {}", toolUse.name, e.getMessage());
                     toolUseBlock.putObject("input");
                 }
             }
@@ -238,19 +253,27 @@ public final class CeoAgent implements Agent {
                     threads.add(t);
                 }
 
-                // Wait for all delegation threads
+                // Wait for all delegation threads (max 90s each)
                 for (Thread t : threads) {
                     try {
                         t.join(90_000);
+                        if (t.isAlive()) {
+                            t.interrupt();
+                            log.warn("Delegation thread timed out after 90s, interrupted");
+                        }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         log.warn("Interrupted while waiting for delegation thread");
                     }
                 }
 
-                // Collect results
+                // Collect results, fill missing with timeout error
                 for (DelegationResult dr : delegationResults) {
                     toolResults.put(dr.toolUseId, dr.resultContent);
+                }
+                for (ToolUseBlock toolUse : delegations) {
+                    toolResults.putIfAbsent(toolUse.id,
+                            "Fehler: Delegation-Timeout nach 90 Sekunden");
                 }
             }
 
@@ -313,6 +336,8 @@ public final class CeoAgent implements Agent {
         StringBuilder textContent = new StringBuilder();
         List<ToolUseBlock> toolUses = new ArrayList<>();
         String stopReason = "end_turn";
+        int inputTokens = 0;
+        int outputTokens = 0;
 
         String currentToolId = null;
         String currentToolName = null;
@@ -329,6 +354,12 @@ public final class CeoAgent implements Agent {
                 String type = event.has("type") ? event.get("type").asText() : "";
 
                 switch (type) {
+                    case "message_start" -> {
+                        JsonNode msg = event.get("message");
+                        if (msg != null && msg.has("usage")) {
+                            inputTokens = msg.get("usage").path("input_tokens").asInt(0);
+                        }
+                    }
                     case "content_block_start" -> {
                         JsonNode contentBlock = event.get("content_block");
                         if (contentBlock != null && "tool_use".equals(contentBlock.get("type").asText())) {
@@ -345,8 +376,10 @@ public final class CeoAgent implements Agent {
                         if ("text_delta".equals(deltaType)) {
                             String token = delta.get("text").asText();
                             textContent.append(token);
-                            emitter.send(SseEmitter.event().data(
-                                    "{\"token\":" + objectMapper.writeValueAsString(token) + "}"));
+                            if (!trySend(emitter, "{\"token\":" + objectMapper.writeValueAsString(token) + "}")) {
+                                log.info("Client disconnected during streaming, aborting");
+                                return new StreamResult(textContent.toString(), "client_disconnected", toolUses, inputTokens, outputTokens);
+                            }
                         } else if ("input_json_delta".equals(deltaType)) {
                             String partialJson = delta.get("partial_json").asText();
                             currentToolInput.append(partialJson);
@@ -367,12 +400,16 @@ public final class CeoAgent implements Agent {
                         if (delta != null && delta.has("stop_reason")) {
                             stopReason = delta.get("stop_reason").asText();
                         }
+                        JsonNode usage = event.get("usage");
+                        if (usage != null) {
+                            outputTokens = usage.path("output_tokens").asInt(0);
+                        }
                     }
                 }
             }
         }
 
-        return new StreamResult(textContent.toString(), stopReason, toolUses);
+        return new StreamResult(textContent.toString(), stopReason, toolUses, inputTokens, outputTokens);
     }
 
     private HttpResponse<java.io.InputStream> sendWithRetry(HttpRequest httpRequest) throws Exception {
@@ -411,6 +448,19 @@ public final class CeoAgent implements Agent {
     private boolean isRetryable(int statusCode) {
         return statusCode == 429 || statusCode == 529 || statusCode == 500
                 || statusCode == 502 || statusCode == 503;
+    }
+
+    /**
+     * Attempts to send data via SSE. Returns false if client is disconnected.
+     */
+    private boolean trySend(SseEmitter emitter, String data) {
+        try {
+            emitter.send(SseEmitter.event().data(data));
+            return true;
+        } catch (Exception e) {
+            log.debug("SSE send failed (client disconnected?): {}", e.getMessage());
+            return false;
+        }
     }
 
     private void sendErrorEvent(SseEmitter emitter, String message) {
@@ -489,7 +539,7 @@ public final class CeoAgent implements Agent {
         return text.length() > 120 ? text.substring(0, 120) : text;
     }
 
-    private record StreamResult(String text, String stopReason, List<ToolUseBlock> toolUses) {}
+    private record StreamResult(String text, String stopReason, List<ToolUseBlock> toolUses, int inputTokens, int outputTokens) {}
     private record ToolUseBlock(String id, String name, String input) {}
     private record DelegationResult(String toolUseId, String resultContent) {}
 }

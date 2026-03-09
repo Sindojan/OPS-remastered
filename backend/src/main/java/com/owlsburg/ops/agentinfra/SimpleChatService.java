@@ -13,8 +13,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -27,21 +29,33 @@ public class SimpleChatService {
     private final AgentFactory agentFactory;
     private final ObjectMapper objectMapper;
     private final AgentActivityBus activityBus;
+    private final AgentRunService agentRunService;
+    private final AgentInstanceService agentInstanceService;
+    private final AgentIncidentService agentIncidentService;
 
     public SimpleChatService(AgentInstanceRepository agentInstanceRepository,
                              ChatSessionService chatSessionService,
                              AgentFactory agentFactory,
                              ObjectMapper objectMapper,
-                             AgentActivityBus activityBus) {
+                             AgentActivityBus activityBus,
+                             AgentRunService agentRunService,
+                             AgentInstanceService agentInstanceService,
+                             AgentIncidentService agentIncidentService) {
         this.agentInstanceRepository = agentInstanceRepository;
         this.chatSessionService = chatSessionService;
         this.agentFactory = agentFactory;
         this.objectMapper = objectMapper;
         this.activityBus = activityBus;
+        this.agentRunService = agentRunService;
+        this.agentInstanceService = agentInstanceService;
+        this.agentIncidentService = agentIncidentService;
     }
 
     public UUID streamChat(SimpleChatRequest request, UUID userId, SseEmitter emitter) {
         UUID sessionId = null;
+        UUID agentRunId = null;
+        UUID instanceId = request.agentInstanceId();
+        boolean activitySet = false;
         try {
             // 1. Resolve or create session
             if (request.sessionId() != null) {
@@ -54,7 +68,7 @@ public class SimpleChatService {
             // 2. Load agent instance with tenant check (defense-in-depth)
             String tenantId = TenantContext.getCurrentTenant();
             UUID tenantUuid = UUID.fromString(tenantId);
-            AgentInstanceEntity instance = agentInstanceRepository.findByIdAndTenantId(request.agentInstanceId(), tenantUuid)
+            AgentInstanceEntity instance = agentInstanceRepository.findByIdAndTenantId(instanceId, tenantUuid)
                     .orElseThrow(() -> new AccessDeniedException("Zugriff verweigert"));
 
             // 3. Save greeting on new session
@@ -70,7 +84,7 @@ public class SimpleChatService {
             emitter.send(SseEmitter.event().data("{\"sessionId\":\"" + sessionId + "\"}"));
 
             // 6. Create Agent via Factory (builds system prompt, tools, memory injection)
-            Agent agent = agentFactory.createAgent(request.agentInstanceId(), tenantId);
+            Agent agent = agentFactory.createAgent(instanceId, tenantId);
 
             // 7. Load full history from DB and build messages
             List<ChatMessageResponse> dbHistory = chatSessionService.getMessages(sessionId);
@@ -82,12 +96,27 @@ public class SimpleChatService {
                 messages.add(msgNode);
             }
 
-            // 8. Execute streaming via CeoAgent
+            // 8. Create AgentRun for tracking
+            AgentRunEntity agentRun = agentRunService.startRun(
+                    instanceId, TriggerType.CHAT,
+                    "chat:" + sessionId, request.message());
+            agentRunId = agentRun.getId();
+
+            // Set BUSY before execution
+            safeUpdateActivity(instanceId, AgentActivityStatus.BUSY);
+            activitySet = true;
+
+            // 9. Execute streaming via CeoAgent
             AgentContext context = AgentContext.forChat(tenantId, userId, sessionId, activityBus);
 
             String fullResponse;
+            int inputTokens = 0;
+            int outputTokens = 0;
             if (agent instanceof CeoAgent ceoAgent) {
-                fullResponse = ceoAgent.getLastResponse(context, request.message(), messages, emitter);
+                CeoAgent.ChatResult chatResult = ceoAgent.getLastResponse(context, request.message(), messages, emitter);
+                fullResponse = chatResult.response();
+                inputTokens = chatResult.inputTokens();
+                outputTokens = chatResult.outputTokens();
             } else {
                 // Non-CEO agents: execute synchronously and send result as token
                 AgentResult result = agent.execute(context, request.message());
@@ -98,12 +127,32 @@ public class SimpleChatService {
                 }
             }
 
-            // 9. Save assistant message to DB
+            // 10. Complete AgentRun with token tracking
+            String model = resolveModel(instance);
+            int totalTokens = inputTokens + outputTokens;
+            BigDecimal cost = calculateCost(model, inputTokens, outputTokens);
+            agentRunService.completeRun(agentRun.getId(), fullResponse, totalTokens, cost);
+
+            // Set IDLE + link last run on success
+            safeUpdateActivity(instanceId, AgentActivityStatus.IDLE);
+            safeLinkLastRun(instanceId, agentRun.getId());
+
+            // 11. Save assistant message to DB
             if (fullResponse != null && !fullResponse.isEmpty()) {
                 chatSessionService.saveMessage(sessionId, "assistant", fullResponse);
             }
 
-            // 10. Auto-generate title on first message (new session)
+            // 12. Send usage event
+            if (inputTokens > 0 || outputTokens > 0) {
+                try {
+                    emitter.send(SseEmitter.event().data(objectMapper.writeValueAsString(
+                            Map.of("usage", Map.of("inputTokens", inputTokens, "outputTokens", outputTokens)))));
+                } catch (Exception e) {
+                    log.debug("SSE usage event send failed: {}", e.getMessage());
+                }
+            }
+
+            // 13. Auto-generate title on first message (new session)
             if (request.sessionId() == null) {
                 String title = request.message().length() > 50
                         ? request.message().substring(0, 50) + "..."
@@ -111,23 +160,120 @@ public class SimpleChatService {
                 chatSessionService.updateSessionTitle(sessionId, title);
             }
 
-            // 11. Send done event
+            // 14. Send done event
             emitter.send(SseEmitter.event().data("{\"done\":true}"));
             emitter.complete();
 
             return sessionId;
 
         } catch (LlmProviderException e) {
+            failRunSafe(agentRunId, e.getMessage());
+            safeUpdateActivity(instanceId, AgentActivityStatus.ERROR);
+            safeLinkLastRun(instanceId, agentRunId);
+            reportIncidentSafe(instanceId, "LLM_ERROR", e.getMessage());
             sendErrorAndComplete(emitter, e.getMessage());
             return sessionId;
         } catch (IllegalArgumentException e) {
+            failRunSafe(agentRunId, e.getMessage());
+            if (activitySet) safeUpdateActivity(instanceId, AgentActivityStatus.ERROR);
+            safeLinkLastRun(instanceId, agentRunId);
             sendErrorAndComplete(emitter, e.getMessage());
             return sessionId;
         } catch (Exception e) {
             log.error("Chat streaming error", e);
+            failRunSafe(agentRunId, e.getMessage());
+            if (activitySet) safeUpdateActivity(instanceId, AgentActivityStatus.ERROR);
+            safeLinkLastRun(instanceId, agentRunId);
+            reportIncidentSafe(instanceId, "RUNTIME_ERROR", e.getMessage());
             sendErrorAndComplete(emitter, "Interner Fehler");
             return sessionId;
+        } finally {
+            // Guarantee: if run still PENDING/RUNNING, mark FAILED
+            finalizeRunSafe(agentRunId);
+            // Guarantee: reset BUSY to IDLE if still BUSY (e.g. SSE timeout)
+            resetBusyIfNeeded(instanceId);
         }
+    }
+
+    private void failRunSafe(UUID runId, String message) {
+        if (runId == null) return;
+        try {
+            agentRunService.failRun(runId, message);
+        } catch (Exception e) {
+            log.debug("Failed to mark AgentRun as failed: {}", e.getMessage());
+        }
+    }
+
+    private void finalizeRunSafe(UUID runId) {
+        if (runId == null) return;
+        try {
+            AgentRunEntity run = agentRunService.findById(runId);
+            if (run.getStatus() == AgentRunStatus.PENDING || run.getStatus() == AgentRunStatus.RUNNING) {
+                agentRunService.failRun(runId, "Run nicht ordnungsgemäß abgeschlossen (SSE-Timeout oder Abbruch)");
+            }
+        } catch (Exception e) {
+            log.debug("Failed to finalize AgentRun: {}", e.getMessage());
+        }
+    }
+
+    private void safeUpdateActivity(UUID instanceId, AgentActivityStatus status) {
+        if (instanceId == null) return;
+        try {
+            agentInstanceService.updateActivityStatus(instanceId, status);
+        } catch (Exception e) {
+            log.debug("Failed to update activity status: {}", e.getMessage());
+        }
+    }
+
+    private void safeLinkLastRun(UUID instanceId, UUID runId) {
+        if (instanceId == null || runId == null) return;
+        try {
+            agentInstanceService.linkLastRun(instanceId, runId);
+        } catch (Exception e) {
+            log.debug("Failed to link last run: {}", e.getMessage());
+        }
+    }
+
+    private void resetBusyIfNeeded(UUID instanceId) {
+        if (instanceId == null) return;
+        try {
+            AgentInstanceEntity instance = agentInstanceService.findById(instanceId);
+            if (instance.getActivityStatus() == AgentActivityStatus.BUSY) {
+                agentInstanceService.updateActivityStatus(instanceId, AgentActivityStatus.IDLE);
+            }
+        } catch (Exception e) {
+            log.debug("Failed to reset BUSY status: {}", e.getMessage());
+        }
+    }
+
+    private void reportIncidentSafe(UUID instanceId, String type, String description) {
+        if (instanceId == null) return;
+        try {
+            agentIncidentService.report(instanceId, type, description);
+        } catch (Exception e) {
+            log.debug("Failed to report incident: {}", e.getMessage());
+        }
+    }
+
+    private String resolveModel(AgentInstanceEntity instance) {
+        try {
+            var config = objectMapper.readTree(instance.getConfig());
+            if (config.has("model")) {
+                return config.get("model").asText();
+            }
+        } catch (Exception e) {
+            log.debug("Failed to parse instance config: {}", e.getMessage());
+        }
+        return "claude-sonnet-4-20250514";
+    }
+
+    private BigDecimal calculateCost(String model, int inputTokens, int outputTokens) {
+        if (model != null && model.contains("opus")) {
+            return BigDecimal.valueOf(inputTokens * 15.0 / 1_000_000 + outputTokens * 75.0 / 1_000_000);
+        } else if (model != null && model.contains("haiku")) {
+            return BigDecimal.valueOf(inputTokens * 0.80 / 1_000_000 + outputTokens * 4.0 / 1_000_000);
+        }
+        return BigDecimal.valueOf(inputTokens * 3.0 / 1_000_000 + outputTokens * 15.0 / 1_000_000);
     }
 
     private void sendErrorAndComplete(SseEmitter emitter, String message) {

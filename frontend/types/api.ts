@@ -89,6 +89,8 @@ export interface AgentTemplate {
   status: string;
 }
 
+export type AgentActivityStatus = 'IDLE' | 'BUSY' | 'ERROR';
+
 export interface AgentInstance {
   id: string;
   templateId: string;
@@ -96,6 +98,9 @@ export interface AgentInstance {
   parentInstanceId: string | null;
   type: string;
   status: string;
+  activityStatus: AgentActivityStatus;
+  lastRunId: string | null;
+  activityStatusChangedAt: string | null;
   config: string;
   customSystemPrompt: string | null;
   createdAt: string;
@@ -936,6 +941,28 @@ export interface CompanyStatsResponse {
   activeAgentRuns30d: number;
   storageUsedMb: number;
   lastActiveAt: string | null;
+  totalTokens30d: number;
+  totalCostUsd30d: number;
+}
+
+// ─── System Admin Agent Management ─────────────────────
+
+export interface AgentInstanceDetailResponse {
+  instanceId: string;
+  name: string;
+  templateName: string;
+  model: string;
+  status: string;
+  activityStatus: AgentActivityStatus;
+  toolCount: number;
+  hasCustomPrompt: boolean;
+  customSystemPrompt: string | null;
+}
+
+export interface SystemLlmConfigResponse {
+  provider: string;
+  defaultModel: string | null;
+  hasApiKey: boolean;
 }
 
 export interface CompanyAdminResponse {
@@ -1096,11 +1123,42 @@ export interface AgentTemplateDetailResponse {
 
 // ─── Agent Activity ───────────────────────────────────
 
+export interface AgentRunDetail {
+  id: string;
+  instanceId: string;
+  triggerType: string;
+  triggerSource: string | null;
+  inputContext: string | null;
+  output: string | null;
+  status: string;
+  tokensUsed: number;
+  costUsd: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  steps: AgentRunStep[] | null;
+}
+
+export interface AgentRunStep {
+  id: string;
+  runId: string;
+  stepNumber: number;
+  type: string;
+  toolName: string | null;
+  input: string | null;
+  output: string | null;
+  tokensUsed: number;
+  durationMs: number | null;
+  createdAt: string;
+}
+
 export interface AgentInstanceActivity {
   id: string;
   name: string;
   templateRole: string;
   status: string;
+  activityStatus: AgentActivityStatus;
   parentInstanceId: string | null;
   model: string;
   type: string;

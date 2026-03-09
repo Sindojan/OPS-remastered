@@ -1,6 +1,8 @@
 package com.owlsburg.ops.agentinfra;
 
 import com.owlsburg.ops.agentinfra.dto.AgentInstanceResponse;
+import com.owlsburg.ops.agentinfra.dto.AgentRunResponse;
+import com.owlsburg.ops.agentinfra.dto.AgentRunStepResponse;
 import com.owlsburg.ops.agentinfra.dto.CreateAgentInstanceRequest;
 import com.owlsburg.ops.common.ApiResponse;
 import jakarta.validation.Valid;
@@ -23,9 +25,12 @@ public class AgentInstanceController {
     );
 
     private final AgentInstanceService instanceService;
+    private final AgentRunService agentRunService;
 
-    public AgentInstanceController(AgentInstanceService instanceService) {
+    public AgentInstanceController(AgentInstanceService instanceService,
+                                   AgentRunService agentRunService) {
         this.instanceService = instanceService;
+        this.agentRunService = agentRunService;
     }
 
     @GetMapping
@@ -140,6 +145,18 @@ public class AgentInstanceController {
         }
         AgentInstanceEntity saved = instanceService.updateConfig(id, instance.getConfig());
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(saved), "Model updated"));
+    }
+
+    @GetMapping("/{id}/last-run")
+    public ResponseEntity<ApiResponse<AgentRunResponse>> getLastRun(@PathVariable UUID id) {
+        AgentInstanceEntity instance = instanceService.findByIdSecure(id);
+        if (instance.getLastRunId() == null) {
+            return ResponseEntity.ok(ApiResponse.ok(null, "Kein letzter Run vorhanden"));
+        }
+        AgentRunEntity run = agentRunService.findById(instance.getLastRunId());
+        List<AgentRunStepResponse> steps = agentRunService.findStepsByRunId(run.getId())
+                .stream().map(AgentRunStepResponse::from).toList();
+        return ResponseEntity.ok(ApiResponse.ok(AgentRunResponse.from(run, steps)));
     }
 
     @DeleteMapping("/{id}")

@@ -8,6 +8,7 @@ public record AgentInstanceActivity(
         String name,
         String templateRole,
         String status,
+        String activityStatus,
         UUID parentInstanceId,
         String model,
         String type,
