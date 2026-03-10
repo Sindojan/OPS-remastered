@@ -129,7 +129,8 @@ public class AgentExecutionService {
                         List.copyOf(messages),
                         toolDefinitions,
                         model,
-                        template.getMaxTokensPerRun()
+                        template.getMaxTokensPerRun(),
+                        null
                 );
                 response = provider.chat(request, apiKey);
             } catch (LlmProviderException e) {

@@ -4,12 +4,15 @@ import com.owlsburg.ops.agentinfra.*;
 import com.owlsburg.ops.agentinfra.dto.BudgetOverviewResponse;
 import com.owlsburg.ops.agentinfra.llm.LlmConfigService;
 import com.owlsburg.ops.agentinfra.llm.TenantLlmConfigEntity;
+import com.owlsburg.ops.agentinfra.tools.AgentTool;
+import com.owlsburg.ops.agentinfra.tools.AgentToolRegistry;
 import com.owlsburg.ops.auth.UserEntity;
 import com.owlsburg.ops.auth.UserService;
 import com.owlsburg.ops.auth.dto.UserResponse;
 import com.owlsburg.ops.common.*;
 import com.owlsburg.ops.common.dto.ModuleResponse;
 import com.owlsburg.ops.tenant.dto.*;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
@@ -21,10 +24,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/system/companies")
@@ -41,13 +46,14 @@ public class SystemCompanyController {
     private final AgentInstanceService agentInstanceService;
     private final AgentTemplateRepository templateRepository;
     private final LlmConfigService llmConfigService;
+    private final AgentToolRegistry toolRegistry;
     private final ObjectMapper objectMapper;
 
     public SystemCompanyController(SystemCompanyService companyService, UserService userService,
                                    PasswordEncoder passwordEncoder, ModuleService moduleService,
                                    BudgetService budgetService, AgentInstanceService agentInstanceService,
                                    AgentTemplateRepository templateRepository, LlmConfigService llmConfigService,
-                                   ObjectMapper objectMapper) {
+                                   AgentToolRegistry toolRegistry, ObjectMapper objectMapper) {
         this.companyService = companyService;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
@@ -56,6 +62,7 @@ public class SystemCompanyController {
         this.agentInstanceService = agentInstanceService;
         this.templateRepository = templateRepository;
         this.llmConfigService = llmConfigService;
+        this.toolRegistry = toolRegistry;
         this.objectMapper = objectMapper;
     }
 
@@ -206,27 +213,78 @@ public class SystemCompanyController {
             List<AgentInstanceEntity> instances = agentInstanceService.findAll();
             List<AgentInstanceDetailResponse> responses = instances.stream()
                     .map(inst -> {
-                        String templateName = templateRepository.findById(inst.getTemplateId())
-                                .map(AgentTemplateEntity::getName)
-                                .orElse("Unbekannt");
-                        int toolCount = 0;
-                        try {
-                            var tools = objectMapper.readTree(
-                                    templateRepository.findById(inst.getTemplateId())
-                                            .map(AgentTemplateEntity::getAllowedTools)
-                                            .orElse("[]"));
-                            toolCount = tools.size();
-                        } catch (Exception ignored) {}
+                        AgentTemplateEntity template = templateRepository.findById(inst.getTemplateId())
+                                .orElse(null);
+                        String templateName = template != null ? template.getName() : "Unbekannt";
+
+                        // Resolve effective tools
+                        List<String> allowedTools = resolveInstanceTools(inst, template);
+                        List<String> templateTools = parseTemplateTools(template);
+                        boolean hasToolOverride = inst.getAllowedToolsOverride() != null;
+
+                        // Resolve budget from instance config or template
+                        int maxTokensPerRun = resolveConfigInt(inst, "maxTokensPerRun",
+                                template != null ? template.getMaxTokensPerRun() : 4096);
+                        int dailyTokenBudget = resolveConfigInt(inst, "dailyTokenBudget",
+                                template != null ? template.getDailyTokenBudget() : 100000);
+
                         String model = resolveInstanceModel(inst);
                         return new AgentInstanceDetailResponse(
                                 inst.getId(), inst.getName(), templateName, model,
                                 inst.getStatus().name(), inst.getActivityStatus().name(),
-                                toolCount, inst.getCustomSystemPrompt() != null,
-                                inst.getCustomSystemPrompt());
+                                allowedTools.size(), inst.getCustomSystemPrompt() != null,
+                                inst.getCustomSystemPrompt(),
+                                allowedTools, templateTools, hasToolOverride,
+                                maxTokensPerRun, dailyTokenBudget,
+                                template != null ? template.getMaxTokensPerRun() : 4096,
+                                template != null ? template.getDailyTokenBudget() : 100000);
                     })
                     .toList();
             return ResponseEntity.ok(ApiResponse.ok(responses));
         });
+    }
+
+    @GetMapping("/{id}/agent-summary")
+    public ResponseEntity<ApiResponse<AgentSystemSummaryResponse>> getAgentSummary(@PathVariable UUID id) {
+        companyService.findById(id); // ensure exists
+        return withTenantContext(id, () -> {
+            List<AgentInstanceEntity> instances = agentInstanceService.findAll();
+            int total = instances.size();
+            int active = (int) instances.stream()
+                    .filter(i -> i.getStatus() == AgentInstanceStatus.ACTIVE).count();
+            int error = (int) instances.stream()
+                    .filter(i -> i.getActivityStatus() == AgentActivityStatus.ERROR).count();
+            List<String> modelsInUse = instances.stream()
+                    .map(this::resolveInstanceModel)
+                    .distinct()
+                    .toList();
+            long totalDailyBudget = instances.stream()
+                    .filter(i -> i.getStatus() == AgentInstanceStatus.ACTIVE)
+                    .mapToLong(i -> {
+                        AgentTemplateEntity t = templateRepository.findById(i.getTemplateId()).orElse(null);
+                        return resolveConfigInt(i, "dailyTokenBudget",
+                                t != null ? t.getDailyTokenBudget() : 100000);
+                    })
+                    .sum();
+            Instant lastActivity = instances.stream()
+                    .map(AgentInstanceEntity::getActivityStatusChangedAt)
+                    .filter(java.util.Objects::nonNull)
+                    .max(Instant::compareTo)
+                    .orElse(null);
+
+            return ResponseEntity.ok(ApiResponse.ok(new AgentSystemSummaryResponse(
+                    total, active, error, modelsInUse, totalDailyBudget, lastActivity)));
+        });
+    }
+
+    @GetMapping("/{id}/available-tools")
+    public ResponseEntity<ApiResponse<List<ToolInfoResponse>>> getAvailableTools(@PathVariable UUID id) {
+        companyService.findById(id); // ensure exists
+        List<ToolInfoResponse> tools = toolRegistry.getAllTools().stream()
+                .map(t -> new ToolInfoResponse(t.getName(), t.getDescription(), t.getModuleId()))
+                .sorted((a, b) -> a.name().compareTo(b.name()))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.ok(tools));
     }
 
     private static final Set<String> VALID_MODELS = Set.of(
@@ -242,6 +300,16 @@ public class SystemCompanyController {
             if (!inst.getTenantId().equals(id)) {
                 throw new org.springframework.security.access.AccessDeniedException("Zugriff verweigert");
             }
+
+            // Status toggle (CEO cannot be deactivated)
+            if (request.status() != null) {
+                AgentTemplateEntity template = templateRepository.findById(inst.getTemplateId()).orElse(null);
+                if (template != null && "ceo".equals(template.getRole()) && "INACTIVE".equals(request.status())) {
+                    throw new IllegalArgumentException("CEO-Agent kann nicht deaktiviert werden");
+                }
+                inst.setStatus(AgentInstanceStatus.valueOf(request.status()));
+            }
+
             if (request.customSystemPrompt() != null) {
                 String prompt = request.customSystemPrompt().isBlank() ? null : request.customSystemPrompt();
                 inst.setCustomSystemPrompt(prompt);
@@ -261,6 +329,50 @@ public class SystemCompanyController {
                     inst.setConfig(objNode.toString());
                 }
             }
+
+            // Budget overrides in instance config
+            if (request.maxTokensPerRun() != null || request.dailyTokenBudget() != null) {
+                try {
+                    JsonNode config = objectMapper.readTree(inst.getConfig());
+                    var objNode = (com.fasterxml.jackson.databind.node.ObjectNode) config;
+                    if (request.maxTokensPerRun() != null) {
+                        if (request.maxTokensPerRun() < 256 || request.maxTokensPerRun() > 8192) {
+                            throw new IllegalArgumentException("maxTokensPerRun muss zwischen 256 und 8192 liegen");
+                        }
+                        objNode.put("maxTokensPerRun", request.maxTokensPerRun());
+                    }
+                    if (request.dailyTokenBudget() != null) {
+                        objNode.put("dailyTokenBudget", request.dailyTokenBudget());
+                    }
+                    inst.setConfig(objectMapper.writeValueAsString(objNode));
+                } catch (IllegalArgumentException e) {
+                    throw e;
+                } catch (Exception e) {
+                    log.warn("Failed to update budget in instance config: {}", e.getMessage());
+                }
+            }
+
+            // Tool override
+            if (request.allowedToolsOverride() != null) {
+                if (request.allowedToolsOverride().isEmpty()) {
+                    // Empty list = reset to template defaults
+                    inst.setAllowedToolsOverride(null);
+                } else {
+                    // Validate tool names
+                    List<String> validNames = toolRegistry.getAllToolNames();
+                    for (String toolName : request.allowedToolsOverride()) {
+                        if (!validNames.contains(toolName)) {
+                            throw new IllegalArgumentException("Unbekanntes Tool: " + toolName);
+                        }
+                    }
+                    try {
+                        inst.setAllowedToolsOverride(objectMapper.writeValueAsString(request.allowedToolsOverride()));
+                    } catch (Exception e) {
+                        log.warn("Failed to serialize tool override: {}", e.getMessage());
+                    }
+                }
+            }
+
             return ResponseEntity.ok(ApiResponse.<Void>ok(null, "Agent aktualisiert"));
         });
     }
@@ -268,9 +380,20 @@ public class SystemCompanyController {
     public record AgentInstanceDetailResponse(
             UUID instanceId, String name, String templateName, String model,
             String status, String activityStatus, int toolCount, boolean hasCustomPrompt,
-            String customSystemPrompt) {}
+            String customSystemPrompt,
+            List<String> allowedTools, List<String> templateTools, boolean hasToolOverride,
+            int maxTokensPerRun, int dailyTokenBudget,
+            int templateMaxTokensPerRun, int templateDailyTokenBudget) {}
 
-    public record AgentUpdateRequest(String customSystemPrompt, String model) {}
+    public record AgentUpdateRequest(String customSystemPrompt, String model, String status,
+                                     Integer maxTokensPerRun, Integer dailyTokenBudget,
+                                     List<String> allowedToolsOverride) {}
+
+    public record AgentSystemSummaryResponse(int totalAgents, int activeAgents, int errorAgents,
+                                              List<String> modelsInUse, long totalDailyBudget,
+                                              Instant lastActivity) {}
+
+    public record ToolInfoResponse(String name, String description, String moduleId) {}
 
     // ─── LLM Config ────────────────────────────────────────
 
@@ -280,8 +403,11 @@ public class SystemCompanyController {
         return withTenantContext(id, () -> {
             Optional<TenantLlmConfigEntity> config = llmConfigService.getConfig();
             LlmConfigResponse response = config.map(c -> new LlmConfigResponse(
-                    c.getProvider(), c.getDefaultModel(), c.getApiKeyEnc() != null && !c.getApiKeyEnc().isBlank()
-            )).orElse(new LlmConfigResponse("anthropic", null, false));
+                    c.getProvider(), c.getDefaultModel(),
+                    c.getApiKeyEnc() != null && !c.getApiKeyEnc().isBlank(),
+                    llmConfigService.getTemperature(c),
+                    llmConfigService.getMaxTokensDefault(c)
+            )).orElse(new LlmConfigResponse("anthropic", null, false, null, null));
             return ResponseEntity.ok(ApiResponse.ok(response));
         });
     }
@@ -296,23 +422,55 @@ public class SystemCompanyController {
         if (!VALID_PROVIDERS.contains(provider)) {
             throw new IllegalArgumentException("Ungültiger Provider: " + provider);
         }
-        if (request.defaultModel() != null && !VALID_MODELS.contains(request.defaultModel())) {
-            throw new IllegalArgumentException("Ungültiges Model: " + request.defaultModel());
+        if (request.temperature() != null && (request.temperature() < 0.0 || request.temperature() > 1.0)) {
+            throw new IllegalArgumentException("Temperature muss zwischen 0.0 und 1.0 liegen");
+        }
+        if (request.maxTokensDefault() != null && (request.maxTokensDefault() < 256 || request.maxTokensDefault() > 8192)) {
+            throw new IllegalArgumentException("maxTokensDefault muss zwischen 256 und 8192 liegen");
         }
         return withTenantContext(id, () -> {
-            TenantLlmConfigEntity saved = llmConfigService.saveConfig(
-                    provider, request.apiKey(), request.defaultModel());
+            TenantLlmConfigEntity saved = llmConfigService.saveConfigWithSettings(
+                    provider, request.apiKey(), request.defaultModel(),
+                    request.temperature(), request.maxTokensDefault());
             LlmConfigResponse response = new LlmConfigResponse(
-                    saved.getProvider(), saved.getDefaultModel(), true);
+                    saved.getProvider(), saved.getDefaultModel(), true,
+                    llmConfigService.getTemperature(saved),
+                    llmConfigService.getMaxTokensDefault(saved));
             return ResponseEntity.ok(ApiResponse.ok(response));
         });
     }
 
-    public record LlmConfigResponse(String provider, String defaultModel, boolean hasApiKey) {}
+    @GetMapping("/{id}/llm-config/models")
+    public ResponseEntity<ApiResponse<List<String>>> listModels(@PathVariable UUID id) {
+        companyService.findById(id);
+        return withTenantContext(id, () -> {
+            List<String> models = llmConfigService.listModels();
+            return ResponseEntity.ok(ApiResponse.ok(models));
+        });
+    }
+
+    @PostMapping("/{id}/llm-config/models")
+    public ResponseEntity<ApiResponse<List<String>>> listModelsWithKey(@PathVariable UUID id,
+                                                                        @RequestBody LlmConfigSaveRequest request) {
+        companyService.findById(id);
+        try {
+            List<String> models = llmConfigService.listModelsWithKey(
+                    request.provider(), request.apiKey());
+            return ResponseEntity.ok(ApiResponse.ok(models));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Verbindungsfehler: " + e.getMessage()));
+        }
+    }
+
+    public record LlmConfigResponse(String provider, String defaultModel, boolean hasApiKey,
+                                     Double temperature, Integer maxTokensDefault) {}
     public record LlmConfigSaveRequest(
             String provider,
             @jakarta.validation.constraints.Size(max = 200) String apiKey,
-            String defaultModel) {}
+            String defaultModel,
+            Double temperature,
+            Integer maxTokensDefault) {}
 
     private String resolveInstanceModel(AgentInstanceEntity instance) {
         try {
@@ -322,6 +480,36 @@ public class SystemCompanyController {
             }
         } catch (Exception ignored) {}
         return "claude-sonnet-4-20250514";
+    }
+
+    private List<String> resolveInstanceTools(AgentInstanceEntity inst, AgentTemplateEntity template) {
+        if (inst.getAllowedToolsOverride() != null) {
+            try {
+                return objectMapper.readValue(inst.getAllowedToolsOverride(), new TypeReference<List<String>>() {});
+            } catch (Exception e) {
+                log.warn("Failed to parse allowedToolsOverride: {}", e.getMessage());
+            }
+        }
+        return parseTemplateTools(template);
+    }
+
+    private List<String> parseTemplateTools(AgentTemplateEntity template) {
+        if (template == null) return List.of();
+        try {
+            return objectMapper.readValue(template.getAllowedTools(), new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private int resolveConfigInt(AgentInstanceEntity inst, String key, int defaultValue) {
+        if (inst.getConfig() != null && !"{}".equals(inst.getConfig())) {
+            try {
+                JsonNode config = objectMapper.readTree(inst.getConfig());
+                if (config.has(key)) return config.get(key).asInt();
+            } catch (Exception ignored) {}
+        }
+        return defaultValue;
     }
 
     /**

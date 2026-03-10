@@ -56,4 +56,16 @@ public class AgentToolRegistry {
     public Collection<AgentTool> getAllTools() {
         return Collections.unmodifiableCollection(toolMap.values());
     }
+
+    public List<AgentTool> getToolsByNames(List<String> names, UUID tenantId) {
+        return names.stream()
+                .map(toolMap::get)
+                .filter(Objects::nonNull)
+                .filter(tool -> tenantId == null || moduleService.isModuleEnabled(tenantId, tool.getModuleId()))
+                .toList();
+    }
+
+    public List<String> getAllToolNames() {
+        return List.copyOf(toolMap.keySet());
+    }
 }

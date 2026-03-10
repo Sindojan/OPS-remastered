@@ -962,12 +962,36 @@ export interface AgentInstanceDetailResponse {
   toolCount: number;
   hasCustomPrompt: boolean;
   customSystemPrompt: string | null;
+  allowedTools: string[];
+  templateTools: string[];
+  hasToolOverride: boolean;
+  maxTokensPerRun: number;
+  dailyTokenBudget: number;
+  templateMaxTokensPerRun: number;
+  templateDailyTokenBudget: number;
+}
+
+export interface AgentSystemSummaryResponse {
+  totalAgents: number;
+  activeAgents: number;
+  errorAgents: number;
+  modelsInUse: string[];
+  totalDailyBudget: number;
+  lastActivity: string | null;
+}
+
+export interface ToolInfoResponse {
+  name: string;
+  description: string;
+  moduleId: string;
 }
 
 export interface SystemLlmConfigResponse {
   provider: string;
   defaultModel: string | null;
   hasApiKey: boolean;
+  temperature: number | null;
+  maxTokensDefault: number | null;
 }
 
 export interface CompanyAdminResponse {

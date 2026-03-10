@@ -12,5 +12,6 @@ public record AgentCapabilities(
         boolean canSpawnSubAgents,
         boolean canCommunicatePeers,
         int maxIterations,
-        int maxTokensPerRun
+        int maxTokensPerRun,
+        Double temperature
 ) {}

@@ -115,8 +115,9 @@ public class AgentFactory {
                 .map(t -> new LlmToolDefinition(t.getName(), t.getDescription(), t.getInputSchema()))
                 .toList();
 
+        Double temperature = resolveTemperature();
         AgentCapabilities capabilities = new AgentCapabilities(
-                tools, toolDefs, false, false, false, 3, 2048);
+                tools, toolDefs, false, false, false, 3, 2048, temperature);
 
         // Get LLM provider
         String apiKey = llmConfigService.getDecryptedApiKey();
@@ -144,8 +145,19 @@ public class AgentFactory {
         // Resolve model
         String model = resolveModel(instance);
 
-        // Parse allowed tools
-        List<String> allowedToolNames = parseAllowedTools(template);
+        // Parse allowed tools – instance override takes priority over template
+        List<String> allowedToolNames;
+        if (instance.getAllowedToolsOverride() != null) {
+            try {
+                allowedToolNames = objectMapper.readValue(instance.getAllowedToolsOverride(),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            } catch (Exception e) {
+                log.warn("Failed to parse allowedToolsOverride for instance {}: {}", instance.getId(), e.getMessage());
+                allowedToolNames = parseAllowedTools(template);
+            }
+        } else {
+            allowedToolNames = parseAllowedTools(template);
+        }
 
         // Build identity
         AgentIdentity identity = new AgentIdentity(
@@ -153,11 +165,23 @@ public class AgentFactory {
                 instance.getName(), role, instance.getType(),
                 instance.getParentInstanceId(), systemPrompt, model, allowedToolNames);
 
-        // Build tools and capabilities
-        List<AgentTool> tools = toolRegistry.getToolsForInstance(template, UUID.fromString(tenantId));
+        // Build tools and capabilities – use instance override if present
+        UUID tenantUuid = UUID.fromString(tenantId);
+        List<AgentTool> tools;
+        if (instance.getAllowedToolsOverride() != null) {
+            tools = toolRegistry.getToolsByNames(allowedToolNames, tenantUuid);
+        } else {
+            tools = toolRegistry.getToolsForInstance(template, tenantUuid);
+        }
         List<LlmToolDefinition> toolDefs = tools.stream()
                 .map(t -> new LlmToolDefinition(t.getName(), t.getDescription(), t.getInputSchema()))
                 .toList();
+
+        // Resolve temperature from LLM settings
+        Double temperature = resolveTemperature();
+
+        // Resolve maxTokensPerRun – instance config override > template default
+        int maxTokensPerRun = resolveMaxTokensPerRun(instance, template);
 
         // Get API key
         String apiKey = llmConfigService.getDecryptedApiKey();
@@ -165,14 +189,14 @@ public class AgentFactory {
         switch (role) {
             case "ceo" -> {
                 AgentCapabilities capabilities = new AgentCapabilities(
-                        tools, toolDefs, true, false, false, 10, template.getMaxTokensPerRun());
+                        tools, toolDefs, true, false, false, 10, maxTokensPerRun, temperature);
                 return new CeoAgent(identity, capabilities, apiKey, toolRegistry, objectMapper);
             }
             default -> {
                 // All _lead roles and any future roles → LeadAgent
                 boolean isLead = role.endsWith("_lead");
                 AgentCapabilities capabilities = new AgentCapabilities(
-                        tools, toolDefs, false, isLead, isLead, 5, template.getMaxTokensPerRun());
+                        tools, toolDefs, false, isLead, isLead, 5, maxTokensPerRun, temperature);
 
                 String providerName = llmConfigService.getConfig()
                         .map(c -> c.getProvider()).orElse("anthropic");
@@ -181,6 +205,41 @@ public class AgentFactory {
                 return new LeadAgent(identity, capabilities, provider, apiKey, toolRegistry);
             }
         }
+    }
+
+    private Double resolveTemperature() {
+        try {
+            return llmConfigService.getConfig()
+                    .map(config -> {
+                        try {
+                            JsonNode settingsNode = objectMapper.readTree(
+                                    config.getSettings() != null ? config.getSettings() : "{}");
+                            if (settingsNode.has("temperature")) {
+                                return settingsNode.get("temperature").asDouble();
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to parse LLM settings for temperature: {}", e.getMessage());
+                        }
+                        return null;
+                    })
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private int resolveMaxTokensPerRun(AgentInstanceEntity instance, AgentTemplateEntity template) {
+        if (instance.getConfig() != null && !"{}".equals(instance.getConfig())) {
+            try {
+                JsonNode configNode = objectMapper.readTree(instance.getConfig());
+                if (configNode.has("maxTokensPerRun")) {
+                    return configNode.get("maxTokensPerRun").asInt();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse instance config for maxTokensPerRun: {}", e.getMessage());
+            }
+        }
+        return template.getMaxTokensPerRun();
     }
 
     private String resolveModel(AgentInstanceEntity instance) {

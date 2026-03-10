@@ -23,4 +23,7 @@ public class TenantLlmConfigEntity extends BaseEntity {
 
     @Column(name = "default_model", length = 100)
     private String defaultModel;
+
+    @Column(columnDefinition = "jsonb")
+    private String settings = "{}";
 }

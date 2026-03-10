@@ -7,5 +7,6 @@ public record LlmRequest(
         List<LlmMessage> messages,
         List<LlmToolDefinition> tools,
         String model,
-        int maxTokens
+        int maxTokens,
+        Double temperature
 ) {}

@@ -64,7 +64,7 @@ public final class LeadAgent implements Agent {
 
                 LlmRequest request = new LlmRequest(
                         effectiveSystemPrompt, messages, capabilities.toolDefinitions(),
-                        identity.model(), capabilities.maxTokensPerRun());
+                        identity.model(), capabilities.maxTokensPerRun(), capabilities.temperature());
                 LlmResponse response = llmProvider.chat(request, apiKey);
 
                 totalInputTokens += response.inputTokens();

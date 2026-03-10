@@ -51,4 +51,7 @@ public class AgentInstanceEntity extends BaseEntity {
 
     @Column(name = "activity_status_changed_at")
     private Instant activityStatusChangedAt;
+
+    @Column(name = "allowed_tools_override", columnDefinition = "jsonb")
+    private String allowedToolsOverride;
 }

@@ -171,6 +171,9 @@ public class AnthropicLlmProvider implements LlmProvider {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", request.model());
         body.put("max_tokens", request.maxTokens());
+        if (request.temperature() != null) {
+            body.put("temperature", request.temperature());
+        }
 
         if (request.systemPrompt() != null && !request.systemPrompt().isBlank()) {
             body.put("system", request.systemPrompt());

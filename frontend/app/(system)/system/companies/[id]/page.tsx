@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -49,7 +49,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useApi, useMutation } from "@/hooks/api/use-api";
+import { apiClient } from "@/lib/api-client";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Wrench, Zap } from "lucide-react";
 import type {
   CompanyResponse,
   CompanyUpdateRequest,
@@ -60,6 +64,8 @@ import type {
   ModuleResponse,
   BudgetOverviewResponse,
   AgentInstanceDetailResponse,
+  AgentSystemSummaryResponse,
+  ToolInfoResponse,
   SystemLlmConfigResponse,
 } from "@/types/api";
 
@@ -300,10 +306,20 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
   } = useApi<AgentInstanceDetailResponse[]>(
     `/api/system/companies/${companyId}/agents`
   );
+  const { data: summary } = useApi<AgentSystemSummaryResponse>(
+    `/api/system/companies/${companyId}/agent-summary`
+  );
+  const { data: availableTools } = useApi<ToolInfoResponse[]>(
+    `/api/system/companies/${companyId}/available-tools`
+  );
   const { mutate } = useMutation();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState<string>("");
+  const [editTools, setEditTools] = useState<string[]>([]);
+  const [editMaxTokens, setEditMaxTokens] = useState<string>("");
+  const [editDailyBudget, setEditDailyBudget] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const handleModelChange = async (instanceId: string, model: string) => {
@@ -320,6 +336,21 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
     }
   };
 
+  const handleStatusToggle = async (agent: AgentInstanceDetailResponse) => {
+    const newStatus = agent.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    try {
+      await mutate(
+        "patch",
+        `/api/system/companies/${companyId}/agents/${agent.instanceId}`,
+        { status: newStatus }
+      );
+      toast.success(newStatus === "ACTIVE" ? "Agent aktiviert" : "Agent deaktiviert");
+      refetch();
+    } catch {
+      toast.error("Fehler beim Umschalten des Agent-Status");
+    }
+  };
+
   const handleSavePrompt = async (instanceId: string) => {
     setSaving(true);
     try {
@@ -330,13 +361,91 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
       );
       toast.success("System-Prompt gespeichert");
       refetch();
-      setExpandedId(null);
+      setExpandedSection(null);
     } catch {
       toast.error("Fehler beim Speichern des System-Prompts");
     } finally {
       setSaving(false);
     }
   };
+
+  const handleSaveTools = async (instanceId: string) => {
+    setSaving(true);
+    try {
+      await mutate(
+        "patch",
+        `/api/system/companies/${companyId}/agents/${instanceId}`,
+        { allowedToolsOverride: editTools }
+      );
+      toast.success("Tools aktualisiert");
+      refetch();
+      setExpandedSection(null);
+    } catch {
+      toast.error("Fehler beim Speichern der Tools");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResetTools = async (instanceId: string) => {
+    setSaving(true);
+    try {
+      await mutate(
+        "patch",
+        `/api/system/companies/${companyId}/agents/${instanceId}`,
+        { allowedToolsOverride: [] }
+      );
+      toast.success("Tools auf Template-Standard zurueckgesetzt");
+      refetch();
+      setExpandedSection(null);
+    } catch {
+      toast.error("Fehler beim Zuruecksetzen der Tools");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveBudget = async (instanceId: string) => {
+    setSaving(true);
+    try {
+      const body: Record<string, number> = {};
+      if (editMaxTokens) body.maxTokensPerRun = parseInt(editMaxTokens);
+      if (editDailyBudget) body.dailyTokenBudget = parseInt(editDailyBudget);
+      await mutate(
+        "patch",
+        `/api/system/companies/${companyId}/agents/${instanceId}`,
+        body
+      );
+      toast.success("Budget aktualisiert");
+      refetch();
+      setExpandedSection(null);
+    } catch {
+      toast.error("Fehler beim Speichern des Budgets");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openSection = (agentId: string, section: string, agent: AgentInstanceDetailResponse) => {
+    if (expandedId === agentId && expandedSection === section) {
+      setExpandedId(null);
+      setExpandedSection(null);
+      return;
+    }
+    setExpandedId(agentId);
+    setExpandedSection(section);
+    if (section === "prompt") {
+      setEditPrompt(agent.customSystemPrompt || "");
+    } else if (section === "tools") {
+      setEditTools([...agent.allowedTools]);
+    } else if (section === "budget") {
+      setEditMaxTokens(agent.maxTokensPerRun !== agent.templateMaxTokensPerRun ? String(agent.maxTokensPerRun) : "");
+      setEditDailyBudget(agent.dailyTokenBudget !== agent.templateDailyTokenBudget ? String(agent.dailyTokenBudget) : "");
+    }
+  };
+
+  const isCeo = (agent: AgentInstanceDetailResponse) =>
+    agent.templateName.toLowerCase().includes("ceo");
 
   if (loading) {
     return (
@@ -347,119 +456,241 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
   }
 
   return (
-    <Card className="p-6">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold">Agent-Instanzen</h3>
-        <p className="text-xs text-muted-foreground">
-          Model und System-Prompt pro Agent-Instanz konfigurieren.
-        </p>
-      </div>
-      <div className="space-y-3">
-        {(agents || []).map((agent) => (
-          <div key={agent.instanceId} className="rounded-lg border">
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{agent.name}</span>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {agent.templateName}
-                    </Badge>
-                    {agent.hasCustomPrompt && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        Custom Prompt
+    <div className="space-y-4">
+      {/* KPI Summary */}
+      {summary && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <KpiCard label="Aktive Agenten" value={`${summary.activeAgents}/${summary.totalAgents}`} />
+          <KpiCard label="Fehler-Status" value={String(summary.errorAgents)} />
+          <KpiCard label="Modelle" value={summary.modelsInUse.length > 0 ? String(summary.modelsInUse.length) : "0"} />
+          <KpiCard label="Tages-Budget" value={formatTokens(summary.totalDailyBudget)} />
+        </div>
+      )}
+
+      <Card className="p-6">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold">Agent-Instanzen</h3>
+          <p className="text-xs text-muted-foreground">
+            Status, Model, Tools und Budget pro Agent-Instanz konfigurieren.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {(agents || []).map((agent) => (
+            <div key={agent.instanceId} className="rounded-lg border">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{agent.name}</span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {agent.templateName}
                       </Badge>
-                    )}
+                      {agent.hasCustomPrompt && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          Custom Prompt
+                        </Badge>
+                      )}
+                      {agent.hasToolOverride && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          Custom Tools
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                          agent.activityStatus === "BUSY" ? "bg-primary animate-pulse" :
+                          agent.activityStatus === "ERROR" ? "bg-destructive" : "bg-success"
+                        }`} />
+                        {agent.activityStatus === "BUSY" ? "Aktiv" : agent.activityStatus === "ERROR" ? "Fehler" : "Bereit"}
+                      </span>
+                      <span>·</span>
+                      <span>{agent.toolCount} Tools</span>
+                      <span>·</span>
+                      <span>{MODEL_OPTIONS.find(m => m.value === agent.model)?.label || agent.model}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{agent.status}</span>
-                    <span>·</span>
-                    <span className="flex items-center gap-1">
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${
-                        agent.activityStatus === "BUSY" ? "bg-primary animate-pulse" :
-                        agent.activityStatus === "ERROR" ? "bg-destructive" : "bg-success"
-                      }`} />
-                      {agent.activityStatus === "BUSY" ? "Aktiv" : agent.activityStatus === "ERROR" ? "Fehler" : "Bereit"}
-                    </span>
-                    <span>·</span>
-                    <span>{agent.toolCount} Tools</span>
-                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={agent.status === "ACTIVE"}
+                    onCheckedChange={() => handleStatusToggle(agent)}
+                    disabled={isCeo(agent)}
+                  />
+                  <Select
+                    value={agent.model}
+                    onValueChange={(v) => handleModelChange(agent.instanceId, v)}
+                  >
+                    <SelectTrigger className="w-[180px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MODEL_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={agent.model}
-                  onValueChange={(v) => handleModelChange(agent.instanceId, v)}
-                >
-                  <SelectTrigger className="w-[200px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MODEL_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              {/* Expandable sections */}
+              <div className="border-t px-4 py-1.5 flex gap-1">
                 <Button
-                  variant="ghost"
+                  variant={expandedId === agent.instanceId && expandedSection === "prompt" ? "secondary" : "ghost"}
                   size="sm"
-                  className="text-xs"
-                  onClick={() => {
-                    if (expandedId === agent.instanceId) {
-                      setExpandedId(null);
-                    } else {
-                      setExpandedId(agent.instanceId);
-                      setEditPrompt(agent.customSystemPrompt || "");
-                    }
-                  }}
+                  className="text-xs h-7"
+                  onClick={() => openSection(agent.instanceId, "prompt", agent)}
                 >
-                  <Settings2 className="h-3.5 w-3.5 mr-1" />
+                  <Settings2 className="h-3 w-3 mr-1" />
                   Prompt
                 </Button>
+                <Button
+                  variant={expandedId === agent.instanceId && expandedSection === "tools" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => openSection(agent.instanceId, "tools", agent)}
+                >
+                  <Wrench className="h-3 w-3 mr-1" />
+                  Tools ({agent.toolCount})
+                </Button>
+                <Button
+                  variant={expandedId === agent.instanceId && expandedSection === "budget" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => openSection(agent.instanceId, "budget", agent)}
+                >
+                  <Zap className="h-3 w-3 mr-1" />
+                  Budget
+                </Button>
               </div>
-            </div>
-            {expandedId === agent.instanceId && (
-              <div className="border-t px-4 py-3 space-y-2">
-                <Label className="text-xs">Custom System-Prompt</Label>
-                <Textarea
-                  value={editPrompt}
-                  onChange={(e) => setEditPrompt(e.target.value)}
-                  rows={8}
-                  className="font-mono text-xs"
-                  placeholder="Leer = Template-Standard verwenden"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setExpandedId(null)}
-                  >
-                    Abbrechen
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSavePrompt(agent.instanceId)}
-                    disabled={saving}
-                  >
-                    <Save className="h-3.5 w-3.5 mr-1" />
-                    Speichern
-                  </Button>
+
+              {/* Prompt section */}
+              {expandedId === agent.instanceId && expandedSection === "prompt" && (
+                <div className="border-t px-4 py-3 space-y-2">
+                  <Label className="text-xs">Custom System-Prompt</Label>
+                  <Textarea
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    rows={8}
+                    className="font-mono text-xs"
+                    placeholder="Leer = Template-Standard verwenden"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setExpandedId(null); setExpandedSection(null); }}>
+                      Abbrechen
+                    </Button>
+                    <Button size="sm" onClick={() => handleSavePrompt(agent.instanceId)} disabled={saving}>
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      Speichern
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </Card>
+              )}
+
+              {/* Tools section */}
+              {expandedId === agent.instanceId && expandedSection === "tools" && (
+                <div className="border-t px-4 py-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Verfuegbare Tools</Label>
+                    {agent.hasToolOverride && (
+                      <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleResetTools(agent.instanceId)} disabled={saving}>
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Auf Template zuruecksetzen
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-64 overflow-y-auto rounded-md border p-3">
+                    {(availableTools || []).map((tool) => (
+                      <label key={tool.name} className="flex items-start gap-2 text-xs cursor-pointer hover:bg-muted/50 rounded p-1">
+                        <Checkbox
+                          checked={editTools.includes(tool.name)}
+                          onCheckedChange={(checked) => {
+                            setEditTools(prev =>
+                              checked ? [...prev, tool.name] : prev.filter(t => t !== tool.name)
+                            );
+                          }}
+                          className="mt-0.5"
+                        />
+                        <div>
+                          <span className="font-mono text-[11px]">{tool.name}</span>
+                          <span className="text-muted-foreground ml-1">({tool.moduleId})</span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setExpandedId(null); setExpandedSection(null); }}>
+                      Abbrechen
+                    </Button>
+                    <Button size="sm" onClick={() => handleSaveTools(agent.instanceId)} disabled={saving}>
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      Tools speichern
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Budget section */}
+              {expandedId === agent.instanceId && expandedSection === "budget" && (
+                <div className="border-t px-4 py-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Max Tokens pro Lauf</Label>
+                      <Input
+                        type="number"
+                        min={256}
+                        max={8192}
+                        value={editMaxTokens}
+                        onChange={(e) => setEditMaxTokens(e.target.value)}
+                        placeholder={`Template: ${agent.templateMaxTokensPerRun}`}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Template-Standard: {agent.templateMaxTokensPerRun}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Tages-Token-Budget</Label>
+                      <Input
+                        type="number"
+                        min={1000}
+                        value={editDailyBudget}
+                        onChange={(e) => setEditDailyBudget(e.target.value)}
+                        placeholder={`Template: ${agent.templateDailyTokenBudget}`}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Template-Standard: {agent.templateDailyTokenBudget}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setExpandedId(null); setExpandedSection(null); }}>
+                      Abbrechen
+                    </Button>
+                    <Button size="sm" onClick={() => handleSaveBudget(agent.instanceId)} disabled={saving}>
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      Budget speichern
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
   );
 }
 
 // ─── LLM Config Tab ─────────────────────────────────────
+
+interface ModelInfo {
+  id: string;
+  name: string;
+}
 
 function CompanyLlmTab({ companyId }: { companyId: string }) {
   const {
@@ -473,13 +704,75 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
 
   const [apiKey, setApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState("claude-sonnet-4-20250514");
+  const [models, setModels] = useState<ModelInfo[]>(
+    MODEL_OPTIONS.map((o) => ({ id: o.value, name: o.label }))
+  );
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [temperature, setTemperature] = useState<number>(1.0);
+  const [maxTokensDefault, setMaxTokensDefault] = useState<string>("4096");
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load models from stored API key
+  const fetchModels = useCallback(async () => {
+    try {
+      const res = await apiClient.get<{ data: string[] }>(
+        `/api/system/companies/${companyId}/llm-config/models`
+      );
+      if (res.data && res.data.length > 0) {
+        setModels(res.data.map((id: string) => ({ id, name: id })));
+      }
+    } catch {
+      // Keep fallback models
+    }
+  }, [companyId]);
+
+  // Load models with a new API key (debounced)
+  const fetchModelsWithKey = useCallback(async (key: string) => {
+    setModelsLoading(true);
+    try {
+      const res = await apiClient.post<{ data: string[] }>(
+        `/api/system/companies/${companyId}/llm-config/models`,
+        { provider: "anthropic", apiKey: key }
+      );
+      if (res.data && res.data.length > 0) {
+        setModels(res.data.map((id: string) => ({ id, name: id })));
+      }
+    } catch {
+      // Keep existing models
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [companyId]);
 
   useEffect(() => {
     if (config?.defaultModel) {
       setDefaultModel(config.defaultModel);
     }
-  }, [config?.defaultModel]);
+    if (config?.temperature != null) {
+      setTemperature(config.temperature);
+    }
+    if (config?.maxTokensDefault != null) {
+      setMaxTokensDefault(String(config.maxTokensDefault));
+    }
+    if (config?.hasApiKey) {
+      fetchModels();
+    }
+  }, [config?.defaultModel, config?.temperature, config?.maxTokensDefault, config?.hasApiKey, fetchModels]);
+
+  // Debounce: reload models when API key changes
+  useEffect(() => {
+    if (!apiKey || apiKey.length < 10) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchModelsWithKey(apiKey);
+    }, 800);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [apiKey, fetchModelsWithKey]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -488,14 +781,40 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
         provider: "anthropic",
         apiKey: apiKey || undefined,
         defaultModel,
+        temperature,
+        maxTokensDefault: maxTokensDefault ? parseInt(maxTokensDefault) : undefined,
       });
       toast.success("LLM-Konfiguration gespeichert");
       setApiKey("");
       refetch();
+      fetchModels();
     } catch {
       toast.error("Fehler beim Speichern der LLM-Konfiguration");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await apiClient.get<{ data: string[] }>(
+        `/api/system/companies/${companyId}/llm-config/models`
+      );
+      if (res.data) {
+        setTestResult("success");
+        setModels(res.data.map((id: string) => ({ id, name: id })));
+        toast.success(`Verbindung erfolgreich – ${res.data.length} Modelle verfuegbar`);
+      } else {
+        setTestResult("error");
+        toast.error("Verbindung fehlgeschlagen");
+      }
+    } catch {
+      setTestResult("error");
+      toast.error("Verbindung fehlgeschlagen – API-Key pruefen");
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -512,7 +831,7 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
       <div>
         <h3 className="text-sm font-semibold">LLM-Konfiguration</h3>
         <p className="text-xs text-muted-foreground">
-          API-Schluessel und Standard-Modell fuer dieses Unternehmen
+          API-Schluessel, Standard-Modell und Parameter fuer dieses Unternehmen
           konfigurieren.
         </p>
       </div>
@@ -535,6 +854,18 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
                 Nicht konfiguriert
               </Badge>
             )}
+            {config?.hasApiKey && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={handleTestConnection}
+                disabled={testing}
+              >
+                {testing && <Loader2 className="h-3 w-3 animate-spin" />}
+                {testing ? "Teste..." : testResult === "success" ? "Verbunden" : testResult === "error" ? "Fehlgeschlagen" : "Verbindung testen"}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -550,22 +881,73 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
             placeholder={config?.hasApiKey ? "Neuen Key eingeben..." : "sk-ant-..."}
             className="max-w-md font-mono text-sm"
           />
+          {apiKey.length > 0 && apiKey.length < 10 && (
+            <p className="text-[10px] text-muted-foreground">Key eingeben um Modelle zu laden...</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
           <Label className="text-xs">Standard-Modell</Label>
-          <Select value={defaultModel} onValueChange={setDefaultModel}>
-            <SelectTrigger className="w-[260px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MODEL_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Select value={defaultModel} onValueChange={setDefaultModel} disabled={modelsLoading}>
+              <SelectTrigger className="w-[360px]">
+                {modelsLoading ? (
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Modelle laden...
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Standard-Modell waehlen" />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    <span className="font-mono text-xs">{model.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {apiKey
+              ? "Modelle mit dem eingegebenen API-Key geladen"
+              : "Wird fuer Agent-Instanzen verwendet, die kein eigenes Modell angeben"}
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">Temperature: {temperature.toFixed(1)}</Label>
+          <div className="max-w-md flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">0.0</span>
+            <Slider
+              value={[temperature]}
+              onValueChange={(v) => setTemperature(v[0])}
+              min={0}
+              max={1}
+              step={0.1}
+              className="flex-1"
+            />
+            <span className="text-xs text-muted-foreground">1.0</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Niedrig = deterministischer, Hoch = kreativer
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">Max Tokens (Standard)</Label>
+          <Input
+            type="number"
+            min={256}
+            max={8192}
+            value={maxTokensDefault}
+            onChange={(e) => setMaxTokensDefault(e.target.value)}
+            className="max-w-[200px] font-mono text-sm"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            Standard-Antwortlaenge fuer alle Agents (256–8192)
+          </p>
         </div>
 
         <Button onClick={handleSave} disabled={saving} size="sm">

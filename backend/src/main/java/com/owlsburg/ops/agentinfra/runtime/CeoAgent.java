@@ -319,6 +319,9 @@ public final class CeoAgent implements Agent {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", identity.model());
         body.put("max_tokens", capabilities.maxTokensPerRun());
+        if (capabilities.temperature() != null) {
+            body.put("temperature", capabilities.temperature());
+        }
         body.put("system", systemPrompt);
         body.put("stream", true);
 

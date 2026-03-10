@@ -1,5 +1,7 @@
 package com.owlsburg.ops.agentinfra.llm;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.owlsburg.ops.common.EncryptionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,13 +20,16 @@ public class LlmConfigService {
     private final TenantLlmConfigRepository configRepository;
     private final EncryptionService encryptionService;
     private final LlmProviderRegistry providerRegistry;
+    private final ObjectMapper objectMapper;
 
     public LlmConfigService(TenantLlmConfigRepository configRepository,
                             EncryptionService encryptionService,
-                            LlmProviderRegistry providerRegistry) {
+                            LlmProviderRegistry providerRegistry,
+                            ObjectMapper objectMapper) {
         this.configRepository = configRepository;
         this.encryptionService = encryptionService;
         this.providerRegistry = providerRegistry;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -77,6 +82,45 @@ public class LlmConfigService {
         String apiKey = encryptionService.decrypt(config.getApiKeyEnc());
         LlmProvider provider = providerRegistry.getProvider(config.getProvider());
         return provider.listModels(apiKey);
+    }
+
+    @Transactional
+    public TenantLlmConfigEntity saveConfigWithSettings(String provider, String apiKey, String defaultModel,
+                                                         Double temperature, Integer maxTokensDefault) {
+        TenantLlmConfigEntity saved = saveConfig(provider, apiKey, defaultModel);
+
+        // Build settings JSONB
+        try {
+            ObjectNode settingsNode = objectMapper.createObjectNode();
+            if (temperature != null) {
+                settingsNode.put("temperature", temperature);
+            }
+            if (maxTokensDefault != null) {
+                settingsNode.put("maxTokensDefault", maxTokensDefault);
+            }
+            saved.setSettings(objectMapper.writeValueAsString(settingsNode));
+            configRepository.save(saved);
+        } catch (Exception e) {
+            log.warn("Failed to save LLM settings: {}", e.getMessage());
+        }
+
+        return saved;
+    }
+
+    public Double getTemperature(TenantLlmConfigEntity config) {
+        try {
+            var node = objectMapper.readTree(config.getSettings() != null ? config.getSettings() : "{}");
+            if (node.has("temperature")) return node.get("temperature").asDouble();
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public Integer getMaxTokensDefault(TenantLlmConfigEntity config) {
+        try {
+            var node = objectMapper.readTree(config.getSettings() != null ? config.getSettings() : "{}");
+            if (node.has("maxTokensDefault")) return node.get("maxTokensDefault").asInt();
+        } catch (Exception ignored) {}
+        return null;
     }
 
     public List<String> listModelsWithKey(String provider, String apiKey) {
