@@ -4,6 +4,10 @@ import com.owlsburg.ops.agentinfra.AgentRunRepository;
 import com.owlsburg.ops.auth.Role;
 import com.owlsburg.ops.auth.UserEntity;
 import com.owlsburg.ops.auth.UserRepository;
+import com.owlsburg.ops.common.ModuleRepository;
+import com.owlsburg.ops.common.TenantContext;
+import com.owlsburg.ops.common.TenantModuleEntity;
+import com.owlsburg.ops.common.TenantModuleRepository;
 import com.owlsburg.ops.tenant.dto.CompanyCreateRequest;
 import com.owlsburg.ops.tenant.dto.CompanyStatsResponse;
 import com.owlsburg.ops.tenant.dto.CompanyUpdateRequest;
@@ -28,12 +32,17 @@ public class SystemCompanyService {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final AgentRunRepository agentRunRepository;
+    private final ModuleRepository moduleRepository;
+    private final TenantModuleRepository tenantModuleRepository;
 
     public SystemCompanyService(TenantRepository tenantRepository, UserRepository userRepository,
-                                AgentRunRepository agentRunRepository) {
+                                AgentRunRepository agentRunRepository, ModuleRepository moduleRepository,
+                                TenantModuleRepository tenantModuleRepository) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.agentRunRepository = agentRunRepository;
+        this.moduleRepository = moduleRepository;
+        this.tenantModuleRepository = tenantModuleRepository;
     }
 
     @Transactional(readOnly = true)
@@ -56,13 +65,13 @@ public class SystemCompanyService {
             throw new IllegalArgumentException("Admin email already in use: " + request.adminEmail());
         }
 
-        TenantEntity tenant = new TenantEntity();
-        tenant.setName(request.name());
-        tenant.setSlug(request.slug());
-        tenant.setPlan(request.plan() != null ? request.plan() : "BASIC");
-        tenant.setStatus("ACTIVE");
-        tenant.setActive(true);
-        tenant = tenantRepository.save(tenant);
+        TenantEntity tenantEntity = new TenantEntity();
+        tenantEntity.setName(request.name());
+        tenantEntity.setSlug(request.slug());
+        tenantEntity.setPlan(request.plan() != null ? request.plan() : "BASIC");
+        tenantEntity.setStatus("ACTIVE");
+        tenantEntity.setActive(true);
+        final TenantEntity tenant = tenantRepository.save(tenantEntity);
 
         String password = request.adminPassword() != null
                 ? request.adminPassword()
@@ -78,7 +87,25 @@ public class SystemCompanyService {
         admin.setActive(true);
         userRepository.save(admin);
 
-        log.info("Created company '{}' (slug: {}) with admin {}", tenant.getName(), tenant.getSlug(), request.adminEmail());
+        // Initialize all modules for the new tenant (all enabled by default)
+        // Temporarily set tenant context for RLS on tenant_modules table
+        try {
+            TenantContext.setCurrentTenant(tenant.getId().toString());
+            moduleRepository.findAll().forEach(module -> {
+                TenantModuleEntity tm = new TenantModuleEntity();
+                tm.setTenantId(tenant.getId());
+                tm.setModuleId(module.getId());
+                tm.setEnabled(true);
+                tm.setEnabledAt(Instant.now());
+                tenantModuleRepository.save(tm);
+            });
+        } finally {
+            TenantContext.clear();
+        }
+
+        log.info("Created company '{}' (slug: {}) with admin {} and {} modules",
+                tenant.getName(), tenant.getSlug(), request.adminEmail(),
+                moduleRepository.count());
         return tenant;
     }
 

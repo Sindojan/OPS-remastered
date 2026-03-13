@@ -326,6 +326,33 @@ sindojan_ops_remastered/
 | TASK-FE-037 | Agent Panel: "Letzter Run" Button mit Steps-Anzeige (Collapsible Section) | - |
 | TASK-FE-038 | System Admin Firmendetail: Activity-Status Badge pro Agent im Agenten-Tab | - |
 
+### Block 19: Docker-Hardening, My-Day Dashboard-Fixes, Backend-Tests ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-DEV-001 | Docker-Hardening, My-Day Dashboard-Fixes und Backend-Tests | `09d1e9a` |
+
+### Block 20: Memory-System (4-Typ) ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-BE-050 | V20 Migration (memory_type, run_id, confidence auf agent_memories), RunMemory, Episodic Extraction, Procedural Tracking | `0feb580` |
+
+### Zwischenblock: Per-Tenant Agent & LLM-Konfiguration ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| TASK-DB-021 | V21 Migration (settings JSONB auf tenant_llm_config, allowed_tools_override auf agent_instances) | `8d8fb69` |
+| TASK-BE-051 | TenantLlmConfigEntity + AgentInstanceEntity erweitert, LlmRequest + AgentCapabilities + Temperature Support | `8d8fb69` |
+| TASK-BE-052 | AgentFactory Instance-Level Overrides (Tools, Budget, Temperature), AgentToolRegistry erweitert | `8d8fb69` |
+| TASK-BE-053 | SystemCompanyController: Erweiterte Agent/LLM-Endpoints, DTOs (AgentSystemSummaryResponse, ToolInfoResponse) | `8d8fb69` |
+| TASK-FE-039 | LLM-Tab (Temperature Slider, MaxTokens, Modell-Auswahl), Agents-Tab (Toggle, Tool-Override, Budget, Prompt-Dialog) | `8d8fb69` |
+
+### FIX-BLOCK-I: Chat-Bugfixes & Agent-PATCH ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| FIX-TENANT | AgentRunEntity: Fehlendes tenant_id Feld + @PrePersist (NOT NULL Constraint Violation) | - |
+| FIX-JSONB | AgentRunService: ensureJson() für Plain-Text → JSONB Escaping (newlines, tabs, quotes) | - |
+| FIX-SSE | SimpleChatService: Try-catch um SSE done/usage Events (Client-Disconnect Robustheit) | - |
+| FIX-PATCH | SystemCompanyController + AgentInstanceService: Explizites save() nach PATCH-Änderungen | - |
+
 ## Arbeitsweise mit Agents
 
 **Vor jeder Entwicklungsarbeit** das jeweilige Agent Skill-File aus `.claude-agents/agents/` lesen und dessen Regeln befolgen:
@@ -420,6 +447,8 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V17__agent_communication.sql | agent_memories + agent_messages Tabellen mit RLS, spawned_by_run_id, CEO + Lead Tool-Zuweisungen aktualisiert (40 Tools) |
 | V18__tenant_modules.sql | modules + tenant_modules Tabellen, RLS Policy, Seed 9 Module, Backward-Compat für bestehende Tenants |
 | V19__agent_activity_status.sql | activity_status (IDLE/BUSY/ERROR), last_run_id, activity_status_changed_at auf agent_instances |
+| V20__agent_memory_types.sql | memory_type, run_id, confidence Felder auf agent_memories, 4-Typ Memory-System |
+| V21__agent_llm_enhancements.sql | settings JSONB auf tenant_llm_config, allowed_tools_override JSONB auf agent_instances |
 
 ## Default Admin
 
@@ -470,7 +499,7 @@ Deaktivierung: Kein Sidebar-Eintrag, kein API-Zugriff (403), keine Agent-Tools. 
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-03-09
-**Session:** Block 18 komplett (Agent-Optimierung)
-**Status:** Backend ~565 Java-Dateien, V19 Migration. Activity-Status (IDLE/BUSY/ERROR) auf agent_instances persistent gespeichert. Last-Run-Referenz (last_run_id) mit Quick-Access-Endpoint. Reliability-Fixes: SSE-Alive-Check, Delegation-Timeout-Interrupt, Budget-Exception, Incident-Reporting, Finally-Block für verwaiste Runs. Frontend: Activity-Badge in Settings + System Admin, Last-Run-Panel im Agent-Chat.
-**Nächste Blöcke:** Block 19 (Docker/Deployment), Dashboard-Verbesserungen, E2E-Tests
+**Datum:** 2026-03-10
+**Session:** Zwischenblock (Per-Tenant Agent & LLM Config) + Chat-Bugfixes
+**Status:** Backend ~570 Java-Dateien, V21 Migration. Per-Tenant LLM-Konfiguration (Temperature, MaxTokens, dynamische Modell-Ladung). Instance-Level Agent-Overrides (Tools, Budget, Model). LLM/Agent-Settings aus normalen Tenant-Settings entfernt → nur noch in Systemverwaltung. 3 kritische Chat-Bugs gefixt: AgentRunEntity fehlte tenant_id, JSONB-Escaping für Plain-Text-Output, SSE-Emitter-Robustheit nach Client-Disconnect.
+**Nächste Blöcke:** Neues großes Feature (TBD)
