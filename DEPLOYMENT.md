@@ -46,6 +46,13 @@ JWT_SECRET=<openssl rand -base64 48>
 ENCRYPTION_KEY=<openssl rand -base64 48>
 CORS_ALLOWED_ORIGINS=http://mein-server.example.com
 API_URL=http://mein-server.example.com
+
+# System-Admin Credentials (optional)
+SYSTEM_ADMIN_EMAIL=philipp.ebert@strate-software.com
+SYSTEM_ADMIN_PASSWORD=<sicheres-passwort>
+
+# System-Agent LLM API-Key (optional)
+SYSTEM_LLM_API_KEY=sk-ant-...
 ```
 
 Secrets generieren:
@@ -55,6 +62,17 @@ openssl rand -base64 48  # fuer ENCRYPTION_KEY
 ```
 
 **Wichtig:** `API_URL` ist die externe URL des Servers (ohne `/api` Suffix).
+
+#### Optionale Env-Vars
+
+| Variable | Beschreibung | Default |
+|----------|-------------|---------|
+| `SYSTEM_ADMIN_EMAIL` | E-Mail des System-Admins | `philipp.ebert@strate-software.com` |
+| `SYSTEM_ADMIN_PASSWORD` | Neues Passwort fuer System-Admin | nicht gesetzt (Migration-Default bleibt aktiv) |
+| `SYSTEM_LLM_API_KEY` | Anthropic API-Key fuer System-Agents | nicht gesetzt (muss manuell ueber UI konfiguriert werden) |
+
+- **`SYSTEM_ADMIN_PASSWORD`**: Wenn gesetzt, werden E-Mail + Passwort des System-Admins bei jedem Start ueberschrieben. Wenn nicht gesetzt, bleiben die Default-Credentials aus der Migration aktiv.
+- **`SYSTEM_LLM_API_KEY`**: Wird nur beim ersten Start gesetzt, wenn noch keine LLM-Config in der DB existiert. Bereits manuell konfigurierte Keys werden nie ueberschrieben.
 
 ### 2. Starten (HTTP)
 
@@ -79,8 +97,8 @@ curl http://localhost/actuator/health
 ### 3. Erster Login
 
 **System-Admin:**
-- E-Mail: `philipp.ebert@strate-software.com`
-- Passwort: `N0n3Xx.Blender`
+- E-Mail: `philipp.ebert@strate-software.com` (oder `SYSTEM_ADMIN_EMAIL`)
+- Passwort: `N0n3Xx.Blender` (oder `SYSTEM_ADMIN_PASSWORD` wenn gesetzt)
 - Zugriff auf Systemverwaltung
 
 **Default Tenant-Admin:**
@@ -88,13 +106,13 @@ curl http://localhost/actuator/health
 - Passwort: `root1234`
 - Zugriff auf Owlsburg OPS Plattform
 
-**Passwoerter nach dem ersten Login aendern!**
+**Passwoerter nach dem ersten Login aendern!** (oder via `.env` konfigurieren)
 
 ### 4. Company einrichten (System-Admin)
 
 1. Als System-Admin einloggen
 2. Systemverwaltung → Firmen → Company-Details pruefen
-3. **LLM-Tab:** Anthropic API-Key hinterlegen (fuer Agent-System)
+3. **LLM-Tab:** Anthropic API-Key pruefen (automatisch gesetzt wenn `SYSTEM_LLM_API_KEY` in `.env`)
 4. **Module-Tab:** Gewuenschte Module aktivieren
 5. **Agenten-Tab:** Agent-Status pruefen
 
