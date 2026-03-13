@@ -12,7 +12,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -48,10 +47,17 @@ public class SystemAdminInitializer {
 
     @EventListener(ApplicationReadyEvent.class)
     @Order(5)
-    @Transactional
     public void initialize() {
-        initializeSystemAdmin();
-        initializeSystemLlmConfig();
+        try {
+            initializeSystemAdmin();
+        } catch (Exception e) {
+            log.error("Failed to initialize System-Admin credentials: {}", e.getMessage(), e);
+        }
+        try {
+            initializeSystemLlmConfig();
+        } catch (Exception e) {
+            log.error("Failed to initialize System-LLM config: {}", e.getMessage(), e);
+        }
     }
 
     private void initializeSystemAdmin() {
@@ -64,11 +70,14 @@ public class SystemAdminInitializer {
                 ? systemAdminEmail
                 : "philipp.ebert@strate-software.com";
 
-        // Find existing SYSTEM_ADMIN by the default migration email
-        Optional<UserEntity> existing = userRepository.findByEmail("philipp.ebert@strate-software.com");
+        // Find existing SYSTEM_ADMIN: try target email first, then default migration email
+        Optional<UserEntity> existing = userRepository.findByEmail(email);
+        if (existing.isEmpty()) {
+            existing = userRepository.findByEmail("philipp.ebert@strate-software.com");
+        }
 
         if (existing.isEmpty()) {
-            log.warn("No SYSTEM_ADMIN user found with default email – skipping credential update");
+            log.warn("No SYSTEM_ADMIN user found – skipping credential update");
             return;
         }
 
