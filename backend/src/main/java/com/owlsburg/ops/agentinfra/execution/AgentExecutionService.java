@@ -196,6 +196,13 @@ public class AgentExecutionService {
             }
         }
 
+        // Log warning if iterations exhausted
+        if (lastTextContent == null) {
+            log.warn("Run {} erreichte max Iterationen ({}) ohne finalen Text", runId, MAX_ITERATIONS);
+            reportIncidentSafe(instance.getId(), "MAX_ITERATIONS",
+                    "Run " + runId + " erreichte maximale Iterationen (" + MAX_ITERATIONS + ") ohne finalen Text");
+        }
+
         // Calculate cost
         int totalTokens = totalInputTokens + totalOutputTokens;
         BigDecimal cost = calculateCost(model, totalInputTokens, totalOutputTokens);

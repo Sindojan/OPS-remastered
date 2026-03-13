@@ -105,10 +105,16 @@ public class SimpleChatService {
                 messages.add(msgNode);
             }
 
-            // 8. Create AgentRun for tracking
-            AgentRunEntity agentRun = agentRunService.startRun(
-                    instanceId, TriggerType.CHAT,
-                    "chat:" + sessionId, request.message());
+            // 8. Create AgentRun for tracking (with budget check)
+            AgentRunEntity agentRun;
+            try {
+                agentRun = agentRunService.startRunWithBudgetCheck(
+                        instanceId, TriggerType.CHAT,
+                        "chat:" + sessionId, request.message());
+            } catch (BudgetExceededException e) {
+                sendErrorAndComplete(emitter, "Token-Budget für heute erschöpft.");
+                return sessionId;
+            }
             agentRunId = agentRun.getId();
 
             // Set BUSY before execution
@@ -126,6 +132,12 @@ public class SimpleChatService {
                 fullResponse = chatResult.response();
                 inputTokens = chatResult.inputTokens();
                 outputTokens = chatResult.outputTokens();
+
+                // Report incident if iterations were exhausted
+                if (chatResult.iterationsExhausted()) {
+                    reportIncidentSafe(instanceId, "MAX_ITERATIONS",
+                            "CEO Agent erreichte maximale Iterationen ohne natürliches Ende");
+                }
 
                 // Extract episodic memories and record tool outcomes
                 if (chatResult.toolCallLogs() != null && !chatResult.toolCallLogs().isEmpty()) {
@@ -176,8 +188,12 @@ public class SimpleChatService {
             }
 
             // 14. Send done event
-            emitter.send(SseEmitter.event().data("{\"done\":true}"));
-            emitter.complete();
+            try {
+                emitter.send(SseEmitter.event().data("{\"done\":true}"));
+                emitter.complete();
+            } catch (Exception e) {
+                log.debug("SSE done event send failed (client likely disconnected): {}", e.getMessage());
+            }
 
             return sessionId;
 

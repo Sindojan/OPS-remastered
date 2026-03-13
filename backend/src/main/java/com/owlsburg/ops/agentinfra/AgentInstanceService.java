@@ -148,6 +148,11 @@ public class AgentInstanceService {
     }
 
     @Transactional
+    public AgentInstanceEntity save(AgentInstanceEntity instance) {
+        return instanceRepository.save(instance);
+    }
+
+    @Transactional
     public void delete(UUID id) {
         AgentInstanceEntity existing = findById(id);
         instanceRepository.delete(existing);

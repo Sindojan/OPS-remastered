@@ -373,6 +373,9 @@ public class SystemCompanyController {
                 }
             }
 
+            // Persist changes
+            agentInstanceService.save(inst);
+
             return ResponseEntity.ok(ApiResponse.<Void>ok(null, "Agent aktualisiert"));
         });
     }

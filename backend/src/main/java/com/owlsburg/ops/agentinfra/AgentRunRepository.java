@@ -37,4 +37,7 @@ public interface AgentRunRepository extends JpaRepository<AgentRunEntity, UUID> 
 
     @Query(value = "SELECT ar.started_at FROM agent_runs ar JOIN agent_instances ai ON ar.instance_id = ai.id WHERE ai.tenant_id = :tenantId ORDER BY ar.started_at DESC LIMIT 1", nativeQuery = true)
     Instant findLastActiveByTenant(@Param("tenantId") UUID tenantId);
+
+    @Query("SELECT r FROM AgentRunEntity r WHERE r.completedAt < :before AND r.status IN ('SUCCESS','FAILED','CANCELLED')")
+    List<AgentRunEntity> findCompletedBefore(@Param("before") Instant before);
 }

@@ -122,7 +122,7 @@ public class AgentRunService {
     public AgentRunEntity completeRun(UUID runId, String output, int totalTokensUsed, BigDecimal costUsd) {
         AgentRunEntity run = findById(runId);
         run.setStatus(AgentRunStatus.SUCCESS);
-        run.setOutput(output);
+        run.setOutput(ensureJson(output));
         run.setTokensUsed(totalTokensUsed);
         run.setCostUsd(costUsd);
         run.setCompletedAt(Instant.now());
@@ -194,7 +194,13 @@ public class AgentRunService {
         if (trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith("\"")) {
             return trimmed;
         }
-        // Wrap plain text as JSON string
-        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+        // Wrap plain text as JSON string with proper escaping
+        return "\"" + value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                + "\"";
     }
 }

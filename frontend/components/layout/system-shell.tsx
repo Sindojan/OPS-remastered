@@ -20,11 +20,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Bot,
   Building2,
   ChevronsLeft,
   ChevronsRight,
   ChevronRight,
+  Key,
   LogOut,
+  MessageSquare,
   Shield,
   Zap,
 } from "lucide-react";
@@ -33,10 +36,16 @@ import { useAuth } from "@/contexts/auth-context";
 
 const systemNavItems = [
   { label: "Unternehmen", href: "/system/companies", icon: Building2 },
+  { label: "System-Agenten", href: "/system/agents", icon: Bot },
+  { label: "System-Chat", href: "/system/chat", icon: MessageSquare },
+  { label: "API-Credentials", href: "/system/credentials", icon: Key },
 ];
 
 const routeNames: Record<string, string> = {
   "/system/companies": "Unternehmen",
+  "/system/agents": "System-Agenten",
+  "/system/chat": "System-Chat",
+  "/system/credentials": "API-Credentials",
 };
 
 export function SystemShell({ children }: { children: React.ReactNode }) {
@@ -47,7 +56,11 @@ export function SystemShell({ children }: { children: React.ReactNode }) {
 
   const pageName =
     routeNames[pathname] ??
-    (pathname.startsWith("/system/companies/") ? "Unternehmensdetails" : "System");
+    (pathname.startsWith("/system/companies/")
+      ? "Unternehmensdetails"
+      : pathname.startsWith("/system/agents/")
+        ? "Agent-Details"
+        : "System");
 
   const initials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()

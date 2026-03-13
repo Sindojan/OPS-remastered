@@ -298,6 +298,10 @@ const MODEL_OPTIONS = [
   { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
 ];
 
+function modelLabel(modelId: string): string {
+  return MODEL_OPTIONS.find((m) => m.value === modelId)?.label || modelId;
+}
+
 function CompanyAgentsTab({ companyId }: { companyId: string }) {
   const {
     data: agents,
@@ -306,7 +310,7 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
   } = useApi<AgentInstanceDetailResponse[]>(
     `/api/system/companies/${companyId}/agents`
   );
-  const { data: summary } = useApi<AgentSystemSummaryResponse>(
+  const { data: summary, refetch: refetchSummary } = useApi<AgentSystemSummaryResponse>(
     `/api/system/companies/${companyId}/agent-summary`
   );
   const { data: availableTools } = useApi<ToolInfoResponse[]>(
@@ -314,23 +318,47 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
   );
   const { mutate } = useMutation();
 
+  // Dynamic models from LLM config
+  const [dynamicModels, setDynamicModels] = useState<string[]>([]);
+  useEffect(() => {
+    apiClient
+      .get<{ data: string[] }>(`/api/system/companies/${companyId}/llm-config/models`)
+      .then((res) => {
+        if (res.data && res.data.length > 0) setDynamicModels(res.data);
+      })
+      .catch(() => {});
+  }, [companyId]);
+
+  const modelOptions =
+    dynamicModels.length > 0
+      ? dynamicModels.map((id) => ({ value: id, label: modelLabel(id) }))
+      : MODEL_OPTIONS;
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState<string>("");
   const [editTools, setEditTools] = useState<string[]>([]);
   const [editMaxTokens, setEditMaxTokens] = useState<string>("");
   const [editDailyBudget, setEditDailyBudget] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // Prompt dialog
+  const [promptDialogAgent, setPromptDialogAgent] = useState<AgentInstanceDetailResponse | null>(null);
+
+  const patchAgent = async (instanceId: string, body: Record<string, unknown>) => {
+    await mutate(
+      "patch",
+      `/api/system/companies/${companyId}/agents/${instanceId}`,
+      body
+    );
+    refetch();
+    refetchSummary();
+  };
 
   const handleModelChange = async (instanceId: string, model: string) => {
     try {
-      await mutate(
-        "patch",
-        `/api/system/companies/${companyId}/agents/${instanceId}`,
-        { model }
-      );
+      await patchAgent(instanceId, { model });
       toast.success("Model aktualisiert");
-      refetch();
     } catch {
       toast.error("Fehler beim Aktualisieren des Models");
     }
@@ -338,32 +366,40 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
 
   const handleStatusToggle = async (agent: AgentInstanceDetailResponse) => {
     const newStatus = agent.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setTogglingId(agent.instanceId);
     try {
-      await mutate(
-        "patch",
-        `/api/system/companies/${companyId}/agents/${agent.instanceId}`,
-        { status: newStatus }
-      );
+      await patchAgent(agent.instanceId, { status: newStatus });
       toast.success(newStatus === "ACTIVE" ? "Agent aktiviert" : "Agent deaktiviert");
-      refetch();
     } catch {
       toast.error("Fehler beim Umschalten des Agent-Status");
+    } finally {
+      setTogglingId(null);
     }
   };
 
-  const handleSavePrompt = async (instanceId: string) => {
+  const handleSavePrompt = async () => {
+    if (!promptDialogAgent) return;
     setSaving(true);
     try {
-      await mutate(
-        "patch",
-        `/api/system/companies/${companyId}/agents/${instanceId}`,
-        { customSystemPrompt: editPrompt }
-      );
+      await patchAgent(promptDialogAgent.instanceId, { customSystemPrompt: editPrompt });
       toast.success("System-Prompt gespeichert");
-      refetch();
-      setExpandedSection(null);
+      setPromptDialogAgent(null);
     } catch {
       toast.error("Fehler beim Speichern des System-Prompts");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePrompt = async () => {
+    if (!promptDialogAgent) return;
+    setSaving(true);
+    try {
+      await patchAgent(promptDialogAgent.instanceId, { customSystemPrompt: "" });
+      toast.success("Custom Prompt entfernt");
+      setPromptDialogAgent(null);
+    } catch {
+      toast.error("Fehler beim Entfernen des Prompts");
     } finally {
       setSaving(false);
     }
@@ -372,14 +408,9 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
   const handleSaveTools = async (instanceId: string) => {
     setSaving(true);
     try {
-      await mutate(
-        "patch",
-        `/api/system/companies/${companyId}/agents/${instanceId}`,
-        { allowedToolsOverride: editTools }
-      );
+      await patchAgent(instanceId, { allowedToolsOverride: editTools });
       toast.success("Tools aktualisiert");
-      refetch();
-      setExpandedSection(null);
+      setExpandedId(null);
     } catch {
       toast.error("Fehler beim Speichern der Tools");
     } finally {
@@ -390,16 +421,11 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
   const handleResetTools = async (instanceId: string) => {
     setSaving(true);
     try {
-      await mutate(
-        "patch",
-        `/api/system/companies/${companyId}/agents/${instanceId}`,
-        { allowedToolsOverride: [] }
-      );
-      toast.success("Tools auf Template-Standard zurueckgesetzt");
-      refetch();
-      setExpandedSection(null);
+      await patchAgent(instanceId, { allowedToolsOverride: [] });
+      toast.success("Tools auf Template-Standard zurückgesetzt");
+      setExpandedId(null);
     } catch {
-      toast.error("Fehler beim Zuruecksetzen der Tools");
+      toast.error("Fehler beim Zurücksetzen der Tools");
     } finally {
       setSaving(false);
     }
@@ -411,14 +437,9 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
       const body: Record<string, number> = {};
       if (editMaxTokens) body.maxTokensPerRun = parseInt(editMaxTokens);
       if (editDailyBudget) body.dailyTokenBudget = parseInt(editDailyBudget);
-      await mutate(
-        "patch",
-        `/api/system/companies/${companyId}/agents/${instanceId}`,
-        body
-      );
+      await patchAgent(instanceId, body);
       toast.success("Budget aktualisiert");
-      refetch();
-      setExpandedSection(null);
+      setExpandedId(null);
     } catch {
       toast.error("Fehler beim Speichern des Budgets");
     } finally {
@@ -426,22 +447,23 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
     }
   };
 
-  const openSection = (agentId: string, section: string, agent: AgentInstanceDetailResponse) => {
-    if (expandedId === agentId && expandedSection === section) {
+  const toggleExpanded = (agentId: string, agent: AgentInstanceDetailResponse) => {
+    if (expandedId === agentId) {
       setExpandedId(null);
-      setExpandedSection(null);
       return;
     }
     setExpandedId(agentId);
-    setExpandedSection(section);
-    if (section === "prompt") {
-      setEditPrompt(agent.customSystemPrompt || "");
-    } else if (section === "tools") {
-      setEditTools([...agent.allowedTools]);
-    } else if (section === "budget") {
-      setEditMaxTokens(agent.maxTokensPerRun !== agent.templateMaxTokensPerRun ? String(agent.maxTokensPerRun) : "");
-      setEditDailyBudget(agent.dailyTokenBudget !== agent.templateDailyTokenBudget ? String(agent.dailyTokenBudget) : "");
-    }
+    setEditTools([...agent.allowedTools]);
+    setEditMaxTokens(
+      agent.maxTokensPerRun !== agent.templateMaxTokensPerRun
+        ? String(agent.maxTokensPerRun)
+        : ""
+    );
+    setEditDailyBudget(
+      agent.dailyTokenBudget !== agent.templateDailyTokenBudget
+        ? String(agent.dailyTokenBudget)
+        : ""
+    );
   };
 
   const isCeo = (agent: AgentInstanceDetailResponse) =>
@@ -450,7 +472,10 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
   if (loading) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-muted-foreground">Laden...</p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Laden...
+        </div>
       </Card>
     );
   }
@@ -460,10 +485,23 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
       {/* KPI Summary */}
       {summary && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <KpiCard label="Aktive Agenten" value={`${summary.activeAgents}/${summary.totalAgents}`} />
+          <KpiCard
+            label="Aktive Agenten"
+            value={`${summary.activeAgents}/${summary.totalAgents}`}
+          />
           <KpiCard label="Fehler-Status" value={String(summary.errorAgents)} />
-          <KpiCard label="Modelle" value={summary.modelsInUse.length > 0 ? String(summary.modelsInUse.length) : "0"} />
-          <KpiCard label="Tages-Budget" value={formatTokens(summary.totalDailyBudget)} />
+          <KpiCard
+            label="Modelle"
+            value={
+              summary.modelsInUse.length > 0
+                ? String(summary.modelsInUse.length)
+                : "0"
+            }
+          />
+          <KpiCard
+            label="Tages-Budget"
+            value={formatTokens(summary.totalDailyBudget)}
+          />
         </div>
       )}
 
@@ -471,216 +509,338 @@ function CompanyAgentsTab({ companyId }: { companyId: string }) {
         <div className="mb-4">
           <h3 className="text-sm font-semibold">Agent-Instanzen</h3>
           <p className="text-xs text-muted-foreground">
-            Status, Model, Tools und Budget pro Agent-Instanz konfigurieren.
+            Status, Model, Prompt, Tools und Budget pro Agent konfigurieren.
           </p>
         </div>
         <div className="space-y-3">
-          {(agents || []).map((agent) => (
-            <div key={agent.instanceId} className="rounded-lg border">
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{agent.name}</span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        {agent.templateName}
-                      </Badge>
-                      {agent.hasCustomPrompt && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          Custom Prompt
-                        </Badge>
-                      )}
-                      {agent.hasToolOverride && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          Custom Tools
-                        </Badge>
-                      )}
+          {(agents || []).map((agent) => {
+            const expanded = expandedId === agent.instanceId;
+            return (
+              <div
+                key={agent.instanceId}
+                className={`rounded-lg border transition-colors ${
+                  agent.status === "INACTIVE" ? "opacity-60" : ""
+                }`}
+              >
+                {/* Header row */}
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${
+                        agent.status === "ACTIVE"
+                          ? "bg-primary/10"
+                          : "bg-muted"
+                      }`}
+                    >
+                      <Bot
+                        className={`h-4 w-4 ${
+                          agent.status === "ACTIVE"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
+                      />
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className={`inline-block h-1.5 w-1.5 rounded-full ${
-                          agent.activityStatus === "BUSY" ? "bg-primary animate-pulse" :
-                          agent.activityStatus === "ERROR" ? "bg-destructive" : "bg-success"
-                        }`} />
-                        {agent.activityStatus === "BUSY" ? "Aktiv" : agent.activityStatus === "ERROR" ? "Fehler" : "Bereit"}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium">
+                          {agent.name}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          {agent.templateName}
+                        </Badge>
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] ${
+                            agent.activityStatus === "BUSY"
+                              ? "text-primary"
+                              : agent.activityStatus === "ERROR"
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-1.5 w-1.5 rounded-full ${
+                              agent.activityStatus === "BUSY"
+                                ? "bg-primary animate-pulse"
+                                : agent.activityStatus === "ERROR"
+                                ? "bg-destructive"
+                                : "bg-emerald-500"
+                            }`}
+                          />
+                          {agent.activityStatus === "BUSY"
+                            ? "Aktiv"
+                            : agent.activityStatus === "ERROR"
+                            ? "Fehler"
+                            : "Bereit"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <span>{agent.toolCount} Tools</span>
+                        <span>·</span>
+                        <span>{modelLabel(agent.model)}</span>
+                        {agent.hasCustomPrompt && (
+                          <>
+                            <span>·</span>
+                            <span className="text-primary">Custom Prompt</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {/* Model selector */}
+                    <Select
+                      value={agent.model || undefined}
+                      onValueChange={(v) =>
+                        handleModelChange(agent.instanceId, v)
+                      }
+                    >
+                      <SelectTrigger className="w-[170px] h-8 text-xs">
+                        <SelectValue placeholder="Model wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {modelOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* Status toggle */}
+                    <div className="flex items-center gap-1.5">
+                      <Switch
+                        checked={agent.status === "ACTIVE"}
+                        onCheckedChange={() => handleStatusToggle(agent)}
+                        disabled={isCeo(agent) || togglingId === agent.instanceId}
+                      />
+                      <span className="text-[10px] text-muted-foreground w-8">
+                        {agent.status === "ACTIVE" ? "An" : "Aus"}
                       </span>
-                      <span>·</span>
-                      <span>{agent.toolCount} Tools</span>
-                      <span>·</span>
-                      <span>{MODEL_OPTIONS.find(m => m.value === agent.model)?.label || agent.model}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={agent.status === "ACTIVE"}
-                    onCheckedChange={() => handleStatusToggle(agent)}
-                    disabled={isCeo(agent)}
-                  />
-                  <Select
-                    value={agent.model}
-                    onValueChange={(v) => handleModelChange(agent.instanceId, v)}
+
+                {/* Action bar */}
+                <div className="border-t px-4 py-1.5 flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 gap-1"
+                    onClick={() => {
+                      setPromptDialogAgent(agent);
+                      setEditPrompt(agent.customSystemPrompt || "");
+                    }}
                   >
-                    <SelectTrigger className="w-[180px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MODEL_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Settings2 className="h-3 w-3" />
+                    Prompt bearbeiten
+                  </Button>
+                  <Button
+                    variant={expanded ? "secondary" : "ghost"}
+                    size="sm"
+                    className="text-xs h-7 gap-1"
+                    onClick={() => toggleExpanded(agent.instanceId, agent)}
+                  >
+                    <Wrench className="h-3 w-3" />
+                    Tools & Budget
+                  </Button>
                 </div>
-              </div>
 
-              {/* Expandable sections */}
-              <div className="border-t px-4 py-1.5 flex gap-1">
-                <Button
-                  variant={expandedId === agent.instanceId && expandedSection === "prompt" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => openSection(agent.instanceId, "prompt", agent)}
-                >
-                  <Settings2 className="h-3 w-3 mr-1" />
-                  Prompt
-                </Button>
-                <Button
-                  variant={expandedId === agent.instanceId && expandedSection === "tools" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => openSection(agent.instanceId, "tools", agent)}
-                >
-                  <Wrench className="h-3 w-3 mr-1" />
-                  Tools ({agent.toolCount})
-                </Button>
-                <Button
-                  variant={expandedId === agent.instanceId && expandedSection === "budget" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => openSection(agent.instanceId, "budget", agent)}
-                >
-                  <Zap className="h-3 w-3 mr-1" />
-                  Budget
-                </Button>
-              </div>
+                {/* Expanded: Tools + Budget */}
+                {expanded && (
+                  <div className="border-t px-4 py-4 space-y-5">
+                    {/* Tools */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium">
+                          Verfügbare Tools ({editTools.length})
+                        </Label>
+                        {agent.hasToolOverride && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7 gap-1"
+                            onClick={() =>
+                              handleResetTools(agent.instanceId)
+                            }
+                            disabled={saving}
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Auf Template zurücksetzen
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto rounded-md border p-3">
+                        {(availableTools || []).map((tool) => (
+                          <label
+                            key={tool.name}
+                            className="flex items-start gap-2 text-xs cursor-pointer hover:bg-muted/50 rounded p-1"
+                          >
+                            <Checkbox
+                              checked={editTools.includes(tool.name)}
+                              onCheckedChange={(checked) => {
+                                setEditTools((prev) =>
+                                  checked
+                                    ? [...prev, tool.name]
+                                    : prev.filter((t) => t !== tool.name)
+                                );
+                              }}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <span className="font-mono text-[11px]">
+                                {tool.name}
+                              </span>
+                              <span className="text-muted-foreground ml-1">
+                                ({tool.moduleId})
+                              </span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            handleSaveTools(agent.instanceId)
+                          }
+                          disabled={saving}
+                          className="gap-1"
+                        >
+                          {saving && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          <Save className="h-3.5 w-3.5" />
+                          Tools speichern
+                        </Button>
+                      </div>
+                    </div>
 
-              {/* Prompt section */}
-              {expandedId === agent.instanceId && expandedSection === "prompt" && (
-                <div className="border-t px-4 py-3 space-y-2">
-                  <Label className="text-xs">Custom System-Prompt</Label>
-                  <Textarea
-                    value={editPrompt}
-                    onChange={(e) => setEditPrompt(e.target.value)}
-                    rows={8}
-                    className="font-mono text-xs"
-                    placeholder="Leer = Template-Standard verwenden"
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setExpandedId(null); setExpandedSection(null); }}>
-                      Abbrechen
-                    </Button>
-                    <Button size="sm" onClick={() => handleSavePrompt(agent.instanceId)} disabled={saving}>
-                      <Save className="h-3.5 w-3.5 mr-1" />
-                      Speichern
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Tools section */}
-              {expandedId === agent.instanceId && expandedSection === "tools" && (
-                <div className="border-t px-4 py-3 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Verfuegbare Tools</Label>
-                    {agent.hasToolOverride && (
-                      <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleResetTools(agent.instanceId)} disabled={saving}>
-                        <RotateCcw className="h-3 w-3 mr-1" />
-                        Auf Template zuruecksetzen
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-64 overflow-y-auto rounded-md border p-3">
-                    {(availableTools || []).map((tool) => (
-                      <label key={tool.name} className="flex items-start gap-2 text-xs cursor-pointer hover:bg-muted/50 rounded p-1">
-                        <Checkbox
-                          checked={editTools.includes(tool.name)}
-                          onCheckedChange={(checked) => {
-                            setEditTools(prev =>
-                              checked ? [...prev, tool.name] : prev.filter(t => t !== tool.name)
-                            );
-                          }}
-                          className="mt-0.5"
-                        />
-                        <div>
-                          <span className="font-mono text-[11px]">{tool.name}</span>
-                          <span className="text-muted-foreground ml-1">({tool.moduleId})</span>
+                    {/* Budget */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">
+                        Token-Budget
+                      </Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">
+                            Max Tokens pro Lauf
+                          </Label>
+                          <Input
+                            type="number"
+                            min={256}
+                            max={8192}
+                            value={editMaxTokens}
+                            onChange={(e) =>
+                              setEditMaxTokens(e.target.value)
+                            }
+                            placeholder={`Template: ${agent.templateMaxTokensPerRun}`}
+                            className="font-mono text-sm"
+                          />
                         </div>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setExpandedId(null); setExpandedSection(null); }}>
-                      Abbrechen
-                    </Button>
-                    <Button size="sm" onClick={() => handleSaveTools(agent.instanceId)} disabled={saving}>
-                      <Save className="h-3.5 w-3.5 mr-1" />
-                      Tools speichern
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Budget section */}
-              {expandedId === agent.instanceId && expandedSection === "budget" && (
-                <div className="border-t px-4 py-3 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Max Tokens pro Lauf</Label>
-                      <Input
-                        type="number"
-                        min={256}
-                        max={8192}
-                        value={editMaxTokens}
-                        onChange={(e) => setEditMaxTokens(e.target.value)}
-                        placeholder={`Template: ${agent.templateMaxTokensPerRun}`}
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-[10px] text-muted-foreground">Template-Standard: {agent.templateMaxTokensPerRun}</p>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Tages-Token-Budget</Label>
-                      <Input
-                        type="number"
-                        min={1000}
-                        value={editDailyBudget}
-                        onChange={(e) => setEditDailyBudget(e.target.value)}
-                        placeholder={`Template: ${agent.templateDailyTokenBudget}`}
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-[10px] text-muted-foreground">Template-Standard: {agent.templateDailyTokenBudget}</p>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">
+                            Tages-Token-Budget
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1000}
+                            value={editDailyBudget}
+                            onChange={(e) =>
+                              setEditDailyBudget(e.target.value)
+                            }
+                            placeholder={`Template: ${agent.templateDailyTokenBudget}`}
+                            className="font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            handleSaveBudget(agent.instanceId)
+                          }
+                          disabled={saving}
+                          className="gap-1"
+                        >
+                          {saving && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          <Save className="h-3.5 w-3.5" />
+                          Budget speichern
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setExpandedId(null); setExpandedSection(null); }}>
-                      Abbrechen
-                    </Button>
-                    <Button size="sm" onClick={() => handleSaveBudget(agent.instanceId)} disabled={saving}>
-                      <Save className="h-3.5 w-3.5 mr-1" />
-                      Budget speichern
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       </Card>
+
+      {/* Prompt Dialog */}
+      <Dialog
+        open={promptDialogAgent !== null}
+        onOpenChange={(open) => {
+          if (!open) setPromptDialogAgent(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              System-Prompt: {promptDialogAgent?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Eigenen System-Prompt für diese Agent-Instanz definieren. Leer
+              lassen, um den Template-Standard zu verwenden.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={editPrompt}
+            onChange={(e) => setEditPrompt(e.target.value)}
+            rows={14}
+            className="font-mono text-xs"
+            placeholder="Leer = Template-Standard verwenden&#10;&#10;Beispiel:&#10;Du bist ein spezialisierter Agent für Produktionsüberwachung.&#10;Antworte immer auf Deutsch und priorisiere kritische Maschinenstörungen."
+          />
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <div>
+              {promptDialogAgent?.hasCustomPrompt && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeletePrompt}
+                  disabled={saving}
+                  className="text-destructive hover:text-destructive gap-1"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Auf Template zurücksetzen
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPromptDialogAgent(null)}
+              >
+                Abbrechen
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSavePrompt}
+                disabled={saving}
+                className="gap-1"
+              >
+                {saving && <Loader2 className="h-3 w-3 animate-spin" />}
+                <Save className="h-3.5 w-3.5" />
+                Speichern
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -705,7 +865,7 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
   const [apiKey, setApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState("claude-sonnet-4-20250514");
   const [models, setModels] = useState<ModelInfo[]>(
-    MODEL_OPTIONS.map((o) => ({ id: o.value, name: o.label }))
+    MODEL_OPTIONS.map((o) => ({ id: o.value, name: o.label })),
   );
   const [modelsLoading, setModelsLoading] = useState(false);
   const [temperature, setTemperature] = useState<number>(1.0);
