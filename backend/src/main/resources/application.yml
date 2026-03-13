@@ -47,5 +47,12 @@ encryption:
 cors:
   allowed-origins: http://localhost:3000,http://localhost:4201
 
+system-admin:
+  email: ${SYSTEM_ADMIN_EMAIL:#{null}}
+  password: ${SYSTEM_ADMIN_PASSWORD:#{null}}
+
+system-llm:
+  api-key: ${SYSTEM_LLM_API_KEY:#{null}}
+
 server:
   port: 8080

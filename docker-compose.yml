@@ -48,6 +48,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost}
+      SYSTEM_ADMIN_EMAIL: ${SYSTEM_ADMIN_EMAIL:-}
+      SYSTEM_ADMIN_PASSWORD: ${SYSTEM_ADMIN_PASSWORD:-}
+      SYSTEM_LLM_API_KEY: ${SYSTEM_LLM_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
