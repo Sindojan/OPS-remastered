@@ -26,7 +26,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserEntity> findAll(UUID tenantId, Pageable pageable) {
-        return userRepository.findByTenantId(tenantId, pageable);
+        return userRepository.findByTenantIdAndRoleNot(tenantId, Role.SYSTEM_ADMIN, pageable);
     }
 
     @Transactional(readOnly = true)

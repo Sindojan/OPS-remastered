@@ -33,7 +33,6 @@ import {
   Building2,
   DollarSign,
   Bell,
-  Blocks,
 } from "lucide-react";
 import type {
   ApiResponse,
@@ -57,7 +56,6 @@ import { UsersTab } from "@/components/settings/users-tab";
 import { CompanyTab } from "@/components/settings/company-tab";
 import { BudgetTab } from "@/components/settings/budget-tab";
 import { NotificationsTab } from "@/components/settings/notifications-tab";
-import { ModulesTab } from "@/components/settings/modules-tab";
 
 // ============ Role Agent Defaults Tab ============
 
@@ -609,12 +607,6 @@ export default function SettingsPage() {
               <Bell className="h-3.5 w-3.5" />
               Benachrichtigungen
             </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="modules" className="gap-1.5">
-                <Blocks className="h-3.5 w-3.5" />
-                Module
-              </TabsTrigger>
-            )}
           </TabsList>
 
           <TabsContent value="roles">
@@ -647,11 +639,6 @@ export default function SettingsPage() {
             <NotificationsTab />
           </TabsContent>
 
-          {isAdmin && (
-            <TabsContent value="modules">
-              <ModulesTab />
-            </TabsContent>
-          )}
         </Tabs>
       </div>
   );

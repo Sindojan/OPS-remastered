@@ -14,6 +14,7 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     Optional<UserEntity> findByEmail(String email);
     Optional<UserEntity> findByEmailAndTenantId(String email, UUID tenantId);
     Page<UserEntity> findByTenantId(UUID tenantId, Pageable pageable);
+    Page<UserEntity> findByTenantIdAndRoleNot(UUID tenantId, Role role, Pageable pageable);
     boolean existsByEmail(String email);
     boolean existsByEmailAndTenantId(String email, UUID tenantId);
     long countByTenantId(UUID tenantId);

@@ -18,6 +18,8 @@ import {
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
 import type { ChatSessionResponse, LlmConfig, AgentRunDetail } from "@/types/api";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 interface AgentPanelProps {
   open: boolean;
   onClose: () => void;
@@ -76,7 +78,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     if (!token) return;
     setSessionsLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/chat/sessions", {
+      const res = await fetch(`${API_BASE}/api/chat/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -96,7 +98,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
       if (!token) return;
       try {
         const res = await fetch(
-          `http://localhost:8080/api/chat/sessions/${sessionId}/messages`,
+          `${API_BASE}/api/chat/sessions/${sessionId}/messages`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const json = await res.json();
@@ -179,7 +181,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     if (!token) return;
     try {
       await fetch(
-        `http://localhost:8080/api/chat/sessions/${deleteTarget.id}`,
+        `${API_BASE}/api/chat/sessions/${deleteTarget.id}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -203,7 +205,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     if (!token) return;
     setLastRunLoading(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/agent-instances/${agent.id}/last-run`, {
+      const res = await fetch(`${API_BASE}/api/agent-instances/${agent.id}/last-run`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -240,7 +242,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
 
     try {
       const token = localStorage.getItem("owlsburg_token");
-      const response = await fetch("http://localhost:8080/api/chat/message", {
+      const response = await fetch(`${API_BASE}/api/chat/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
