@@ -55,7 +55,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -65,7 +65,7 @@ services:
       context: ./frontend
       dockerfile: ../docker/frontend.Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost/api}
+        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost}
     container_name: owlsburg-frontend
     depends_on:
       - backend

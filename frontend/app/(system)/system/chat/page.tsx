@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2, Plus, Trash2 } from "lucide-react";
 import { MarkdownMessage } from "@/components/chat/markdown-message";
+import {
+  DelegationCard,
+  LEAD_LABELS,
+  formatTokens,
+  type ChatMessage,
+  type LeadStepInfo,
+  type TokenUsage,
+} from "@/components/chat/delegation-card";
 import { useSystemChatSessions, useSystemChatMessages } from "@/hooks/api/use-system-chat";
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
 import type { SystemChatSession } from "@/types/system-agent";
@@ -11,11 +19,6 @@ import type { SystemChatSession } from "@/types/system-agent";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 // Well-known System CEO instance ID from V23 seed
 const SYSTEM_CEO_ID = "b0000000-0000-0000-0000-000000000001";
-
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
 
 export default function SystemChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -28,6 +31,13 @@ export default function SystemChatPage() {
 
   const { data: sessions, refetch: refetchSessions } = useSystemChatSessions();
   const { data: dbMessages, refetch: refetchMessages } = useSystemChatMessages(sessionId);
+
+  const sessionTokenTotal = useMemo(() => {
+    return messages.reduce((sum, m) => {
+      if (m.usage) return sum + m.usage.inputTokens + m.usage.outputTokens;
+      return sum;
+    }, 0);
+  }, [messages]);
 
   // Load messages when session changes
   useEffect(() => {
@@ -52,9 +62,7 @@ export default function SystemChatPage() {
     setInput("");
     setStreaming(true);
 
-    // Add user message immediately
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
-    // Add empty assistant placeholder
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
@@ -114,7 +122,126 @@ export default function SystemChatPage() {
               });
             }
 
+            if (data.delegation) {
+              const label = LEAD_LABELS[data.delegation.lead] || data.delegation.lead;
+              const delegationId = data.delegation.id || undefined;
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "tool" as const,
+                  content: `Delegiere an **${label}**...\n_${data.delegation.task}_`,
+                  toolCalls: [{ name: "delegate_to_lead", input: data.delegation.task }],
+                  leadSteps: [],
+                  delegationId,
+                },
+              ]);
+            }
+
+            if (data.leadStep) {
+              const step: LeadStepInfo = {
+                type: data.leadStep.type,
+                toolName: data.leadStep.toolName,
+                content: data.leadStep.content,
+                iteration: data.leadStep.iteration,
+              };
+              const matchId = data.leadStep.id;
+              setMessages((prev) => {
+                const updated = [...prev];
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (updated[i].role === "tool" && updated[i].delegationId === matchId) {
+                    const m = { ...updated[i] };
+                    m.leadSteps = [...(m.leadSteps || []), step];
+                    updated[i] = m;
+                    break;
+                  }
+                }
+                return updated;
+              });
+            }
+
+            if (data.delegationResult) {
+              const matchId = data.delegationResult.id;
+              setMessages((prev) => {
+                const updated = [...prev];
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (
+                    updated[i].role === "tool" &&
+                    (matchId ? updated[i].delegationId === matchId :
+                      updated[i].toolCalls?.[0]?.name === "delegate_to_lead")
+                  ) {
+                    const label = LEAD_LABELS[data.delegationResult.lead] || data.delegationResult.lead;
+                    const m = { ...updated[i] };
+                    const stepCount = m.leadSteps?.length || 0;
+                    m.content = `**${label}** hat geantwortet` + (stepCount > 0 ? ` (${stepCount} Schritte)` : "");
+                    const toolCalls = [...(m.toolCalls || [])];
+                    toolCalls[0] = { ...toolCalls[0], result: data.delegationResult.result };
+                    m.toolCalls = toolCalls;
+                    updated[i] = m;
+                    break;
+                  }
+                }
+                if (updated[updated.length - 1]?.role !== "assistant") {
+                  updated.push({ role: "assistant", content: "" });
+                }
+                return updated;
+              });
+            }
+
+            if (data.toolCall) {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "tool" as const,
+                  content: `\u{1F527} **${data.toolCall.name}** wird aufgerufen...`,
+                  toolCalls: [{ name: data.toolCall.name, input: data.toolCall.input }],
+                },
+              ]);
+            }
+
+            if (data.toolResult) {
+              setMessages((prev) => {
+                const updated = [...prev];
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (
+                    updated[i].role === "tool" &&
+                    updated[i].toolCalls?.[0]?.name === data.toolResult.name
+                  ) {
+                    const m = { ...updated[i] };
+                    const toolCalls = [...(m.toolCalls || [])];
+                    toolCalls[0] = { ...toolCalls[0], result: data.toolResult.result };
+                    m.toolCalls = toolCalls;
+                    m.content = `\u{2705} **${data.toolResult.name}** abgeschlossen`;
+                    updated[i] = m;
+                    break;
+                  }
+                }
+                if (updated[updated.length - 1]?.role !== "assistant") {
+                  updated.push({ role: "assistant", content: "" });
+                }
+                return updated;
+              });
+            }
+
+            if (data.usage) {
+              setMessages((prev) => {
+                const updated = [...prev];
+                for (let i = updated.length - 1; i >= 0; i--) {
+                  if (updated[i].role === "assistant" && updated[i].content) {
+                    updated[i] = { ...updated[i], usage: data.usage as TokenUsage };
+                    break;
+                  }
+                }
+                return updated;
+              });
+            }
+
             if (data.done) {
+              setMessages((prev) => {
+                if (prev[prev.length - 1]?.role === "assistant" && !prev[prev.length - 1]?.content) {
+                  return prev.slice(0, -1);
+                }
+                return prev;
+              });
               refetchSessions();
             }
 
@@ -225,8 +352,18 @@ export default function SystemChatPage() {
 
       {/* Chat area */}
       <div className="flex flex-1 flex-col rounded-lg border bg-card">
+        {/* Header with token counter */}
+        <div className="flex items-center justify-between border-b px-4 py-2">
+          <span className="text-sm font-semibold">System CEO Chat</span>
+          {sessionTokenTotal > 0 && (
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {formatTokens(sessionTokenTotal)} tok
+            </span>
+          )}
+        </div>
+
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center">
               <div className="text-center text-muted-foreground">
@@ -238,29 +375,41 @@ export default function SystemChatPage() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              className={
+                msg.role === "user"
+                  ? "ml-8 rounded-lg rounded-tr-sm bg-primary/10 p-3 text-sm text-foreground"
+                  : msg.role === "tool"
+                  ? "mx-4 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground font-mono"
+                  : "mr-8 rounded-lg rounded-tl-sm bg-muted p-3 text-sm text-foreground"
+              }
             >
-              <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                }`}
-              >
-                {msg.role === "assistant" ? (
-                  <>
-                    <MarkdownMessage content={msg.content} />
-                    {streaming && i === messages.length - 1 && !msg.content && (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
-                    {streaming && i === messages.length - 1 && msg.content && (
-                      <span className="inline-block w-1.5 h-4 bg-foreground/70 animate-pulse ml-0.5" />
-                    )}
-                  </>
+              {msg.role === "assistant" ? (
+                <>
+                  <MarkdownMessage
+                    content={
+                      streaming && i === messages.length - 1
+                        ? msg.content + " \u258B"
+                        : msg.content
+                    }
+                  />
+                  {streaming && i === messages.length - 1 && !msg.content && (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                  {msg.usage && (
+                    <div className="mt-1.5 text-[10px] text-muted-foreground/60 font-mono">
+                      {"\u2191"}{formatTokens(msg.usage.inputTokens)} {"\u2193"}{formatTokens(msg.usage.outputTokens)}
+                    </div>
+                  )}
+                </>
+              ) : msg.role === "tool" ? (
+                msg.delegationId != null ? (
+                  <DelegationCard msg={msg} isStreaming={streaming} />
                 ) : (
-                  msg.content
-                )}
-              </div>
+                  <MarkdownMessage content={msg.content} />
+                )
+              ) : (
+                <span className="whitespace-pre-wrap">{msg.content}</span>
+              )}
             </div>
           ))}
         </div>

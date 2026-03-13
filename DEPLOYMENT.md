@@ -20,19 +20,118 @@ cd frontend && npx next dev --port 4201
 - Backend: http://localhost:8080
 - MinIO Console: http://localhost:9002
 
-## Produktion deployen
+---
+
+## Produktion deployen (Docker Compose)
+
+### Voraussetzungen
+
+- Docker + Docker Compose (v2)
+- Min. 4 GB RAM, 2 CPU Cores
+- Für HTTPS: TLS-Zertifikat (fullchain.pem + privkey.pem)
+
+### 1. Umgebungsvariablen konfigurieren
 
 ```bash
-# 1. Konfiguration erstellen
 cp .env.example .env
-# Werte in .env ausfuellen (sichere Passwoerter!)
-
-# 2. Starten
-./scripts/prod.sh
 ```
 
-- Anwendung: http://localhost (Port 80)
-- Alle Services hinter Nginx Reverse Proxy
+`.env` bearbeiten und sichere Werte setzen:
+
+```env
+DB_PASSWORD=<sicheres-passwort>
+MINIO_ROOT_USER=owlsburg-admin
+MINIO_ROOT_PASSWORD=<sicheres-passwort>
+JWT_SECRET=<openssl rand -base64 48>
+ENCRYPTION_KEY=<openssl rand -base64 48>
+CORS_ALLOWED_ORIGINS=http://mein-server.example.com
+API_URL=http://mein-server.example.com
+```
+
+Secrets generieren:
+```bash
+openssl rand -base64 48  # fuer JWT_SECRET
+openssl rand -base64 48  # fuer ENCRYPTION_KEY
+```
+
+**Wichtig:** `API_URL` ist die externe URL des Servers (ohne `/api` Suffix).
+
+### 2. Starten (HTTP)
+
+```bash
+docker compose up -d
+```
+
+Erster Start dauert etwas laenger (Images bauen, DB-Migrationen).
+
+Status pruefen:
+```bash
+docker compose ps
+docker compose logs -f backend  # Migrations-Log beobachten
+```
+
+Health-Check:
+```bash
+curl http://localhost/actuator/health
+# Erwartete Antwort: {"status":"UP"}
+```
+
+### 3. Erster Login
+
+**System-Admin:**
+- E-Mail: `philipp.ebert@strate-software.com`
+- Passwort: `N0n3Xx.Blender`
+- Zugriff auf Systemverwaltung
+
+**Default Tenant-Admin:**
+- E-Mail: `software@sindojan.de`
+- Passwort: `root1234`
+- Zugriff auf Owlsburg OPS Plattform
+
+**Passwoerter nach dem ersten Login aendern!**
+
+### 4. Company einrichten (System-Admin)
+
+1. Als System-Admin einloggen
+2. Systemverwaltung → Firmen → Company-Details pruefen
+3. **LLM-Tab:** Anthropic API-Key hinterlegen (fuer Agent-System)
+4. **Module-Tab:** Gewuenschte Module aktivieren
+5. **Agenten-Tab:** Agent-Status pruefen
+
+### 5. Agent-System testen
+
+1. Als Tenant-Admin einloggen (software@sindojan.de)
+2. Agent-Button in der Sidebar klicken (CEO-Chat)
+3. Nachricht senden → CEO antwortet mit Tool-Calls und Delegationen
+
+---
+
+## HTTPS / TLS Setup
+
+### Zertifikate bereitstellen
+
+```bash
+mkdir -p docker/nginx/ssl
+cp /pfad/zu/fullchain.pem docker/nginx/ssl/fullchain.pem
+cp /pfad/zu/privkey.pem docker/nginx/ssl/privkey.pem
+```
+
+### .env anpassen
+
+```env
+CORS_ALLOWED_ORIGINS=https://mein-server.example.com
+API_URL=https://mein-server.example.com
+```
+
+### Mit TLS starten
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+HTTP-Requests werden automatisch auf HTTPS umgeleitet.
+
+---
 
 ## Monitoring starten (optional)
 
@@ -69,3 +168,34 @@ docker compose logs -f nginx
 ```bash
 docker compose ps
 ```
+
+## Troubleshooting
+
+### Backend startet nicht
+```bash
+docker compose logs backend
+```
+Haeufige Ursachen: DB-Passwort falsch, Port belegt.
+
+### Frontend zeigt "Netzwerkfehler"
+- `API_URL` in `.env` pruefen – muss die externe URL sein (ohne `/api`)
+- `CORS_ALLOWED_ORIGINS` muss die Frontend-URL enthalten
+
+### Chat streamt nicht
+- Nginx hat SSE-Locations fuer `/api/chat/` und `/api/system/chat/`
+- `proxy_buffering off` muss gesetzt sein
+
+### Migrationen pruefen
+```bash
+docker compose exec postgres psql -U owlsburg_app -d owlsburg_ops -c "SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
+```
+
+## Updates deployen
+
+```bash
+git pull
+docker compose build
+docker compose up -d
+```
+
+Backend-Migrationen laufen automatisch beim Start.

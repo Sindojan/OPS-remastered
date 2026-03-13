@@ -449,6 +449,9 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V19__agent_activity_status.sql | activity_status (IDLE/BUSY/ERROR), last_run_id, activity_status_changed_at auf agent_instances |
 | V20__agent_memory_types.sql | memory_type, run_id, confidence Felder auf agent_memories, 4-Typ Memory-System |
 | V21__agent_llm_enhancements.sql | settings JSONB auf tenant_llm_config, allowed_tools_override JSONB auf agent_instances |
+| V22__scale_indexes.sql | Performance-Indizes für Agent-Tabellen (Runs, Messages, Memory) |
+| V23__system_agents.sql | System-Level Agent-Infrastruktur (Templates, Instances, Runs, Steps, Chat – ohne tenant_id/RLS) |
+| V24__fix_system_admin_email.sql | System-Admin E-Mail Fix (`.com` Endung fehlte in V7) |
 
 ## Default Admin
 
@@ -459,7 +462,7 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 
 ## System Admin
 
-- **Email:** philipp.ebert@strate-software
+- **Email:** philipp.ebert@strate-software.com
 - **Passwort:** N0n3Xx.Blender
 - **Rolle:** SYSTEM_ADMIN
 - Wird in V7 Migration angelegt (kein Tenant, bypassed RLS)
@@ -499,7 +502,16 @@ Deaktivierung: Kein Sidebar-Eintrag, kein API-Zugriff (403), keine Agent-Tools. 
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-03-10
-**Session:** Zwischenblock (Per-Tenant Agent & LLM Config) + Chat-Bugfixes
-**Status:** Backend ~570 Java-Dateien, V21 Migration. Per-Tenant LLM-Konfiguration (Temperature, MaxTokens, dynamische Modell-Ladung). Instance-Level Agent-Overrides (Tools, Budget, Model). LLM/Agent-Settings aus normalen Tenant-Settings entfernt → nur noch in Systemverwaltung. 3 kritische Chat-Bugs gefixt: AgentRunEntity fehlte tenant_id, JSONB-Escaping für Plain-Text-Output, SSE-Emitter-Robustheit nach Client-Disconnect.
-**Nächste Blöcke:** Neues großes Feature (TBD)
+**Datum:** 2026-03-13
+**Session:** Test-Deployment Vorbereitung
+**Status:** Backend ~570 Java-Dateien, V24 Migration. 4 Deployment-Bugs gefixt: System-Admin E-Mail (.com fehlte), Docker API_URL Double-/api, Nginx SSE für System-Chat, TLS-Support. Docker-Compose prod-Override + DEPLOYMENT.md erstellt.
+**Nächste Blöcke:** Testserver-Deployment, dann neues Feature (TBD)
+
+### Deployment-Vorbereitung ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| BUG-1 | V24 Migration: System-Admin E-Mail Fix (.com Endung) | - |
+| BUG-2 | Docker API_URL Default Fix (ohne /api) | - |
+| BUG-3 | Nginx SSE-Config für /api/system/chat/ | - |
+| BUG-4 | TLS/HTTPS: docker-compose.prod.yml + owlsburg-ssl.conf | - |
+| DOCS | DEPLOYMENT.md erweitert (Produktion, TLS, Troubleshooting) | - |

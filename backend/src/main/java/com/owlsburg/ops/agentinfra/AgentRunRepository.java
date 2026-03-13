@@ -22,6 +22,9 @@ public interface AgentRunRepository extends JpaRepository<AgentRunEntity, UUID> 
 
     List<AgentRunEntity> findByStartedAtBetween(Instant from, Instant to);
 
+    @Query(value = "SELECT ar.* FROM agent_runs ar JOIN agent_instances ai ON ar.instance_id = ai.id WHERE ai.tenant_id = :tenantId AND ar.started_at BETWEEN :from AND :to", nativeQuery = true)
+    List<AgentRunEntity> findByTenantIdAndStartedAtBetween(@Param("tenantId") UUID tenantId, @Param("from") Instant from, @Param("to") Instant to);
+
     Optional<AgentRunEntity> findTopByInstanceIdOrderByStartedAtDesc(UUID instanceId);
 
     // ─── Native queries for System Admin tenant aggregation (bypasses RLS) ───

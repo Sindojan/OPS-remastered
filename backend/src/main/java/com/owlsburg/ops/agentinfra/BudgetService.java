@@ -33,32 +33,49 @@ public class BudgetService {
     @Transactional(readOnly = true)
     public BudgetOverviewResponse getOverview() {
         LocalDate now = LocalDate.now(ZoneOffset.UTC);
+        Instant[] range = buildRanges(now);
 
-        // Current month range
-        LocalDate monthStart = now.withDayOfMonth(1);
-        Instant monthStartInstant = monthStart.atStartOfDay(ZoneOffset.UTC).toInstant();
-        Instant nowInstant = now.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
-
-        // Last 30 days range
-        LocalDate thirtyDaysAgo = now.minusDays(30);
-        Instant thirtyDaysAgoInstant = thirtyDaysAgo.atStartOfDay(ZoneOffset.UTC).toInstant();
-
-        // Load instance name lookup
         Map<UUID, String> instanceNames = new HashMap<>();
         instanceRepository.findAll().forEach(inst -> instanceNames.put(inst.getId(), inst.getName()));
 
-        // Fetch runs for both periods (last 30 days covers current month too)
-        List<AgentRunEntity> last30DaysRuns = runRepository.findByStartedAtBetween(thirtyDaysAgoInstant, nowInstant);
+        List<AgentRunEntity> last30DaysRuns = runRepository.findByStartedAtBetween(range[1], range[0]);
 
-        // Filter current month runs
+        return buildOverview(last30DaysRuns, instanceNames, range[2]);
+    }
+
+    @Transactional(readOnly = true)
+    public BudgetOverviewResponse getOverviewForTenant(UUID tenantId) {
+        LocalDate now = LocalDate.now(ZoneOffset.UTC);
+        Instant[] range = buildRanges(now);
+
+        Map<UUID, String> instanceNames = new HashMap<>();
+        instanceRepository.findByTenantId(tenantId).forEach(inst -> instanceNames.put(inst.getId(), inst.getName()));
+
+        List<AgentRunEntity> last30DaysRuns = runRepository.findByTenantIdAndStartedAtBetween(tenantId, range[1], range[0]);
+
+        return buildOverview(last30DaysRuns, instanceNames, range[2]);
+    }
+
+    /** Returns [nowInstant, thirtyDaysAgoInstant, monthStartInstant] */
+    private Instant[] buildRanges(LocalDate now) {
+        LocalDate monthStart = now.withDayOfMonth(1);
+        Instant monthStartInstant = monthStart.atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant nowInstant = now.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        LocalDate thirtyDaysAgo = now.minusDays(30);
+        Instant thirtyDaysAgoInstant = thirtyDaysAgo.atStartOfDay(ZoneOffset.UTC).toInstant();
+        return new Instant[]{ nowInstant, thirtyDaysAgoInstant, monthStartInstant };
+    }
+
+    private BudgetOverviewResponse buildOverview(List<AgentRunEntity> last30DaysRuns,
+                                                  Map<UUID, String> instanceNames,
+                                                  Instant monthStartInstant) {
+
         List<AgentRunEntity> currentMonthRuns = last30DaysRuns.stream()
                 .filter(r -> r.getStartedAt() != null && !r.getStartedAt().isBefore(monthStartInstant))
                 .toList();
 
         BudgetPeriod currentMonth = buildPeriod(currentMonthRuns, instanceNames);
         BudgetPeriod last30Days = buildPeriod(last30DaysRuns, instanceNames);
-
-        // Daily usage for last 30 days
         List<DailyUsage> dailyUsage = buildDailyUsage(last30DaysRuns);
 
         return new BudgetOverviewResponse(currentMonth, last30Days, dailyUsage);

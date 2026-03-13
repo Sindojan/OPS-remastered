@@ -200,8 +200,7 @@ public class SystemCompanyController {
     @GetMapping("/{id}/budget")
     public ResponseEntity<ApiResponse<BudgetOverviewResponse>> getBudget(@PathVariable UUID id) {
         companyService.findById(id); // ensure exists
-        return withTenantContext(id, () ->
-                ResponseEntity.ok(ApiResponse.ok(budgetService.getOverview())));
+        return ResponseEntity.ok(ApiResponse.ok(budgetService.getOverviewForTenant(id)));
     }
 
     // ─── Agent Management ──────────────────────────────────
