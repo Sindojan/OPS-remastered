@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -33,6 +35,7 @@ public class AgentInstanceEntity extends BaseEntity {
     @Column(nullable = false)
     private AgentInstanceStatus status = AgentInstanceStatus.INACTIVE;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String config = "{}";
 
@@ -52,6 +55,7 @@ public class AgentInstanceEntity extends BaseEntity {
     @Column(name = "activity_status_changed_at")
     private Instant activityStatusChangedAt;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "allowed_tools_override", columnDefinition = "jsonb")
     private String allowedToolsOverride;
 }

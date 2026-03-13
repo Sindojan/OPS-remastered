@@ -7,6 +7,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "tenant_llm_config")
@@ -24,6 +26,7 @@ public class TenantLlmConfigEntity extends BaseEntity {
     @Column(name = "default_model", length = 100)
     private String defaultModel;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String settings = "{}";
 }

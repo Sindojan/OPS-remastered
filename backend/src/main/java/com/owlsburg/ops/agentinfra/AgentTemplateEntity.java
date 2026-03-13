@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "agent_templates")
@@ -25,9 +27,11 @@ public class AgentTemplateEntity extends BaseEntity {
     @Column(name = "base_prompt", columnDefinition = "TEXT")
     private String basePrompt;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "allowed_tools", nullable = false, columnDefinition = "jsonb")
     private String allowedTools = "[]";
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "trigger_types", nullable = false, columnDefinition = "jsonb")
     private String triggerTypes = "[]";
 
