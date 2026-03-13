@@ -67,9 +67,9 @@ public class SimpleChatController {
                 TenantContext.setCurrentTenant(tenantId);
                 simpleChatService.streamChat(request, userId, emitter);
             } catch (Exception e) {
-                log.error("Unexpected error in chat stream thread", e);
+                log.error("CHAT-DEBUG: Exception class={}, message={}", e.getClass().getName(), e.getMessage(), e);
                 try {
-                    emitter.send(SseEmitter.event().data("{\"error\":\"Interner Fehler\"}"));
+                    emitter.send(SseEmitter.event().data("{\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}"));
                     emitter.complete();
                 } catch (Exception ex) {
                     emitter.completeWithError(ex);

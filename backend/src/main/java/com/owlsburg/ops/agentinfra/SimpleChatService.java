@@ -211,12 +211,12 @@ public class SimpleChatService {
             sendErrorAndComplete(emitter, e.getMessage());
             return sessionId;
         } catch (Exception e) {
-            log.error("Chat streaming error", e);
+            log.error("CHAT-DEBUG: Chat streaming error class={}, message={}", e.getClass().getName(), e.getMessage(), e);
             failRunSafe(agentRunId, e.getMessage());
             if (activitySet) safeUpdateActivity(instanceId, AgentActivityStatus.ERROR);
             safeLinkLastRun(instanceId, agentRunId);
             reportIncidentSafe(instanceId, "RUNTIME_ERROR", e.getMessage());
-            sendErrorAndComplete(emitter, "Interner Fehler");
+            sendErrorAndComplete(emitter, "Fehler: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return sessionId;
         } finally {
             // Guarantee: if run still PENDING/RUNNING, mark FAILED
