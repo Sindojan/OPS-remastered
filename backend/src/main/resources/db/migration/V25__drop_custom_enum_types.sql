@@ -21,58 +21,52 @@ ALTER TABLE agent_runs ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
 ALTER TABLE agent_runs ALTER COLUMN trigger_type TYPE VARCHAR(20) USING trigger_type::text;
 
 -- Agent Run Steps
-ALTER TABLE agent_run_steps ALTER COLUMN step_type TYPE VARCHAR(20) USING step_type::text;
+ALTER TABLE agent_run_steps ALTER COLUMN type TYPE VARCHAR(20) USING type::text;
 
 -- Stock Movements
-ALTER TABLE stock_movements ALTER COLUMN movement_type TYPE VARCHAR(20) USING movement_type::text;
+ALTER TABLE stock_movements ALTER COLUMN type TYPE VARCHAR(20) USING type::text;
 
 -- Conversations
 ALTER TABLE conversations ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
 ALTER TABLE conversations ALTER COLUMN source TYPE VARCHAR(20) USING source::text;
 ALTER TABLE conversations ALTER COLUMN priority TYPE VARCHAR(20) USING priority::text;
 
--- Messages
-ALTER TABLE messages ALTER COLUMN sender_type TYPE VARCHAR(20) USING sender_type::text;
+-- Conversation Messages
+ALTER TABLE conversation_messages ALTER COLUMN sender_type TYPE VARCHAR(20) USING sender_type::text;
 
 -- Quality Checks
 ALTER TABLE quality_checks ALTER COLUMN result TYPE VARCHAR(20) USING result::text;
 
--- Maintenance Schedules
-ALTER TABLE maintenance_schedules ALTER COLUMN maintenance_type TYPE VARCHAR(20) USING maintenance_type::text;
+-- Maintenance Intervals
+ALTER TABLE maintenance_intervals ALTER COLUMN type TYPE VARCHAR(20) USING type::text;
 
 -- Maintenance Records
 ALTER TABLE maintenance_records ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
 
--- Addresses
-ALTER TABLE addresses ALTER COLUMN address_type TYPE VARCHAR(20) USING address_type::text;
+-- Customer Addresses
+ALTER TABLE customer_addresses ALTER COLUMN type TYPE VARCHAR(20) USING type::text;
 
 -- Absences
-ALTER TABLE absences ALTER COLUMN absence_type TYPE VARCHAR(20) USING absence_type::text;
+ALTER TABLE absences ALTER COLUMN type TYPE VARCHAR(20) USING type::text;
 ALTER TABLE absences ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
 
 -- Time Entries
-ALTER TABLE time_entries ALTER COLUMN entry_type TYPE VARCHAR(20) USING entry_type::text;
+ALTER TABLE time_entries ALTER COLUMN type TYPE VARCHAR(20) USING type::text;
 
 -- Parts
-ALTER TABLE parts ALTER COLUMN part_type TYPE VARCHAR(20) USING part_type::text;
+ALTER TABLE parts ALTER COLUMN type TYPE VARCHAR(20) USING type::text;
 
 -- BOM Versions
 ALTER TABLE bom_versions ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
 
--- Process Plan Versions
-ALTER TABLE process_plan_versions ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
+-- Process Plans
+ALTER TABLE process_plans ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
 
 -- Documents
 ALTER TABLE documents ALTER COLUMN status TYPE VARCHAR(20) USING status::text;
 
--- Domain Events
-ALTER TABLE domain_events ALTER COLUMN severity TYPE VARCHAR(20) USING severity::text;
-
 -- Conversation Links
-ALTER TABLE conversation_links ALTER COLUMN reference_type TYPE VARCHAR(20) USING reference_type::text;
-
--- Agent Incidents
-ALTER TABLE agent_incidents ALTER COLUMN severity TYPE VARCHAR(20) USING severity::text;
+ALTER TABLE conversation_links ALTER COLUMN linked_type TYPE VARCHAR(50) USING linked_type::text;
 
 -- Now drop all custom enum types
 DROP TYPE IF EXISTS job_status CASCADE;
