@@ -55,9 +55,8 @@ public class AgentExecutionService {
         AgentInstanceEntity instance = instanceService.findById(run.getInstanceId());
         AgentTemplateEntity template = templateService.findById(instance.getTemplateId());
 
-        // Update status to RUNNING
-        run.setStatus(AgentRunStatus.RUNNING);
-        run.setStartedAt(java.time.Instant.now());
+        // Update status to RUNNING and persist
+        runService.markRunning(runId);
 
         // Set BUSY
         safeUpdateActivity(instance.getId(), AgentActivityStatus.BUSY);
@@ -70,6 +69,7 @@ public class AgentExecutionService {
             return;
         }
 
+        try {
         // Load allowed tools
         UUID tenantUuid = UUID.fromString(TenantContext.getCurrentTenant());
         List<AgentTool> tools = toolRegistry.getToolsForInstance(template, tenantUuid);
@@ -216,6 +216,23 @@ public class AgentExecutionService {
         safeLinkLastRun(instance.getId(), runId);
 
         log.info("Run {} completed: {} tokens, ${}", runId, totalTokens, cost);
+        } catch (Exception e) {
+            log.error("Run {} failed with exception: {}", runId, e.getMessage(), e);
+            try { runService.failRun(runId, e.getMessage()); } catch (Exception ex) { log.debug("Failed to mark run as failed: {}", ex.getMessage()); }
+            safeUpdateActivity(instance.getId(), AgentActivityStatus.ERROR);
+            safeLinkLastRun(instance.getId(), runId);
+            reportIncidentSafe(instance.getId(), "RUNTIME_ERROR", e.getMessage());
+        } finally {
+            // Guarantee: reset BUSY to IDLE if still BUSY
+            try {
+                AgentInstanceEntity inst = instanceService.findById(instance.getId());
+                if (inst.getActivityStatus() == AgentActivityStatus.BUSY) {
+                    instanceService.updateActivityStatus(instance.getId(), AgentActivityStatus.IDLE);
+                }
+            } catch (Exception e) {
+                log.debug("Failed to reset BUSY status: {}", e.getMessage());
+            }
+        }
     }
 
     private String handleDelegation(LlmToolUse toolUse, AgentInstanceEntity parentInstance, int delegationDepth) {

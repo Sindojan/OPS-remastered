@@ -881,7 +881,7 @@ export default function EmployeeDetailPage() {
                 }
               >
                 <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder="Typ wählen..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="VACATION">Vacation</SelectItem>
@@ -1045,7 +1045,7 @@ export default function EmployeeDetailPage() {
                 }
               >
                 <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder="Typ wählen..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CLOCK_IN">Clock In</SelectItem>

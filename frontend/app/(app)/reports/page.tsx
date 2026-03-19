@@ -330,7 +330,7 @@ export default function ReportsPage() {
         "Auftragsnummer",
         "Titel",
         "Status",
-        "Prioritaet",
+        "Priorität",
         "Menge",
         "Frist",
         "Erstellt am",

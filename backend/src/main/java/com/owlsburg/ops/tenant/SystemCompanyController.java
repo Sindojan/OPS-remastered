@@ -287,7 +287,7 @@ public class SystemCompanyController {
     }
 
     private static final Set<String> VALID_MODELS = Set.of(
-            "claude-opus-4-20250514", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001");
+            "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001");
 
     @PatchMapping("/{id}/agents/{instanceId}")
     public ResponseEntity<ApiResponse<Void>> updateAgent(@PathVariable UUID id, @PathVariable UUID instanceId,
@@ -481,7 +481,7 @@ public class SystemCompanyController {
                 return config.get("model").asText();
             }
         } catch (Exception ignored) {}
-        return "claude-sonnet-4-20250514";
+        return "claude-sonnet-4-6";
     }
 
     private List<String> resolveInstanceTools(AgentInstanceEntity inst, AgentTemplateEntity template) {

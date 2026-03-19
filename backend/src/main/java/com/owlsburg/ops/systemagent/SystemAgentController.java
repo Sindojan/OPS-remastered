@@ -230,7 +230,7 @@ public class SystemAgentController {
                 return config.get("model").asText();
             }
         } catch (Exception ignored) {}
-        return "claude-sonnet-4-20250514";
+        return "claude-sonnet-4-6";
     }
 
     private List<String> resolveInstanceTools(SystemAgentInstanceEntity inst, SystemAgentTemplateEntity template) {

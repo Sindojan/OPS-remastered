@@ -89,7 +89,7 @@ type ArticleFormValues = z.infer<typeof articleSchema>;
 const supplierSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich"),
   contactName: z.string().optional(),
-  email: z.string().email("Ungueltige E-Mail").optional().or(z.literal("")),
+  email: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
   phone: z.string().optional(),
   address: z.string().optional(),
   taxId: z.string().optional(),
@@ -528,7 +528,7 @@ export default function InventoryPage() {
               emptyState={{
                 icon: <Truck className="h-8 w-8 text-muted-foreground/40" />,
                 title: "Noch keine Lieferanten",
-                description: "Lieferanten hinzufuegen, um Ihre Lieferkette zu verwalten.",
+                description: "Lieferanten hinzufügen, um Ihre Lieferkette zu verwalten.",
                 action: (
                   <Button
                     size="sm"
@@ -552,7 +552,7 @@ export default function InventoryPage() {
           <DialogHeader>
             <DialogTitle>Neuer Artikel</DialogTitle>
             <DialogDescription>
-              Neuen Artikel zum Lagersystem hinzufuegen.
+              Neuen Artikel zum Lagersystem hinzufügen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -650,7 +650,7 @@ export default function InventoryPage() {
           <DialogHeader>
             <DialogTitle>Neuer Lieferant</DialogTitle>
             <DialogDescription>
-              Neuen Lieferanten zur Lieferkette hinzufuegen.
+              Neuen Lieferanten zur Lieferkette hinzufügen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

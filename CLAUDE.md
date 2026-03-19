@@ -452,6 +452,8 @@ Flache Struktur in `resources/db/migration/` (kein public/tenant Split mehr):
 | V22__scale_indexes.sql | Performance-Indizes für Agent-Tabellen (Runs, Messages, Memory) |
 | V23__system_agents.sql | System-Level Agent-Infrastruktur (Templates, Instances, Runs, Steps, Chat – ohne tenant_id/RLS) |
 | V24__fix_system_admin_email.sql | System-Admin E-Mail Fix (`.com` Endung fehlte in V7) |
+| V25__drop_custom_enum_types.sql | PostgreSQL Custom-ENUM-Typen (severity_level, incident_type etc.) durch VARCHAR ersetzen |
+| V26__fix_severity_columns_and_cleanup.sql | severity-Spalten re-add (von V25 CASCADE gedroppt), TIMESTAMPTZ Konvertierung |
 
 ## Default Admin
 
@@ -502,16 +504,41 @@ Deaktivierung: Kein Sidebar-Eintrag, kein API-Zugriff (403), keine Agent-Tools. 
 
 ## Zuletzt bearbeitet
 
-**Datum:** 2026-03-13
-**Session:** Test-Deployment Vorbereitung
-**Status:** Backend ~570 Java-Dateien, V24 Migration. 4 Deployment-Bugs gefixt: System-Admin E-Mail (.com fehlte), Docker API_URL Double-/api, Nginx SSE für System-Chat, TLS-Support. Docker-Compose prod-Override + DEPLOYMENT.md erstellt.
-**Nächste Blöcke:** Testserver-Deployment, dann neues Feature (TBD)
+**Datum:** 2026-03-19
+**Session:** System-Review & Stabilisierung
+**Status:** Backend ~580 Java-Dateien, V26 Migration. Vollständiger System-Review mit 6 spezialisierten Agents (89 Findings). ~25 CRITICAL/HIGH Bugs gefixt. Design Guide erstellt.
+**Uncommitted:** 35 Dateien (System-Review Fixes + V26 Migration + DESIGN_GUIDE.md) – noch nicht committed.
+**Nächste Blöcke:** Commit der Review-Fixes, dann neues Feature (TBD)
 
 ### Deployment-Vorbereitung ✅
 | Task | Beschreibung | Commit |
 |------|-------------|--------|
-| BUG-1 | V24 Migration: System-Admin E-Mail Fix (.com Endung) | - |
-| BUG-2 | Docker API_URL Default Fix (ohne /api) | - |
-| BUG-3 | Nginx SSE-Config für /api/system/chat/ | - |
-| BUG-4 | TLS/HTTPS: docker-compose.prod.yml + owlsburg-ssl.conf | - |
-| DOCS | DEPLOYMENT.md erweitert (Produktion, TLS, Troubleshooting) | - |
+| BUG-1 | V24 Migration: System-Admin E-Mail Fix (.com Endung) | `f56ad38` |
+| BUG-2 | Docker API_URL Default Fix (ohne /api) | `f56ad38` |
+| BUG-3 | Nginx SSE-Config für /api/system/chat/ | `f56ad38` |
+| BUG-4 | TLS/HTTPS: docker-compose.prod.yml + owlsburg-ssl.conf | `f56ad38` |
+| DOCS | DEPLOYMENT.md erweitert (Produktion, TLS, Troubleshooting) | `f56ad38` |
+
+### Deployment-Bugfixes ✅
+| Task | Beschreibung | Commit |
+|------|-------------|--------|
+| FIX-ENV | System-Admin Credentials + LLM API-Key via .env (SystemAdminInitializer) | `4a0e0cc` |
+| FIX-JSONB | @JdbcTypeCode(SqlTypes.JSON) auf alle 27 JSONB-Felder (13 Entities) | `0ac2fa3` |
+| FIX-CHAT | Chat API-URL Fix, SYSTEM_ADMIN aus Userliste, Modules-Tab entfernt | `c38beda` |
+| FIX-ENUM | V25: PostgreSQL Custom-ENUM-Typen durch VARCHAR ersetzt | `ed088b5` |
+
+### System-Review & Stabilisierung (uncommitted)
+| Task | Beschreibung |
+|------|-------------|
+| SEC-FIX | @PreAuthorize auf AgentInstance/Template/Run/Absence/TenantConfig Controller |
+| SEC-FIX | JWT/Encryption Secrets: Defaults entfernt, nur in application-dev.yml |
+| SEC-FIX | DocumentController: uploadedBy aus SecurityContext statt Request-Param |
+| SEC-FIX | UserController: Tenant-Check auf getById |
+| BUG-FIX | Employee Deactivate: status: "INACTIVE" fehlte im Request |
+| BUG-FIX | SSE Error: Keine rohen Exceptions mehr an Client |
+| BUG-FIX | CeoAgent: SseEmitter Leak Fix (finally-Block) |
+| BUG-FIX | AgentExecutionService: BUSY-Recovery mit try-finally |
+| BUG-FIX | Model-IDs normalisiert (claude-sonnet-4-6 statt alte IDs) |
+| DATA-FIX | V26 Migration: severity-Spalten re-add, TIMESTAMPTZ Konvertierung |
+| FE-FIX | Umlaut-Fixes in 12+ Frontend-Dateien |
+| DOCS | DESIGN_GUIDE.md erstellt (Farben, Typografie, Komponenten) |

@@ -277,7 +277,7 @@ public class SystemChatService {
         } catch (Exception e) {
             log.debug("Failed to parse instance config: {}", e.getMessage());
         }
-        return "claude-sonnet-4-20250514";
+        return "claude-sonnet-4-6";
     }
 
     private BigDecimal calculateCost(String model, int inputTokens, int outputTokens) {

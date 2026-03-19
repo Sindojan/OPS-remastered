@@ -51,10 +51,10 @@ public final class CeoAgent implements Agent {
 
     @Override
     public AgentResult execute(AgentContext context, String task) {
+        SseEmitter dummy = new SseEmitter(300_000L);
+        dummy.onTimeout(dummy::complete);
+        dummy.onError(e -> dummy.complete());
         try {
-            SseEmitter dummy = new SseEmitter(300_000L);
-            dummy.onTimeout(dummy::complete);
-            dummy.onError(e -> dummy.complete());
             StringBuilder result = new StringBuilder();
             int[] tokenAccumulator = new int[2];
             List<ToolCallLog> toolCallLogs = new ArrayList<>();
@@ -63,6 +63,8 @@ public final class CeoAgent implements Agent {
         } catch (Exception e) {
             log.error("CEO non-streaming execution error", e);
             return AgentResult.error("Interner Fehler bei der Ausführung");
+        } finally {
+            try { dummy.complete(); } catch (Exception ignored) {}
         }
     }
 

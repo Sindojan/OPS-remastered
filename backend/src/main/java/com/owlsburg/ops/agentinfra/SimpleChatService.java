@@ -211,7 +211,7 @@ public class SimpleChatService {
             sendErrorAndComplete(emitter, e.getMessage());
             return sessionId;
         } catch (Exception e) {
-            log.error("CHAT-DEBUG: Chat streaming error class={}, message={}", e.getClass().getName(), e.getMessage(), e);
+            log.error("Chat streaming error: {}", e.getMessage(), e);
             failRunSafe(agentRunId, e.getMessage());
             if (activitySet) safeUpdateActivity(instanceId, AgentActivityStatus.ERROR);
             safeLinkLastRun(instanceId, agentRunId);
@@ -295,7 +295,7 @@ public class SimpleChatService {
         } catch (Exception e) {
             log.debug("Failed to parse instance config: {}", e.getMessage());
         }
-        return "claude-sonnet-4-20250514";
+        return "claude-sonnet-4-6";
     }
 
     private BigDecimal calculateCost(String model, int inputTokens, int outputTokens) {

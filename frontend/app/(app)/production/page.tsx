@@ -464,7 +464,7 @@ export default function ProductionOverviewPage() {
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger size="sm" className="w-[130px]">
-                <SelectValue placeholder="Priority" />
+                <SelectValue placeholder="Priorität" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Prioritäten</SelectItem>

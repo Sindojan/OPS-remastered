@@ -57,7 +57,7 @@ const createEmployeeSchema = z.object({
   employeeNumber: z.string().min(1, "Personalnummer ist erforderlich"),
   firstName: z.string().min(1, "Vorname ist erforderlich"),
   lastName: z.string().min(1, "Nachname ist erforderlich"),
-  email: z.string().email("Ungueltige E-Mail").optional().or(z.literal("")),
+  email: z.string().email("Ungültige E-Mail").optional().or(z.literal("")),
   phone: z.string().optional(),
   role: z.string().optional(),
   password: z.string().optional(),
@@ -302,6 +302,7 @@ export default function EmployeesPage() {
         firstName: deactivateTarget.firstName,
         lastName: deactivateTarget.lastName,
         employeeNumber: deactivateTarget.employeeNumber,
+        status: "INACTIVE",
       });
       if (result) {
         toast.success("Mitarbeiter erfolgreich deaktiviert");
@@ -333,7 +334,7 @@ export default function EmployeesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Mitarbeiter"
-        description="Mitarbeiterverwaltung und Personuebersicht"
+        description="Mitarbeiterverwaltung und Personübersicht"
         actions={
           <Button
             size="sm"
@@ -446,7 +447,7 @@ export default function EmployeesPage() {
         title="Mitarbeiter deaktivieren"
         description={
           deactivateTarget
-            ? `Moechten Sie ${deactivateTarget.firstName} ${deactivateTarget.lastName} (${deactivateTarget.employeeNumber}) wirklich deaktivieren? Der Mitarbeiter erscheint nicht mehr in aktiven Personallisten.`
+            ? `Möchten Sie ${deactivateTarget.firstName} ${deactivateTarget.lastName} (${deactivateTarget.employeeNumber}) wirklich deaktivieren? Der Mitarbeiter erscheint nicht mehr in aktiven Personallisten.`
             : ""
         }
         variant="destructive"
@@ -575,7 +576,7 @@ export default function EmployeesPage() {
                     onCheckedChange={(v) => setUseRandomPassword(!!v)}
                   />
                   <Label htmlFor="random-pw" className="text-sm font-normal">
-                    Zufaelliges Passwort generieren
+                    Zufälliges Passwort generieren
                   </Label>
                 </div>
                 {!useRandomPassword && (

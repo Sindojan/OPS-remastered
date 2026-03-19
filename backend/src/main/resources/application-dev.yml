@@ -16,6 +16,9 @@ jwt:
   expiration: 86400000      # 24 hours
   refresh-expiration: 604800000  # 7 days
 
+encryption:
+  key: dev-encryption-key-change-in-prod-32!
+
 logging:
   level:
     com.owlsburg.ops: DEBUG

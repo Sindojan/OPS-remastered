@@ -395,7 +395,7 @@ export default function MachinesPage() {
           <div className="flex items-center gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-9 w-40 text-sm">
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder="Alle Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Alle Status</SelectItem>

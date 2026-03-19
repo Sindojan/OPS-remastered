@@ -36,7 +36,7 @@ public class LlmConfigController {
                     config.getApiKeyEnc() != null && !config.getApiKeyEnc().isBlank()
             );
         } else {
-            response = new LlmConfigResponse("anthropic", "claude-sonnet-4-20250514", false);
+            response = new LlmConfigResponse("anthropic", "claude-sonnet-4-6", false);
         }
 
         return ResponseEntity.ok(ApiResponse.ok(response));

@@ -40,7 +40,7 @@ public class LlmConfigService {
     @Transactional
     public TenantLlmConfigEntity saveConfig(String provider, String apiKey, String defaultModel) {
         String providerName = (provider != null && !provider.isBlank()) ? provider : "anthropic";
-        String model = (defaultModel != null && !defaultModel.isBlank()) ? defaultModel : "claude-sonnet-4-20250514";
+        String model = (defaultModel != null && !defaultModel.isBlank()) ? defaultModel : "claude-sonnet-4-6";
 
         // Validate provider exists
         providerRegistry.getProvider(providerName);

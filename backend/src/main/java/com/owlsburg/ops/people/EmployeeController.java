@@ -57,7 +57,7 @@ public class EmployeeController {
             credentials = new EmployeeCreateResponse.UserCredentials(
                     user.getId(), user.getEmail(), role.name(), password
             );
-            log.info("Auto-created user {} with role {} for employee {}", user.getEmail(), role, request.employeeNumber());
+            log.info("Auto-created user for employee {} with role {}", request.employeeNumber(), role);
         }
 
         // Create employee with linked userId
