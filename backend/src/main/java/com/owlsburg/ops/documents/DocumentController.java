@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,9 +35,10 @@ public class DocumentController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "category", required = false) String category,
-            @RequestParam(value = "uploadedBy", required = false) UUID uploadedBy) {
+            @RequestParam(value = "category", required = false) String category) {
 
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UUID uploadedBy = (UUID) auth.getPrincipal();
         DocumentEntity doc = documentService.upload(file, title, description, category, uploadedBy);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(DocumentResponse.from(doc), "Document uploaded"));

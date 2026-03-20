@@ -719,10 +719,10 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
       {/* Delete confirmation dialog */}
       <ConfirmationDialog
         open={!!deleteTarget}
-        title="Konversation loeschen"
-        description={`Moechten Sie die Konversation "${deleteTarget?.title || "Neue Konversation"}" wirklich loeschen? Diese Aktion kann nicht rueckgaengig gemacht werden.`}
+        title="Konversation löschen"
+        description={`Möchten Sie die Konversation "${deleteTarget?.title || "Neue Konversation"}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
         variant="destructive"
-        confirmLabel="Loeschen"
+        confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         onConfirm={handleDeleteSession}
         onCancel={() => setDeleteTarget(null)}

@@ -63,8 +63,13 @@ public class UserController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<UserResponse>> getById(@PathVariable UUID id) {
-        UserResponse user = UserResponse.from(userService.findById(id));
-        return ResponseEntity.ok(ApiResponse.ok(user));
+        UserEntity user = userService.findById(id);
+        // Defense-in-depth: verify user belongs to current tenant
+        UUID tenantId = UUID.fromString(TenantContext.getCurrentTenant());
+        if (!tenantId.equals(user.getTenantId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Zugriff verweigert");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(UserResponse.from(user)));
     }
 
     @PostMapping

@@ -6,6 +6,7 @@ import com.owlsburg.ops.common.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class AgentRunController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentRunResponse>> startRun(
             @Valid @RequestBody StartAgentRunRequest request) {
 
@@ -86,6 +88,7 @@ public class AgentRunController {
     }
 
     @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentRunResponse>> completeRun(
             @PathVariable UUID id,
             @Valid @RequestBody CompleteAgentRunRequest request) {
@@ -95,6 +98,7 @@ public class AgentRunController {
     }
 
     @PatchMapping("/{id}/fail")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentRunResponse>> failRun(
             @PathVariable UUID id,
             @Valid @RequestBody FailAgentRunRequest request) {
@@ -104,6 +108,7 @@ public class AgentRunController {
     }
 
     @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentRunResponse>> cancelRun(@PathVariable UUID id) {
         AgentRunEntity run = runService.cancelRun(id);
         return ResponseEntity.ok(ApiResponse.ok(AgentRunResponse.from(run), "Agent run cancelled"));
@@ -116,6 +121,7 @@ public class AgentRunController {
     }
 
     @PostMapping("/trigger")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<String>> triggerRun(
             @Valid @RequestBody StartAgentRunRequest request) {
         orchestrator.triggerRun(

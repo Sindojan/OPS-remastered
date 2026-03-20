@@ -124,7 +124,7 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
 
   const handleSubmit = async () => {
     if (!name.trim() || !slug.trim() || !adminEmail.trim() || !adminFirstName.trim() || !adminLastName.trim()) {
-      toast.error("Bitte fuellen Sie alle Pflichtfelder aus.");
+      toast.error("Bitte füllen Sie alle Pflichtfelder aus.");
       return;
     }
 
@@ -257,7 +257,7 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
                 className="font-mono"
               />
               <p className="text-[11px] text-muted-foreground">
-                Automatisch aus dem Namen generiert. Bearbeiten zum Ueberschreiben.
+                Automatisch aus dem Namen generiert. Bearbeiten zum Überschreiben.
               </p>
             </div>
 
@@ -317,7 +317,7 @@ function CreateCompanyModal({ open, onClose, onSuccess }: CreateCompanyModalProp
                   onCheckedChange={(v) => setRandomPassword(!!v)}
                 />
                 <Label htmlFor="random-pw" className="text-sm font-normal">
-                  Zufaelliges Passwort generieren
+                  Zufälliges Passwort generieren
                 </Label>
               </div>
 
@@ -386,7 +386,7 @@ function SuspendDialog({ open, company, onConfirm, onCancel }: SuspendDialogProp
         <DialogHeader>
           <DialogTitle>Unternehmen sperren</DialogTitle>
           <DialogDescription>
-            &quot;{company?.name}&quot; sperren? Benutzer koennen sich nicht mehr
+            &quot;{company?.name}&quot; sperren? Benutzer können sich nicht mehr
             anmelden.
           </DialogDescription>
         </DialogHeader>
@@ -396,7 +396,7 @@ function SuspendDialog({ open, company, onConfirm, onCancel }: SuspendDialogProp
             id="suspend-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Grund fuer die Sperrung..."
+            placeholder="Grund für die Sperrung..."
             rows={3}
           />
         </div>
@@ -496,11 +496,11 @@ export default function CompaniesPage() {
     if (!deleteTarget) return;
     try {
       await mutate("delete", `/api/system/companies/${deleteTarget.id}`);
-      toast.success(`"${deleteTarget.name}" geloescht.`);
+      toast.success(`"${deleteTarget.name}" gelöscht.`);
       setDeleteTarget(null);
       refetch();
     } catch {
-      toast.error("Fehler beim Loeschen des Unternehmens.");
+      toast.error("Fehler beim Löschen des Unternehmens.");
     }
   };
 
@@ -579,7 +579,7 @@ export default function CompaniesPage() {
       }
 
       actions.push({
-        label: "Loeschen",
+        label: "Löschen",
         icon: <Trash2 className="h-3.5 w-3.5" />,
         onClick: (r) => setDeleteTarget(r),
         variant: "destructive",
@@ -611,7 +611,7 @@ export default function CompaniesPage() {
         onClick: (r) => setReactivateTarget(r),
       },
       {
-        label: "Loeschen",
+        label: "Löschen",
         icon: <Trash2 className="h-3.5 w-3.5" />,
         onClick: (r) => setDeleteTarget(r),
         variant: "destructive" as const,
@@ -668,7 +668,7 @@ export default function CompaniesPage() {
                 <SelectItem value="ALL">Alle Status</SelectItem>
                 <SelectItem value="ACTIVE">Aktiv</SelectItem>
                 <SelectItem value="SUSPENDED">Gesperrt</SelectItem>
-                <SelectItem value="DELETED">Geloescht</SelectItem>
+                <SelectItem value="DELETED">Gelöscht</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPlan} onValueChange={setFilterPlan}>
@@ -676,7 +676,7 @@ export default function CompaniesPage() {
                 <SelectValue placeholder="Plan" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Alle Plaene</SelectItem>
+                <SelectItem value="ALL">Alle Pläne</SelectItem>
                 <SelectItem value="BASIC">Basic</SelectItem>
                 <SelectItem value="PROFESSIONAL">Professional</SelectItem>
                 <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
@@ -709,7 +709,7 @@ export default function CompaniesPage() {
           <DialogHeader>
             <DialogTitle>Unternehmen reaktivieren</DialogTitle>
             <DialogDescription>
-              &quot;{reactivateTarget?.name}&quot; reaktivieren? Benutzer koennen sich
+              &quot;{reactivateTarget?.name}&quot; reaktivieren? Benutzer können sich
               wieder anmelden.
             </DialogDescription>
           </DialogHeader>
@@ -740,10 +740,10 @@ export default function CompaniesPage() {
                 <Trash2 className="h-4 w-4 text-destructive" />
               </div>
               <div>
-                <DialogTitle className="text-base">Unternehmen loeschen</DialogTitle>
+                <DialogTitle className="text-base">Unternehmen löschen</DialogTitle>
                 <DialogDescription className="mt-1 text-sm">
-                  &quot;{deleteTarget?.name}&quot; endgueltig loeschen? Diese
-                  Aktion kann nicht rueckgaengig gemacht werden. Alle Daten gehen verloren.
+                  &quot;{deleteTarget?.name}&quot; endgültig löschen? Diese
+                  Aktion kann nicht rückgängig gemacht werden. Alle Daten gehen verloren.
                 </DialogDescription>
               </div>
             </div>
@@ -757,7 +757,7 @@ export default function CompaniesPage() {
               Abbrechen
             </Button>
             <Button variant="destructive" size="sm" onClick={handleDelete}>
-              Loeschen
+              Löschen
             </Button>
           </DialogFooter>
         </DialogContent>

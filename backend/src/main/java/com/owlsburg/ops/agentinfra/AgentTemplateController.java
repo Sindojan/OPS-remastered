@@ -9,6 +9,7 @@ import com.owlsburg.ops.common.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -54,6 +55,7 @@ public class AgentTemplateController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentTemplateResponse>> create(
             @Valid @RequestBody CreateAgentTemplateRequest request) {
 
@@ -75,6 +77,7 @@ public class AgentTemplateController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentTemplateResponse>> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateAgentTemplateRequest request) {
@@ -96,6 +99,7 @@ public class AgentTemplateController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentTemplateResponse>> patch(
             @PathVariable UUID id,
             @RequestBody java.util.Map<String, Object> body) {
@@ -140,6 +144,7 @@ public class AgentTemplateController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         templateService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Agent template deleted"));

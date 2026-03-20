@@ -248,13 +248,13 @@ export default function InboxPage() {
     try {
       const result = await mutations.updatePriority(selectedId, newPriority);
       if (result) {
-        toast.success("Prioritaet aktualisiert");
+        toast.success("Priorität aktualisiert");
         setPriorityDialogOpen(false);
         refetch();
         refetchConversation();
       }
     } catch (err) {
-      toast.error("Fehler beim Aktualisieren der Prioritaet", {
+      toast.error("Fehler beim Aktualisieren der Priorität", {
         description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
@@ -422,10 +422,10 @@ export default function InboxPage() {
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger className="h-7 flex-1 text-xs">
-                  <SelectValue placeholder="Prioritaet" />
+                  <SelectValue placeholder="Priorität" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">Alle Prioritaeten</SelectItem>
+                  <SelectItem value="ALL">Alle Prioritäten</SelectItem>
                   {PRIORITIES.map((p) => (
                     <SelectItem key={p} value={p}>
                       {humanizeStatus(p)}
@@ -521,7 +521,7 @@ export default function InboxPage() {
             <div className="flex flex-1 flex-col items-center justify-center gap-3">
               <Mail className="h-10 w-10 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">
-                Konversation auswaehlen
+                Konversation auswählen
               </p>
             </div>
           ) : (
@@ -579,7 +579,7 @@ export default function InboxPage() {
                       setPriorityDialogOpen(true);
                     }}
                   >
-                    Prioritaet
+                    Priorität
                   </Button>
                   <Button
                     variant="outline"
@@ -675,7 +675,7 @@ export default function InboxPage() {
               <div className="border-t p-3">
                 <div className="flex items-end gap-2">
                   <Textarea
-                    placeholder="Nachricht eingeben... (Enter zum Senden, Shift+Enter fuer neue Zeile)"
+                    placeholder="Nachricht eingeben... (Enter zum Senden, Shift+Enter für neue Zeile)"
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -739,7 +739,7 @@ export default function InboxPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Prioritaet</Label>
+                <Label>Priorität</Label>
                 <Select
                   value={form.watch("priority") || "NORMAL"}
                   onValueChange={(v) => form.setValue("priority", v)}
@@ -794,7 +794,7 @@ export default function InboxPage() {
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Status aendern</DialogTitle>
+            <DialogTitle>Status ändern</DialogTitle>
             <DialogDescription>
               Konversationsstatus aktualisieren.
             </DialogDescription>
@@ -851,14 +851,14 @@ export default function InboxPage() {
       <Dialog open={priorityDialogOpen} onOpenChange={setPriorityDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Prioritaet aendern</DialogTitle>
+            <DialogTitle>Priorität ändern</DialogTitle>
             <DialogDescription>
-              Konversationsprioritaet aktualisieren.
+              Konversationspriorität aktualisieren.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Aktuelle Prioritaet</Label>
+              <Label>Aktuelle Priorität</Label>
               {selectedConversation && (
                 <DomainStatusBadge
                   variant={getPriorityVariant(selectedConversation.priority)}
@@ -868,7 +868,7 @@ export default function InboxPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>Neue Prioritaet</Label>
+              <Label>Neue Priorität</Label>
               <Select value={newPriority} onValueChange={setNewPriority}>
                 <SelectTrigger className="text-sm">
                   <SelectValue />
@@ -896,7 +896,7 @@ export default function InboxPage() {
               onClick={handleChangePriority}
               disabled={mutations.loading}
             >
-              {mutations.loading ? "Aktualisieren..." : "Prioritaet aktualisieren"}
+              {mutations.loading ? "Aktualisieren..." : "Priorität aktualisieren"}
             </Button>
           </DialogFooter>
         </DialogContent>

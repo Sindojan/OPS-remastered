@@ -39,7 +39,7 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
         code: ({ children, className }) => {
           const isInline = !className;
           return isInline ? (
-            <code className="bg-black/30 text-teal-300 px-1 py-0.5 rounded text-xs font-mono">
+            <code className="bg-muted text-primary px-1 py-0.5 rounded text-xs font-mono">
               {children}
             </code>
           ) : (
@@ -47,7 +47,7 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
           );
         },
         pre: ({ children }) => (
-          <pre className="bg-black/40 rounded-md p-3 mb-2 overflow-x-auto text-xs">
+          <pre className="bg-muted rounded-md p-3 mb-2 overflow-x-auto text-xs">
             {children}
           </pre>
         ),
@@ -59,19 +59,19 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
           </div>
         ),
         th: ({ children }) => (
-          <th className="border border-white/20 px-2 py-1 bg-white/10 text-left font-semibold">
+          <th className="border border-border px-2 py-1 bg-muted/50 text-left font-semibold">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="border border-white/20 px-2 py-1">{children}</td>
+          <td className="border border-border px-2 py-1">{children}</td>
         ),
         strong: ({ children }) => (
           <strong className="font-semibold">{children}</strong>
         ),
         em: ({ children }) => <em className="italic">{children}</em>,
         blockquote: ({ children }) => (
-          <blockquote className="border-l-2 border-teal-500 pl-3 mb-2 text-muted-foreground italic">
+          <blockquote className="border-l-2 border-primary pl-3 mb-2 text-muted-foreground italic">
             {children}
           </blockquote>
         ),
@@ -81,7 +81,7 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-teal-400 underline hover:text-teal-300"
+            className="text-primary underline hover:text-primary/80"
           >
             {children}
           </a>

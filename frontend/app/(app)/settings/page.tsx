@@ -33,6 +33,7 @@ import {
   Building2,
   DollarSign,
   Bell,
+  Database,
 } from "lucide-react";
 import type {
   ApiResponse,
@@ -56,6 +57,7 @@ import { UsersTab } from "@/components/settings/users-tab";
 import { CompanyTab } from "@/components/settings/company-tab";
 import { BudgetTab } from "@/components/settings/budget-tab";
 import { NotificationsTab } from "@/components/settings/notifications-tab";
+import { OdooTab } from "@/components/settings/odoo-tab";
 
 // ============ Role Agent Defaults Tab ============
 
@@ -196,7 +198,7 @@ function RoleAgentTab() {
                   }
                 >
                   <SelectTrigger className="w-full max-w-sm">
-                    <SelectValue placeholder="Agent auswaehlen...">
+                    <SelectValue placeholder="Agent auswählen...">
                       {currentName ? (
                         <span className="flex items-center gap-1.5">
                           <Bot className="h-3.5 w-3.5 text-muted-foreground" />
@@ -204,7 +206,7 @@ function RoleAgentTab() {
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                          Agent auswaehlen...
+                          Agent auswählen...
                         </span>
                       )}
                     </SelectValue>
@@ -313,7 +315,7 @@ function KnowledgeSettingsTab() {
       setDeleteCatId(null);
       refetchCats();
     } catch (err) {
-      toast.error("Fehler beim Loeschen der Kategorie", {
+      toast.error("Fehler beim Löschen der Kategorie", {
         description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
@@ -343,7 +345,7 @@ function KnowledgeSettingsTab() {
       setDeleteTagId(null);
       refetchTags();
     } catch (err) {
-      toast.error("Fehler beim Loeschen des Tags", {
+      toast.error("Fehler beim Löschen des Tags", {
         description: err instanceof Error ? err.message : "Unbekannter Fehler",
       });
     }
@@ -532,21 +534,21 @@ function KnowledgeSettingsTab() {
       {/* Delete Confirmations */}
       <ConfirmationDialog
         open={!!deleteCatId}
-        title="Kategorie loeschen?"
-        description="Die Kategorie wird unwiderruflich geloescht. Artikel mit dieser Kategorie behalten ihren Inhalt."
+        title="Kategorie löschen?"
+        description="Die Kategorie wird unwiderruflich gelöscht. Artikel mit dieser Kategorie behalten ihren Inhalt."
         onConfirm={handleDeleteCat}
         onCancel={() => setDeleteCatId(null)}
         variant="destructive"
-        confirmLabel="Kategorie loeschen"
+        confirmLabel="Kategorie löschen"
       />
       <ConfirmationDialog
         open={!!deleteTagId}
-        title="Tag loeschen?"
-        description="Der Tag wird von allen Artikeln entfernt und unwiderruflich geloescht."
+        title="Tag löschen?"
+        description="Der Tag wird von allen Artikeln entfernt und unwiderruflich gelöscht."
         onConfirm={handleDeleteTag}
         onCancel={() => setDeleteTagId(null)}
         variant="destructive"
-        confirmLabel="Tag loeschen"
+        confirmLabel="Tag löschen"
       />
     </div>
   );
@@ -607,6 +609,12 @@ export default function SettingsPage() {
               <Bell className="h-3.5 w-3.5" />
               Benachrichtigungen
             </TabsTrigger>
+            {isAdmin && user?.enabledModules?.includes("odoo") && (
+              <TabsTrigger value="odoo" className="gap-1.5">
+                <Database className="h-3.5 w-3.5" />
+                Odoo
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="roles">
@@ -638,6 +646,12 @@ export default function SettingsPage() {
           <TabsContent value="notifications">
             <NotificationsTab />
           </TabsContent>
+
+          {isAdmin && user?.enabledModules?.includes("odoo") && (
+            <TabsContent value="odoo">
+              <OdooTab />
+            </TabsContent>
+          )}
 
         </Tabs>
       </div>

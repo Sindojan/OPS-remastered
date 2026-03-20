@@ -67,9 +67,9 @@ public class SimpleChatController {
                 TenantContext.setCurrentTenant(tenantId);
                 simpleChatService.streamChat(request, userId, emitter);
             } catch (Exception e) {
-                log.error("CHAT-DEBUG: Exception class={}, message={}", e.getClass().getName(), e.getMessage(), e);
+                log.error("Chat streaming error: {}", e.getMessage(), e);
                 try {
-                    emitter.send(SseEmitter.event().data("{\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}"));
+                    emitter.send(SseEmitter.event().data("{\"error\":\"Ein interner Fehler ist aufgetreten.\"}"));
                     emitter.complete();
                 } catch (Exception ex) {
                     emitter.completeWithError(ex);

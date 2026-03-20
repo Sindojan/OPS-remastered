@@ -340,7 +340,7 @@ export default function ArticleDetailPage() {
         <TabsList>
           <TabsTrigger value="overview" className="gap-1.5">
             <Package className="h-3.5 w-3.5" />
-            Uebersicht
+            Übersicht
           </TabsTrigger>
           <TabsTrigger value="movements" className="gap-1.5">
             <ArrowDownToLine className="h-3.5 w-3.5" />
@@ -590,7 +590,7 @@ export default function ArticleDetailPage() {
           <DialogHeader>
             <DialogTitle>Lagerbewegung buchen</DialogTitle>
             <DialogDescription>
-              Lagerbewegung fuer {article.articleNumber} erfassen.
+              Lagerbewegung für {article.articleNumber} erfassen.
             </DialogDescription>
           </DialogHeader>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

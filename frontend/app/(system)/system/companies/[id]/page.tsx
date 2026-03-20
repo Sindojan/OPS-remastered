@@ -129,9 +129,9 @@ function CompanyModulesTab({ companyId }: { companyId: string }) {
       <div className="mb-4">
         <h3 className="text-sm font-semibold">Feature-Module</h3>
         <p className="text-xs text-muted-foreground">
-          Module fuer dieses Unternehmen aktivieren oder deaktivieren.
+          Module für dieses Unternehmen aktivieren oder deaktivieren.
           Deaktivierte Module sind in Navigation, API und Agent-Tools nicht
-          verfuegbar.
+          verfügbar.
         </p>
       </div>
       <div className="rounded-md border">
@@ -293,8 +293,8 @@ function CompanyBudgetTab({ companyId }: { companyId: string }) {
 // ─── Agents Tab ─────────────────────────────────────────
 
 const MODEL_OPTIONS = [
-  { value: "claude-opus-4-20250514", label: "Claude Opus 4.6" },
-  { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4.6" },
+  { value: "claude-opus-4-6", label: "Claude Opus 4.6" },
+  { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
   { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
 ];
 
@@ -863,7 +863,7 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
   const { mutate } = useMutation();
 
   const [apiKey, setApiKey] = useState("");
-  const [defaultModel, setDefaultModel] = useState("claude-sonnet-4-20250514");
+  const [defaultModel, setDefaultModel] = useState("claude-sonnet-4-6");
   const [models, setModels] = useState<ModelInfo[]>(
     MODEL_OPTIONS.map((o) => ({ id: o.value, name: o.label })),
   );
@@ -991,7 +991,7 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
       <div>
         <h3 className="text-sm font-semibold">LLM-Konfiguration</h3>
         <p className="text-xs text-muted-foreground">
-          API-Schluessel, Standard-Modell und Parameter fuer dieses Unternehmen
+          API-Schlüssel, Standard-Modell und Parameter für dieses Unternehmen
           konfigurieren.
         </p>
       </div>
@@ -1057,7 +1057,7 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
                     Modelle laden...
                   </span>
                 ) : (
-                  <SelectValue placeholder="Standard-Modell waehlen" />
+                  <SelectValue placeholder="Standard-Modell wählen" />
                 )}
               </SelectTrigger>
               <SelectContent>
@@ -1072,7 +1072,7 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
           <p className="text-[10px] text-muted-foreground">
             {apiKey
               ? "Modelle mit dem eingegebenen API-Key geladen"
-              : "Wird fuer Agent-Instanzen verwendet, die kein eigenes Modell angeben"}
+              : "Wird für Agent-Instanzen verwendet, die kein eigenes Modell angeben"}
           </p>
         </div>
 
@@ -1106,7 +1106,7 @@ function CompanyLlmTab({ companyId }: { companyId: string }) {
             className="max-w-[200px] font-mono text-sm"
           />
           <p className="text-[10px] text-muted-foreground">
-            Standard-Antwortlaenge fuer alle Agents (256–8192)
+            Standard-Antwortlänge für alle Agents (256–8192)
           </p>
         </div>
 
@@ -1303,7 +1303,7 @@ export default function CompanyDetailPage() {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Uebersicht</TabsTrigger>
+          <TabsTrigger value="overview">Übersicht</TabsTrigger>
           <TabsTrigger value="stats">Statistiken</TabsTrigger>
           <TabsTrigger value="admins">Admin-Benutzer</TabsTrigger>
           <TabsTrigger value="modules">Module</TabsTrigger>
@@ -1553,7 +1553,7 @@ export default function CompanyDetailPage() {
           <DialogHeader>
             <DialogTitle>Unternehmen sperren</DialogTitle>
             <DialogDescription>
-              &quot;{company.name}&quot; sperren? Benutzer koennen sich nicht mehr
+              &quot;{company.name}&quot; sperren? Benutzer können sich nicht mehr
               anmelden.
             </DialogDescription>
           </DialogHeader>
@@ -1563,7 +1563,7 @@ export default function CompanyDetailPage() {
               id="detail-suspend-reason"
               value={suspendReason}
               onChange={(e) => setSuspendReason(e.target.value)}
-              placeholder="Grund fuer die Sperrung..."
+              placeholder="Grund für die Sperrung..."
               rows={3}
             />
           </div>

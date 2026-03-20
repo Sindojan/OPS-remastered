@@ -5,9 +5,11 @@ import com.owlsburg.ops.agentinfra.dto.AgentRunResponse;
 import com.owlsburg.ops.agentinfra.dto.AgentRunStepResponse;
 import com.owlsburg.ops.agentinfra.dto.CreateAgentInstanceRequest;
 import com.owlsburg.ops.common.ApiResponse;
+import com.owlsburg.ops.common.TenantContext;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,16 +38,13 @@ public class AgentInstanceController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<AgentInstanceResponse>>> list(
             @RequestParam(value = "templateId", required = false) UUID templateId,
-            @RequestParam(value = "status", required = false) AgentInstanceStatus status,
-            @RequestParam(value = "tenantId", required = false) UUID tenantId) {
+            @RequestParam(value = "status", required = false) AgentInstanceStatus status) {
 
         List<AgentInstanceEntity> instances;
         if (templateId != null) {
             instances = instanceService.findByTemplateId(templateId);
         } else if (status != null) {
             instances = instanceService.findByStatus(status);
-        } else if (tenantId != null) {
-            instances = instanceService.findByTenantId(tenantId);
         } else {
             instances = instanceService.findAll();
         }
@@ -63,6 +62,7 @@ public class AgentInstanceController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> create(
             @Valid @RequestBody CreateAgentInstanceRequest request) {
 
@@ -80,24 +80,28 @@ public class AgentInstanceController {
     }
 
     @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> activate(@PathVariable UUID id) {
         AgentInstanceEntity activated = instanceService.activate(id);
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(activated), "Agent instance activated"));
     }
 
     @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> deactivate(@PathVariable UUID id) {
         AgentInstanceEntity deactivated = instanceService.deactivate(id);
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(deactivated), "Agent instance deactivated"));
     }
 
     @PatchMapping("/{id}/quarantine")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> quarantine(@PathVariable UUID id) {
         AgentInstanceEntity quarantined = instanceService.quarantine(id);
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(quarantined), "Agent instance quarantined"));
     }
 
     @PatchMapping("/{id}/terminate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> terminate(@PathVariable UUID id) {
         AgentInstanceEntity terminated = instanceService.terminate(id);
         return ResponseEntity.ok(ApiResponse.ok(AgentInstanceResponse.from(terminated), "Agent instance terminated"));
@@ -160,6 +164,7 @@ public class AgentInstanceController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         instanceService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Agent instance deleted"));

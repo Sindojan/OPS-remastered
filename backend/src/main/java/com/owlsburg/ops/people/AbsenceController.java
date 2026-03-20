@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -31,12 +32,14 @@ public class AbsenceController {
     }
 
     @PatchMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<AbsenceResponse>> approve(@PathVariable UUID id) {
         AbsenceEntity entity = absenceService.approve(id);
         return ResponseEntity.ok(ApiResponse.ok(AbsenceResponse.from(entity)));
     }
 
     @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<AbsenceResponse>> reject(@PathVariable UUID id) {
         AbsenceEntity entity = absenceService.reject(id);
         return ResponseEntity.ok(ApiResponse.ok(AbsenceResponse.from(entity)));

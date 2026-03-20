@@ -1009,6 +1009,25 @@ export interface PasswordResetResponse {
   newPassword: string;
 }
 
+// ─── Odoo ───────────────────────────────────────────────
+
+export type OdooConnectionStatus = 'UNCONFIGURED' | 'PENDING' | 'CONNECTED' | 'ERROR';
+
+export interface OdooConfig {
+  baseUrl: string | null;
+  databaseName: string | null;
+  odooVersion: string;
+  hasApiKey: boolean;
+  connectionStatus: OdooConnectionStatus;
+  lastConnectedAt: string | null;
+}
+
+export interface OdooConnectionTestResult {
+  success: boolean;
+  serverVersion: string | null;
+  message: string;
+}
+
 // ─── Events ─────────────────────────────────────────────
 
 export interface DomainEventResponse {

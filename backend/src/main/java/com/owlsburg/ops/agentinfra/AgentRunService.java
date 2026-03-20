@@ -60,6 +60,14 @@ public class AgentRunService {
     }
 
     @Transactional
+    public void markRunning(UUID runId) {
+        AgentRunEntity run = findById(runId);
+        run.setStatus(AgentRunStatus.RUNNING);
+        run.setStartedAt(Instant.now());
+        runRepository.save(run);
+    }
+
+    @Transactional
     public AgentRunEntity startRun(UUID instanceId, TriggerType triggerType,
                                    String triggerSource, String inputContext) {
         // Verify instance exists

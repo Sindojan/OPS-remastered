@@ -21,6 +21,7 @@ const PATH_TO_MODULE: Record<string, string> = {
   "/inbox": "inbox",
   "/parts-and-processes": "bom",
   "/knowledge": "knowledge",
+  "/odoo": "odoo",
 };
 
 function isPathAllowed(role: string, pathname: string, enabledModules: string[]): boolean {
