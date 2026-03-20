@@ -487,6 +487,7 @@ export interface CreateEmployeeRequest {
   email?: string;
   phone?: string;
   role?: string;
+  status?: string;
   hireDate?: string;
   stationId?: string;
 }
