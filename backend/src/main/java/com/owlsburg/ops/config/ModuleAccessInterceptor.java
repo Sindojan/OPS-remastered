@@ -38,7 +38,8 @@ public class ModuleAccessInterceptor implements HandlerInterceptor {
             Map.entry("/api/bom", "bom"),
             Map.entry("/api/process-plans", "bom"),
             Map.entry("/api/calculations", "bom"),
-            Map.entry("/api/knowledge", "knowledge")
+            Map.entry("/api/knowledge", "knowledge"),
+            Map.entry("/api/odoo", "odoo")
     );
 
     private final ModuleService moduleService;

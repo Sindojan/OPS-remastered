@@ -68,14 +68,25 @@ public final class AnthropicStreamingClient {
 
         if (tools != null && !tools.isEmpty()) {
             ArrayNode toolsArray = body.putArray("tools");
-            for (LlmToolDefinition tool : tools) {
+            for (int i = 0; i < tools.size(); i++) {
+                LlmToolDefinition tool = tools.get(i);
                 ObjectNode toolNode = toolsArray.addObject();
                 toolNode.put("name", tool.name());
                 toolNode.put("description", tool.description());
                 try {
-                    toolNode.set("input_schema", objectMapper.readTree(tool.inputSchema()));
+                    JsonNode schema = objectMapper.readTree(tool.inputSchema());
+                    // Ensure schema has "type" field
+                    if (!schema.has("type")) {
+                        ObjectNode schemaObj = (ObjectNode) schema;
+                        schemaObj.put("type", "object");
+                    }
+                    toolNode.set("input_schema", schema);
                 } catch (Exception e) {
-                    toolNode.putObject("input_schema");
+                    log.warn("Invalid input_schema for tool '{}' (index {}): {}", tool.name(), i, e.getMessage());
+                    ObjectNode emptySchema = objectMapper.createObjectNode();
+                    emptySchema.put("type", "object");
+                    emptySchema.putObject("properties");
+                    toolNode.set("input_schema", emptySchema);
                 }
             }
         }
@@ -212,7 +223,7 @@ public final class AnthropicStreamingClient {
             }
 
             log.error("Anthropic API error ({}): {}", status, errorBody);
-            throw new LlmProviderException("Anthropic API Fehler: HTTP " + status);
+            throw new LlmProviderException("Anthropic API Fehler: HTTP " + status + " - " + errorBody);
         }
         throw new LlmProviderException("Anthropic API nicht erreichbar nach " + (MAX_RETRIES + 1) + " Versuchen");
     }

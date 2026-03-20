@@ -12,6 +12,7 @@ import {
 import {
   Bot,
   Building2,
+  Database,
   Factory,
   Package,
   Puzzle,
@@ -56,6 +57,7 @@ const ALL_NAV_SECTIONS: NavSection[] = [
       { label: "Maschinen", href: "/machines", icon: Cog, moduleId: "machines" },
       { label: "Lager", href: "/inventory", icon: Package, moduleId: "inventory" },
       { label: "Teile & Prozesse", href: "/parts-and-processes", icon: Puzzle, moduleId: "bom" },
+      { label: "Odoo", href: "/odoo", icon: Database, moduleId: "odoo" },
     ],
   },
   {

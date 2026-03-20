@@ -73,7 +73,7 @@ export function DelegationCard({ msg, isStreaming }: { msg: ChatMessage; isStrea
         } />
       </div>
       {expanded && hasSteps && (
-        <div className="mt-2 ml-4 space-y-1.5 border-l-2 border-border/50 pl-3">
+        <div className="mt-2 ml-4 max-h-60 space-y-1.5 overflow-y-auto border-l-2 border-border/50 pl-3">
           {steps.map((step, j) => (
             <div key={j} className="text-[11px] leading-relaxed">
               {step.type === "reasoning" ? (

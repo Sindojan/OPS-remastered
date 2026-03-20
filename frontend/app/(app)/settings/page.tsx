@@ -33,6 +33,7 @@ import {
   Building2,
   DollarSign,
   Bell,
+  Database,
 } from "lucide-react";
 import type {
   ApiResponse,
@@ -56,6 +57,7 @@ import { UsersTab } from "@/components/settings/users-tab";
 import { CompanyTab } from "@/components/settings/company-tab";
 import { BudgetTab } from "@/components/settings/budget-tab";
 import { NotificationsTab } from "@/components/settings/notifications-tab";
+import { OdooTab } from "@/components/settings/odoo-tab";
 
 // ============ Role Agent Defaults Tab ============
 
@@ -607,6 +609,12 @@ export default function SettingsPage() {
               <Bell className="h-3.5 w-3.5" />
               Benachrichtigungen
             </TabsTrigger>
+            {isAdmin && user?.enabledModules?.includes("odoo") && (
+              <TabsTrigger value="odoo" className="gap-1.5">
+                <Database className="h-3.5 w-3.5" />
+                Odoo
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="roles">
@@ -638,6 +646,12 @@ export default function SettingsPage() {
           <TabsContent value="notifications">
             <NotificationsTab />
           </TabsContent>
+
+          {isAdmin && user?.enabledModules?.includes("odoo") && (
+            <TabsContent value="odoo">
+              <OdooTab />
+            </TabsContent>
+          )}
 
         </Tabs>
       </div>
