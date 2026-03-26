@@ -32,7 +32,11 @@ public class DocumentService {
     @Transactional
     public DocumentEntity upload(MultipartFile file, String title, String description,
                                  String category, UUID uploadedBy) {
-        String fileKey = UUID.randomUUID() + "/" + file.getOriginalFilename();
+        String originalName = file.getOriginalFilename();
+        String safeName = originalName != null
+                ? originalName.replaceAll("[^a-zA-Z0-9._-]", "_")
+                : "upload";
+        String fileKey = UUID.randomUUID() + "/" + safeName;
 
         try {
             storageService.upload(fileKey, file.getInputStream(), file.getContentType(), file.getSize());

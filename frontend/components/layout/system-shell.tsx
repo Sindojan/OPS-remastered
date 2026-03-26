@@ -27,29 +27,27 @@ import {
   ChevronRight,
   Key,
   LogOut,
-  MessageSquare,
   Shield,
-  Zap,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
+import { SystemAgentPanel } from "./system-agent-panel";
 
 const systemNavItems = [
   { label: "Unternehmen", href: "/system/companies", icon: Building2 },
   { label: "System-Agenten", href: "/system/agents", icon: Bot },
-  { label: "System-Chat", href: "/system/chat", icon: MessageSquare },
   { label: "API-Credentials", href: "/system/credentials", icon: Key },
 ];
 
 const routeNames: Record<string, string> = {
   "/system/companies": "Unternehmen",
   "/system/agents": "System-Agenten",
-  "/system/chat": "System-Chat",
   "/system/credentials": "API-Credentials",
 };
 
 export function SystemShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -192,6 +190,23 @@ export function SystemShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-1">
+              {/* Agent Panel toggle */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={agentPanelOpen ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    onClick={() => setAgentPanelOpen(!agentPanelOpen)}
+                  >
+                    <Bot className={cn(
+                      "h-4 w-4",
+                      agentPanelOpen ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>System-CEO Chat</TooltipContent>
+              </Tooltip>
+
               <ThemeToggle />
 
               <DropdownMenu>
@@ -228,10 +243,16 @@ export function SystemShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Content */}
-          <main className="dot-grid flex-1 overflow-y-auto p-6">
-            {children}
-          </main>
+          {/* Content + Agent Panel */}
+          <div className="flex flex-1 overflow-hidden">
+            <main className="dot-grid flex-1 overflow-y-auto p-6">
+              {children}
+            </main>
+            <SystemAgentPanel
+              open={agentPanelOpen}
+              onClose={() => setAgentPanelOpen(false)}
+            />
+          </div>
         </div>
       </div>
     </TooltipProvider>

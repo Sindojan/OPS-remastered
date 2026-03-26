@@ -95,8 +95,10 @@ public class SimpleChatService {
             // 6. Create Agent via Factory (builds system prompt, tools, memory injection)
             Agent agent = agentFactory.createAgent(instanceId, tenantId);
 
-            // 7. Load full history from DB and build messages
-            List<ChatMessageResponse> dbHistory = chatSessionService.getMessages(sessionId);
+            // 7. Load history from DB (limit to last 30 messages to avoid token overflow)
+            List<ChatMessageResponse> fullHistory = chatSessionService.getMessages(sessionId);
+            int startIdx = Math.max(0, fullHistory.size() - 30);
+            List<ChatMessageResponse> dbHistory = fullHistory.subList(startIdx, fullHistory.size());
             List<ObjectNode> messages = new ArrayList<>();
             for (ChatMessageResponse msg : dbHistory) {
                 ObjectNode msgNode = objectMapper.createObjectNode();

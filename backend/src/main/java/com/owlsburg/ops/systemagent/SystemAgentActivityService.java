@@ -1,12 +1,13 @@
-package com.owlsburg.ops.agentinfra;
+package com.owlsburg.ops.systemagent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.owlsburg.ops.agentinfra.AgentRunStatus;
 import com.owlsburg.ops.agentinfra.dto.ActiveLinkDto;
 import com.owlsburg.ops.agentinfra.dto.AgentActivitySnapshotResponse;
 import com.owlsburg.ops.agentinfra.dto.AgentInstanceActivity;
-import com.owlsburg.ops.agentinfra.messaging.AgentMessageEntity;
-import com.owlsburg.ops.agentinfra.messaging.AgentMessageRepository;
+import com.owlsburg.ops.systemagent.messaging.SystemAgentMessageEntity;
+import com.owlsburg.ops.systemagent.messaging.SystemAgentMessageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,25 +20,25 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class AgentActivityService {
+public class SystemAgentActivityService {
 
-    private static final Logger log = LoggerFactory.getLogger(AgentActivityService.class);
+    private static final Logger log = LoggerFactory.getLogger(SystemAgentActivityService.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final AgentInstanceRepository instanceRepository;
-    private final AgentTemplateRepository templateRepository;
-    private final AgentRunRepository runRepository;
-    private final AgentMessageRepository messageRepository;
-    private final ChatSessionRepository chatSessionRepository;
-    private final ChatMessageRepository chatMessageRepository;
+    private final SystemAgentInstanceService instanceService;
+    private final SystemAgentTemplateRepository templateRepository;
+    private final SystemAgentRunRepository runRepository;
+    private final SystemAgentMessageRepository messageRepository;
+    private final SystemChatSessionRepository chatSessionRepository;
+    private final SystemChatMessageRepository chatMessageRepository;
 
-    public AgentActivityService(AgentInstanceRepository instanceRepository,
-                                AgentTemplateRepository templateRepository,
-                                AgentRunRepository runRepository,
-                                AgentMessageRepository messageRepository,
-                                ChatSessionRepository chatSessionRepository,
-                                ChatMessageRepository chatMessageRepository) {
-        this.instanceRepository = instanceRepository;
+    public SystemAgentActivityService(SystemAgentInstanceService instanceService,
+                                       SystemAgentTemplateRepository templateRepository,
+                                       SystemAgentRunRepository runRepository,
+                                       SystemAgentMessageRepository messageRepository,
+                                       SystemChatSessionRepository chatSessionRepository,
+                                       SystemChatMessageRepository chatMessageRepository) {
+        this.instanceService = instanceService;
         this.templateRepository = templateRepository;
         this.runRepository = runRepository;
         this.messageRepository = messageRepository;
@@ -47,21 +48,21 @@ public class AgentActivityService {
 
     @Transactional(readOnly = true)
     public AgentActivitySnapshotResponse getSnapshot() {
-        List<AgentInstanceEntity> instances = instanceRepository.findAll();
+        List<SystemAgentInstanceEntity> instances = instanceService.findAll();
 
-        Map<UUID, AgentTemplateEntity> templateCache = new HashMap<>();
+        Map<UUID, SystemAgentTemplateEntity> templateCache = new HashMap<>();
 
         Instant startOfDay = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant now = Instant.now();
         Instant fiveMinutesAgo = now.minusSeconds(300);
 
         // Load recent chat messages to detect activity
-        List<ChatMessageEntity> recentChatMessages = chatMessageRepository
+        List<SystemChatMessageEntity> recentChatMessages = chatMessageRepository
                 .findByCreatedAtAfterOrderByCreatedAtDesc(fiveMinutesAgo);
 
-        // Build session → agentInstanceId mapping for recent sessions (batch query to avoid N+1)
+        // Build session -> agentInstanceId mapping for recent sessions (batch query to avoid N+1)
         Set<UUID> recentSessionIds = recentChatMessages.stream()
-                .map(ChatMessageEntity::getSessionId)
+                .map(SystemChatMessageEntity::getSessionId)
                 .collect(Collectors.toSet());
         Map<UUID, UUID> sessionToAgent = new HashMap<>();
         if (!recentSessionIds.isEmpty()) {
@@ -72,25 +73,23 @@ public class AgentActivityService {
         // Per agent: latest user message + latest activity timestamp from chat
         Map<UUID, String> agentCurrentTask = new HashMap<>();
         Map<UUID, Instant> agentLastChatActivity = new HashMap<>();
-        for (ChatMessageEntity msg : recentChatMessages) {
+        for (SystemChatMessageEntity msg : recentChatMessages) {
             UUID agentId = sessionToAgent.get(msg.getSessionId());
             if (agentId == null) continue;
 
-            // Track latest activity (any role)
             agentLastChatActivity.merge(agentId, msg.getCreatedAt(),
                     (existing, candidate) -> existing.isAfter(candidate) ? existing : candidate);
 
-            // Use latest user message as current task
             if ("user".equals(msg.getRole()) && !agentCurrentTask.containsKey(agentId)) {
                 String content = msg.getContent();
-                if (content.length() > 120) content = content.substring(0, 120) + "…";
+                if (content.length() > 120) content = content.substring(0, 120) + "\u2026";
                 agentCurrentTask.put(agentId, content);
             }
         }
 
         List<AgentInstanceActivity> activities = new ArrayList<>();
-        for (AgentInstanceEntity instance : instances) {
-            AgentTemplateEntity template = templateCache.computeIfAbsent(
+        for (SystemAgentInstanceEntity instance : instances) {
+            SystemAgentTemplateEntity template = templateCache.computeIfAbsent(
                     instance.getTemplateId(),
                     id -> templateRepository.findById(id).orElse(null)
             );
@@ -100,8 +99,7 @@ public class AgentActivityService {
 
             String model = parseModelFromConfig(instance.getConfig());
 
-            // Check agent_runs for active tasks
-            Optional<AgentRunEntity> latestRun = runRepository
+            Optional<SystemAgentRunEntity> latestRun = runRepository
                     .findTopByInstanceIdOrderByStartedAtDesc(instance.getId());
 
             String currentTask = null;
@@ -109,12 +107,11 @@ public class AgentActivityService {
             Instant lastActivityAt = instance.getActivityStatusChangedAt();
 
             if (latestRun.isPresent()) {
-                AgentRunEntity run = latestRun.get();
+                SystemAgentRunEntity run = latestRun.get();
                 if (run.getStatus() == AgentRunStatus.RUNNING || run.getStatus() == AgentRunStatus.PENDING) {
                     currentTask = run.getInputContext();
                     activeRunId = run.getId();
                 }
-                // Use run timestamp as last activity if more recent
                 Instant runTime = run.getCompletedAt() != null ? run.getCompletedAt() : run.getStartedAt();
                 if (runTime != null && (lastActivityAt == null || runTime.isAfter(lastActivityAt))) {
                     lastActivityAt = runTime;
@@ -127,15 +124,14 @@ public class AgentActivityService {
                 if (lastActivityAt == null || chatActivity.isAfter(lastActivityAt)) {
                     lastActivityAt = chatActivity;
                 }
-                // Use chat task if no active run task
                 if (currentTask == null) {
                     currentTask = agentCurrentTask.get(instance.getId());
                 }
             }
 
-            List<AgentRunEntity> todayRuns = runRepository
+            List<SystemAgentRunEntity> todayRuns = runRepository
                     .findByInstanceIdAndStartedAtBetween(instance.getId(), startOfDay, now);
-            int tokensUsedToday = todayRuns.stream().mapToInt(AgentRunEntity::getTokensUsed).sum();
+            int tokensUsedToday = todayRuns.stream().mapToInt(SystemAgentRunEntity::getTokensUsed).sum();
 
             activities.add(new AgentInstanceActivity(
                     instance.getId(),
@@ -155,14 +151,14 @@ public class AgentActivityService {
         }
 
         // Active links from agent_messages (inter-agent communication)
-        List<AgentMessageEntity> recentAgentMessages = messageRepository.findByCreatedAtAfter(fiveMinutesAgo);
+        List<SystemAgentMessageEntity> recentAgentMessages = messageRepository.findByCreatedAtAfter(fiveMinutesAgo);
 
         Set<UUID> instanceIds = instances.stream()
-                .map(AgentInstanceEntity::getId)
+                .map(SystemAgentInstanceEntity::getId)
                 .collect(Collectors.toSet());
 
         Map<String, ActiveLinkDto> linkMap = new LinkedHashMap<>();
-        for (AgentMessageEntity msg : recentAgentMessages) {
+        for (SystemAgentMessageEntity msg : recentAgentMessages) {
             if (instanceIds.contains(msg.getSenderInstanceId()) && instanceIds.contains(msg.getTargetInstanceId())) {
                 String key = msg.getSenderInstanceId() + "->" + msg.getTargetInstanceId();
                 ActiveLinkDto existing = linkMap.get(key);

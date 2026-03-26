@@ -101,20 +101,20 @@ export function UsersTab() {
     firstName: "",
     lastName: "",
     role: "WORKER",
-    primaryAgentInstanceId: undefined as string | undefined,
+    primaryAgentInstanceId: "none" as string,
   });
 
   // Credentials display
   const [credentials, setCredentials] = useState({ email: "", password: "" });
 
   // Filter
-  const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     return users.filter((u) => {
-      if (roleFilter && u.role !== roleFilter) return false;
+      if (roleFilter !== "all" && u.role !== roleFilter) return false;
       if (statusFilter === "active" && !u.active) return false;
       if (statusFilter === "inactive" && u.active) return false;
       return true;
@@ -153,7 +153,7 @@ export function UsersTab() {
         firstName: editForm.firstName,
         lastName: editForm.lastName,
         role: editForm.role,
-        primaryAgentInstanceId: editForm.primaryAgentInstanceId || undefined,
+        primaryAgentInstanceId: editForm.primaryAgentInstanceId === "none" ? undefined : editForm.primaryAgentInstanceId,
       });
       toast.success("Benutzer aktualisiert");
       setShowEditDialog(false);
@@ -229,7 +229,7 @@ export function UsersTab() {
       firstName: u.firstName,
       lastName: u.lastName,
       role: u.role,
-      primaryAgentInstanceId: undefined,
+      primaryAgentInstanceId: "none",
     });
     setShowEditDialog(true);
   }, []);
@@ -330,7 +330,7 @@ export function UsersTab() {
         rowActions={rowActions}
         filterSlots={
           <>
-            <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v === "all" ? undefined : v)}>
+            <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v)}>
               <SelectTrigger className="h-9 w-40">
                 <SelectValue placeholder="Alle Rollen" />
               </SelectTrigger>
@@ -341,7 +341,7 @@ export function UsersTab() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v === "all" ? undefined : v)}>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
               <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Alle Status" />
               </SelectTrigger>
@@ -522,7 +522,7 @@ export function UsersTab() {
               <Label className="text-xs">Primary Agent</Label>
               <Select
                 value={editForm.primaryAgentInstanceId}
-                onValueChange={(v) => setEditForm((f) => ({ ...f, primaryAgentInstanceId: v === "none" ? undefined : v }))}
+                onValueChange={(v) => setEditForm((f) => ({ ...f, primaryAgentInstanceId: v }))}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Standard (Rollen-Default)" />

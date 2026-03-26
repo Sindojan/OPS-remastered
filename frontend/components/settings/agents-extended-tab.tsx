@@ -191,7 +191,7 @@ export function AgentsExtendedTab() {
       cell: (row) => (
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <Select
-            value={row.model || undefined}
+            value={row.model ?? ""}
             onValueChange={(value) => handleModelChange(row.id, value)}
             disabled={updatingId === row.id}
           >

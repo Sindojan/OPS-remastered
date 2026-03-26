@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -35,6 +36,7 @@ public class CustomerController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<CustomerResponse>> create(@Valid @RequestBody CustomerCreateRequest request) {
         CustomerEntity customer = customerService.create(
                 request.companyName(), request.taxId(), request.customerNumber(), request.shortName());
@@ -43,6 +45,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<CustomerResponse>> update(@PathVariable UUID id,
                                                                 @Valid @RequestBody CustomerUpdateRequest request) {
         CustomerEntity customer = customerService.update(
@@ -51,6 +54,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         customerService.softDelete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Customer deactivated"));
@@ -59,6 +63,7 @@ public class CustomerController {
     // ── Contacts ──
 
     @PostMapping("/{id}/contacts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<ContactResponse>> addContact(@PathVariable UUID id,
                                                                    @Valid @RequestBody ContactRequest request) {
         CustomerContactEntity contact = customerService.addContact(
@@ -70,6 +75,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}/contacts/{contactId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<ContactResponse>> updateContact(@PathVariable UUID id,
                                                                       @PathVariable UUID contactId,
                                                                       @Valid @RequestBody ContactRequest request) {
@@ -80,6 +86,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}/contacts/{contactId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> removeContact(@PathVariable UUID id,
                                                            @PathVariable UUID contactId) {
         customerService.removeContact(id, contactId);
@@ -89,6 +96,7 @@ public class CustomerController {
     // ── Addresses ──
 
     @PostMapping("/{id}/addresses")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AddressResponse>> addAddress(@PathVariable UUID id,
                                                                    @Valid @RequestBody AddressRequest request) {
         CustomerAddressEntity address = customerService.addAddress(
@@ -98,6 +106,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}/addresses/{addressId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AddressResponse>> updateAddress(@PathVariable UUID id,
                                                                       @PathVariable UUID addressId,
                                                                       @Valid @RequestBody AddressRequest request) {
@@ -107,6 +116,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}/addresses/{addressId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> removeAddress(@PathVariable UUID id,
                                                            @PathVariable UUID addressId) {
         customerService.removeAddress(id, addressId);

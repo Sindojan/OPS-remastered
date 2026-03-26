@@ -41,7 +41,8 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      router.replace(redirect || getDefaultRoute(user.role));
+      const isValidRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//');
+      router.replace(isValidRedirect ? redirect : getDefaultRoute(user.role));
     }
   }, [isAuthenticated, isLoading, user, router, redirect]);
 

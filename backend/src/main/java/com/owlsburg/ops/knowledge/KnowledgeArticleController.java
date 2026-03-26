@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,7 @@ public class KnowledgeArticleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<KnowledgeArticleResponse>> create(
             @Valid @RequestBody KnowledgeArticleCreateRequest request,
             Authentication authentication) {
@@ -55,6 +57,7 @@ public class KnowledgeArticleController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<KnowledgeArticleResponse>> update(
             @PathVariable UUID id,
             @Valid @RequestBody KnowledgeArticleUpdateRequest request) {
@@ -64,18 +67,21 @@ public class KnowledgeArticleController {
     }
 
     @PostMapping("/{id}/publish")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<KnowledgeArticleResponse>> publish(@PathVariable UUID id) {
         KnowledgeArticleResponse response = articleService.publishAsResponse(id);
         return ResponseEntity.ok(ApiResponse.ok(response, "Article published"));
     }
 
     @PostMapping("/{id}/archive")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<KnowledgeArticleResponse>> archive(@PathVariable UUID id) {
         KnowledgeArticleResponse response = articleService.archiveAsResponse(id);
         return ResponseEntity.ok(ApiResponse.ok(response, "Article archived"));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         articleService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Article deleted"));

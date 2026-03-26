@@ -20,9 +20,31 @@ import type { ChatSessionResponse, LlmConfig, AgentRunDetail } from "@/types/api
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+/** Override config for system-agent usage (different API paths, fixed agent). */
+export interface AgentPanelConfig {
+  /** Agent display name */
+  agentName: string;
+  /** Agent instance ID */
+  agentId: string;
+  /** Model display string */
+  model: string;
+  /** API path for chat sessions, e.g. "/api/system/chat/sessions" */
+  sessionsPath: string;
+  /** API path for sending a message (POST), e.g. "/api/system/chat/message" */
+  messagePath: string;
+  /** API path for last-run, e.g. "/api/system/agents/{id}/last-run" */
+  lastRunPath: string;
+  /** Greeting message */
+  greeting: string;
+  /** Placeholder text */
+  placeholder: string;
+}
+
 interface AgentPanelProps {
   open: boolean;
   onClose: () => void;
+  /** If provided, skips usePrimaryAgent/useApi and uses these fixed values instead. */
+  config?: AgentPanelConfig;
 }
 
 function formatDate(iso: string): string {
@@ -36,9 +58,19 @@ function formatDate(iso: string): string {
   });
 }
 
-export function AgentPanel({ open, onClose }: AgentPanelProps) {
-  const { agent } = usePrimaryAgent();
-  const { data: llmConfig } = useApi<LlmConfig>("/api/settings/llm");
+export function AgentPanel({ open, onClose, config }: AgentPanelProps) {
+  const { agent: primaryAgent } = usePrimaryAgent();
+  const { data: llmConfig } = useApi<LlmConfig>(config ? null : "/api/settings/llm");
+
+  // Resolve agent info: use config override or primary agent
+  const agentName = config?.agentName ?? primaryAgent?.name ?? "Agent";
+  const agentId = config?.agentId ?? primaryAgent?.id;
+  const agentModel = config?.model ?? llmConfig?.defaultModel;
+  const sessionsPath = config?.sessionsPath ?? "/api/chat/sessions";
+  const messagePath = config?.messagePath ?? "/api/chat/message";
+  const lastRunPath = config ? config.lastRunPath : (agentId ? `/api/agent-instances/${agentId}/last-run` : null);
+  const greetingText = config?.greeting ?? (agentName ? `Guten Tag! Ich bin Ihr ${agentName}. Wie kann ich Ihnen helfen?` : "Guten Tag! Wie kann ich Ihnen helfen?");
+  const placeholderText = config?.placeholder ?? "Nachricht eingeben...";
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -67,18 +99,16 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
   const greetingMessage = useCallback((): ChatMessage => {
     return {
       role: "assistant",
-      content: agent?.name
-        ? `Guten Tag! Ich bin Ihr ${agent.name}. Wie kann ich Ihnen helfen?`
-        : "Guten Tag! Wie kann ich Ihnen helfen?",
+      content: greetingText,
     };
-  }, [agent?.name]);
+  }, [greetingText]);
 
   const fetchSessions = useCallback(async () => {
     const token = localStorage.getItem("owlsburg_token");
     if (!token) return;
     setSessionsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/chat/sessions`, {
+      const res = await fetch(`${API_BASE}${sessionsPath}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -90,7 +120,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     } finally {
       setSessionsLoading(false);
     }
-  }, []);
+  }, [sessionsPath]);
 
   const loadSession = useCallback(
     async (sessionId: string) => {
@@ -98,7 +128,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
       if (!token) return;
       try {
         const res = await fetch(
-          `${API_BASE}/api/chat/sessions/${sessionId}/messages`,
+          `${API_BASE}${sessionsPath}/${sessionId}/messages`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const json = await res.json();
@@ -122,7 +152,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
 
   // Load sessions and auto-load most recent on panel open
   useEffect(() => {
-    if (open && agent?.id) {
+    if (open && agentId) {
       fetchSessions().then(() => {
         // We fetch sessions above, but we need to auto-load in a then-chain
         // because setSessions is async. Use a separate effect instead.
@@ -131,7 +161,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     if (!open) {
       setShowSessionList(false);
     }
-  }, [open, agent?.id, fetchSessions]);
+  }, [open, agentId, fetchSessions]);
 
   // Auto-load most recent session once sessions are fetched, but only on panel open
   const hasAutoLoaded = useRef(false);
@@ -181,7 +211,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     if (!token) return;
     try {
       await fetch(
-        `${API_BASE}/api/chat/sessions/${deleteTarget.id}`,
+        `${API_BASE}${sessionsPath}/${deleteTarget.id}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -200,12 +230,12 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
   };
 
   const fetchLastRun = useCallback(async () => {
-    if (!agent?.id) return;
+    if (!lastRunPath) return;
     const token = localStorage.getItem("owlsburg_token");
     if (!token) return;
     setLastRunLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/agent-instances/${agent.id}/last-run`, {
+      const res = await fetch(`${API_BASE}${lastRunPath}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -221,7 +251,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
     } finally {
       setLastRunLoading(false);
     }
-  }, [agent?.id]);
+  }, [lastRunPath]);
 
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
@@ -242,7 +272,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
 
     try {
       const token = localStorage.getItem("owlsburg_token");
-      const response = await fetch(`${API_BASE}/api/chat/message`, {
+      const response = await fetch(`${API_BASE}${messagePath}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -250,7 +280,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
         },
         body: JSON.stringify({
           message: userMsg,
-          agentInstanceId: agent?.id,
+          agentInstanceId: agentId,
           sessionId: currentSessionId,
         }),
       });
@@ -454,7 +484,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
           updated[updated.length - 1] = {
             role: "assistant",
             content:
-              "Verbindungsfehler. Bitte pruefen Sie die LLM-Konfiguration in den Einstellungen.",
+              "Verbindungsfehler. Bitte prüfen Sie die LLM-Konfiguration.",
           };
         }
         return updated;
@@ -484,12 +514,12 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
           </div>
           <div className="flex flex-col">
             <span className="text-[13px] font-semibold leading-tight">
-              {agent?.name ?? "Agent"}
+              {agentName}
             </span>
             <div className="flex items-center gap-2">
-              {llmConfig?.defaultModel && (
+              {agentModel && (
                 <span className="text-[10px] text-muted-foreground leading-tight font-mono">
-                  {llmConfig.defaultModel}
+                  {agentModel}
                 </span>
               )}
               {sessionTokenTotal > 0 && (
@@ -696,7 +726,7 @@ export function AgentPanel({ open, onClose }: AgentPanelProps) {
             resizeTextarea();
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Nachricht eingeben..."
+          placeholder={placeholderText}
           rows={1}
           className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           style={{ minHeight: "40px", maxHeight: "120px" }}

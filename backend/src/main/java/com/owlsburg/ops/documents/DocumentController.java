@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +32,7 @@ public class DocumentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<DocumentResponse>> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
@@ -63,6 +65,7 @@ public class DocumentController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<DocumentResponse>> updateMetadata(
             @PathVariable UUID id,
             @RequestBody DocumentMetadataUpdateRequest request) {
@@ -87,12 +90,14 @@ public class DocumentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         documentService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Document deleted"));
     }
 
     @PostMapping("/{id}/link")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEAD')")
     public ResponseEntity<ApiResponse<DocumentLinkResponse>> link(
             @PathVariable UUID id,
             @Valid @RequestBody DocumentLinkRequest request) {

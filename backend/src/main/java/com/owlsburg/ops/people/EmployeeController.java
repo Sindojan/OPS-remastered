@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,6 +38,7 @@ public class EmployeeController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<EmployeeCreateResponse>> create(@Valid @RequestBody CreateEmployeeRequest request) {
         EmployeeCreateResponse.UserCredentials credentials = null;
 
@@ -87,6 +89,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<EmployeeResponse>> update(@PathVariable UUID id,
                                                                  @Valid @RequestBody UpdateEmployeeRequest request) {
         EmployeeEntity entity = employeeService.update(id, request);
@@ -106,6 +109,7 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         employeeService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Employee deleted"));
@@ -120,6 +124,7 @@ public class EmployeeController {
     }
 
     @PostMapping("/{id}/qualifications")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<QualificationResponse>> addQualification(
             @PathVariable UUID id, @Valid @RequestBody QualificationRequest request) {
         EmployeeQualificationEntity entity = employeeService.addQualification(id, request);
@@ -136,6 +141,7 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}/qualifications/{qId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> removeQualification(@PathVariable UUID id, @PathVariable UUID qId) {
         employeeService.removeQualification(id, qId);
         return ResponseEntity.ok(ApiResponse.ok(null, "Qualification removed"));

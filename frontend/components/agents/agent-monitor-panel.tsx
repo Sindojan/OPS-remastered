@@ -14,6 +14,8 @@ interface AgentMonitorPanelProps {
   realtimeEvent?: AgentActivityEvent;
   activityLog: AgentActivityEvent[];
   onClose: () => void;
+  /** API base prefix, e.g. "/api/system" for system agents. Defaults to "/api". */
+  apiBase?: string;
 }
 
 interface AgentRunResponse {
@@ -119,17 +121,23 @@ function formatTimestamp(iso: string): string {
   return d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-export function AgentMonitorPanel({ agent, instances, realtimeEvent, activityLog, onClose }: AgentMonitorPanelProps) {
+export function AgentMonitorPanel({ agent, instances, realtimeEvent, activityLog, onClose, apiBase = "/api" }: AgentMonitorPanelProps) {
   const parentAgent = instances.find((i) => i.id === agent.parentInstanceId);
 
+  const isSystem = apiBase !== "/api";
+
   const { data: runs } = useApi<AgentRunResponse[]>(
-    `/api/agent-runs?instanceId=${agent.id}`
+    isSystem ? `${apiBase}/agents/${agent.id}/runs?page=0&size=5` : `/api/agent-runs?instanceId=${agent.id}`
   );
 
-  const latestRun = runs && runs.length > 0 ? runs[0] : null;
+  const runsArray = isSystem && runs && typeof runs === "object" && "content" in (runs as unknown as Record<string, unknown>)
+    ? (runs as unknown as { content: AgentRunResponse[] }).content
+    : (runs as AgentRunResponse[] | null);
+
+  const latestRun = runsArray && runsArray.length > 0 ? runsArray[0] : null;
 
   const { data: steps } = useApi<AgentRunStepResponse[]>(
-    latestRun ? `/api/agent-runs/${latestRun.id}/steps` : null
+    !isSystem && latestRun ? `/api/agent-runs/${latestRun.id}/steps` : null
   );
 
   const budgetPercent = agent.dailyTokenBudget > 0

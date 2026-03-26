@@ -108,6 +108,7 @@ public class AgentInstanceController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> updateInstance(
             @PathVariable UUID id,
             @RequestBody java.util.Map<String, String> body) {
@@ -121,6 +122,7 @@ public class AgentInstanceController {
     }
 
     @PatchMapping("/{id}/model")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AgentInstanceResponse>> updateModel(
             @PathVariable UUID id,
             @RequestBody java.util.Map<String, String> body) {

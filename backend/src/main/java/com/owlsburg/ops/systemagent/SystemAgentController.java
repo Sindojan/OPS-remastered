@@ -34,6 +34,7 @@ public class SystemAgentController {
     private final SystemAgentInstanceService instanceService;
     private final SystemAgentTemplateRepository templateRepository;
     private final SystemAgentRunRepository runRepository;
+    private final SystemAgentRunStepRepository runStepRepository;
     private final SystemAgentMemoryService memoryService;
     private final SystemAgentIncidentService incidentService;
     private final SystemAgentToolRegistry toolRegistry;
@@ -42,6 +43,7 @@ public class SystemAgentController {
     public SystemAgentController(SystemAgentInstanceService instanceService,
                                   SystemAgentTemplateRepository templateRepository,
                                   SystemAgentRunRepository runRepository,
+                                  SystemAgentRunStepRepository runStepRepository,
                                   SystemAgentMemoryService memoryService,
                                   SystemAgentIncidentService incidentService,
                                   SystemAgentToolRegistry toolRegistry,
@@ -49,6 +51,7 @@ public class SystemAgentController {
         this.instanceService = instanceService;
         this.templateRepository = templateRepository;
         this.runRepository = runRepository;
+        this.runStepRepository = runStepRepository;
         this.memoryService = memoryService;
         this.incidentService = incidentService;
         this.toolRegistry = toolRegistry;
@@ -173,6 +176,27 @@ public class SystemAgentController {
         return ResponseEntity.ok(ApiResponse.ok(null, "System-Agent aktualisiert"));
     }
 
+    @GetMapping("/{id}/last-run")
+    public ResponseEntity<ApiResponse<SystemLastRunResponse>> getLastRun(@PathVariable UUID id) {
+        SystemAgentInstanceEntity instance = instanceService.findById(id);
+        if (instance.getLastRunId() == null) {
+            return ResponseEntity.ok(ApiResponse.ok(null, "Kein letzter Run vorhanden"));
+        }
+        SystemAgentRunEntity run = runRepository.findById(instance.getLastRunId()).orElse(null);
+        if (run == null) {
+            return ResponseEntity.ok(ApiResponse.ok(null, "Run nicht gefunden"));
+        }
+        List<SystemAgentRunStepEntity> steps = runStepRepository.findByRunIdOrderByStepNumber(run.getId());
+        List<SystemLastRunStepResponse> stepResponses = steps.stream()
+                .map(s -> new SystemLastRunStepResponse(
+                        s.getId(), s.getType().name(), s.getToolName(),
+                        s.getOutput(), s.getTokensUsed(), s.getDurationMs()))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.ok(new SystemLastRunResponse(
+                run.getId(), run.getStatus().name(), run.getTokensUsed(),
+                run.getErrorMessage(), run.getStartedAt(), run.getCompletedAt(), stepResponses)));
+    }
+
     @GetMapping("/{id}/runs")
     public ResponseEntity<ApiResponse<Page<SystemAgentRunSummary>>> getRuns(
             @PathVariable UUID id,
@@ -293,4 +317,11 @@ public class SystemAgentController {
                                               Instant createdAt, Instant resolvedAt) {}
 
     public record SystemToolInfo(String name, String description) {}
+
+    public record SystemLastRunResponse(UUID id, String status, int tokensUsed,
+                                         String errorMessage, Instant startedAt, Instant completedAt,
+                                         List<SystemLastRunStepResponse> steps) {}
+
+    public record SystemLastRunStepResponse(UUID id, String type, String toolName,
+                                             String output, int tokensUsed, Integer durationMs) {}
 }

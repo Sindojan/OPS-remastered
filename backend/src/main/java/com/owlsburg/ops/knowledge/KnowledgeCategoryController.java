@@ -6,6 +6,7 @@ import com.owlsburg.ops.knowledge.dto.KnowledgeCategoryResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +31,7 @@ public class KnowledgeCategoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<KnowledgeCategoryResponse>> create(
             @Valid @RequestBody KnowledgeCategoryRequest request) {
         KnowledgeCategoryEntity entity = categoryService.create(request);
@@ -38,6 +40,7 @@ public class KnowledgeCategoryController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<KnowledgeCategoryResponse>> update(
             @PathVariable UUID id,
             @Valid @RequestBody KnowledgeCategoryRequest request) {
@@ -46,6 +49,7 @@ public class KnowledgeCategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         categoryService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Category deleted"));
